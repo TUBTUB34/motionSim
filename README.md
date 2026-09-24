@@ -35,12 +35,15 @@ Use **Align view to** above the viewport to choose:
 
 - **World (mounting)**: display the installed mounting orientation.
 - **Robot base**: place the base at the grid origin with its XYZ axes aligned.
-- **Live TCP**: place the live TCP at the grid origin with its XYZ axes aligned;
-  the arm moves relative to this tool frame as live data updates.
+- **Live TCP**: align the grid to the TCP pose at the moment you select it, then
+  hold that reference fixed. The base stays stationary and the TCP moves as the
+  joints move. Select Live TCP again to align to its new pose. If selected before
+  data arrives, the first received TCP pose becomes the reference.
 
 The arm, saved TCP and payload markers all use the same selected frame. This is
 only a visualization change; the live numeric TCP readout stays in robot-base
-coordinates. Orbit/zoom still work, and the selection persists when reconnecting.
+coordinates. Orbit/zoom and Reset camera preserve the locked reference. The
+selected mode persists when reconnecting; a new connection captures a fresh TCP reference.
 
 Enable RTDE on the controller and make TCP port **30004** reachable.
 The client negotiates RTDE v2 and requests `actual_q`, `actual_TCP_pose` and
@@ -82,8 +85,9 @@ shows the saved payload center of gravity and mass. Mounting orients the entire
 arm and its markers; when unavailable, the view uses robot base coordinates.
 Mounting is an orientation, not a surveyed world position.
 
-The viewport uses bevelled metal links, blue motor caps, seal rings, and a detailed
-tool flange with directional lighting. It is a kinematic visualization with
+The viewport uses smooth bevelled metal links, satin-blue motor caps with socket
+fasteners, seal rings, a bolted mounting plate, and a detailed tool flange. Metal
+and polymer finishes use different lighting; mesh detail adapts to zoom. It is a kinematic visualization with
 approximate procedural geometry,
 not a collision or dynamics simulator. Payload does not change the measured
 joint angles. Saved installation settings can differ from active values changed

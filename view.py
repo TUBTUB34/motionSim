@@ -7,10 +7,10 @@ from kinematics import MODELS, VIEW_FRAMES, forward_kinematics, mounting_matrix,
 
 
 @lru_cache(maxsize=256)
-def cylinder_geometry(length, radius, end_radius, bevel):
+def cylinder_geometry(length, radius, end_radius, bevel, segments=40):
     """Cache local mesh topology; joint motion only changes its rigid transform."""
-    angles = np.arange(24) * (2*math.pi/24)
-    radial = np.column_stack((np.cos(angles), np.sin(angles), np.zeros(24)))
+    angles = np.arange(segments) * (2*math.pi/segments)
+    radial = np.column_stack((np.cos(angles), np.sin(angles), np.zeros(segments)))
     edge = min(radius*.16, length*.15)
     stations = ([(0, radius*.87), (edge, radius),
                  (length-edge, end_radius), (length, end_radius*.87)] if bevel
@@ -28,6 +28,7 @@ class RobotView(tk.Canvas):
         super().__init__(parent, background="#101923", highlightthickness=0, width=700, height=560)
         self.model = model
         self.view_frame = VIEW_FRAMES[0]
+        self.tcp_view_reference = None
         self.sample = None
         self.stream_state = "Live joint geometry"
         self.installation = None
@@ -46,6 +47,8 @@ class RobotView(tk.Canvas):
         if frame not in VIEW_FRAMES:
             raise ValueError(f"Unknown view frame: {frame}")
         self.view_frame = frame
+        self.tcp_view_reference = (tuple(self.sample.tcp_pose)
+                                   if frame == "Live TCP" and self.sample is not None else None)
         self.redraw()
 
     def set_stream_state(self, state):
@@ -73,6 +76,8 @@ class RobotView(tk.Canvas):
 
     def update_robot(self, sample, installation):
         self.sample, self.installation = sample, installation
+        if self.view_frame == "Live TCP" and self.tcp_view_reference is None:
+            self.tcp_view_reference = tuple(sample.tcp_pose)
         self.redraw()
 
     def project(self, points):
@@ -92,7 +97,7 @@ class RobotView(tk.Canvas):
         self.create_text(*xy[0], text=text, fill=color, anchor="sw",
                          font=("TkDefaultFont", 10), tags="scene")
 
-    def cylinder(self, start, end, radius, color, end_radius=None, bevel=True):
+    def cylinder(self, start, end, radius, color, end_radius=None, bevel=True, segments=40):
         """Shaded, bevelled housing with vectorized lighting and face culling."""
         start, end = np.asarray(start), np.asarray(end)
         axis = end - start
@@ -106,7 +111,12 @@ class RobotView(tk.Canvas):
         v = np.cross(axis, u)
         basis = np.column_stack((u, v, axis))
         end_radius = radius if end_radius is None else end_radius
-        vertices, normals, caps = cylinder_geometry(round(float(length), 12), radius, end_radius, bevel)
+        depth = self.distance - np.dot((start+end)*.5-self.center, self.eye_direction)
+        screen_radius = self.focal*max(radius, end_radius)/max(depth, .05)
+        # Spend mesh detail where it is visible; zooming in restores full curves.
+        detail = 40 if screen_radius > 36 else 32 if screen_radius > 20 else 24 if screen_radius > 10 else 16
+        segments = min(segments, detail)
+        vertices, normals, caps = cylinder_geometry(round(float(length), 12), radius, end_radius, bevel, segments)
         self.shaded_faces(vertices @ basis.T + start, normals @ basis.T, color)
         self.shaded_faces(caps @ basis.T + start, np.array([-axis, axis]), color)
 
@@ -124,9 +134,15 @@ class RobotView(tk.Canvas):
         fill = np.maximum(0, normals @ (-self.right*.8 + self.up*.6))
         half = to_eye + self.light
         half /= np.maximum(np.linalg.norm(half, axis=1)[:, None], 1e-9)
-        specular = np.maximum(0, np.sum(normals*half, axis=1))**32
-        colors = np.clip(rgb[None, :]*(.32 + .65*diffuse + .18*fill)[:, None]
-                         + 70*specular[:, None], 0, 255).astype(int)
+        highlight = np.maximum(0, np.sum(normals*half, axis=1))
+        # Blue polymer caps and rubber seals have softer reflections than aluminum.
+        metal = max(rgb)-min(rgb) < 55 and rgb.mean() > 115
+        reflection = (52*highlight**18 + 46*highlight**90 if metal
+                      else (24 if rgb.mean() > 100 else 10)*highlight**38)
+        rim = (1-np.maximum(0, np.sum(normals*to_eye, axis=1)))**3
+        colors = np.clip(rgb[None, :]*(.35 + .62*diffuse + .16*fill + .07*rim)[:, None]
+                         + reflection[:, None], 0, 255).astype(int)
+        colors = (colors // 3) * 3
         xy, depths = self.project(vertices.reshape(-1, 3))
         xy = xy.reshape(len(vertices), -1, 2)
         depths = depths.reshape(len(vertices), -1).mean(axis=1)
@@ -134,21 +150,45 @@ class RobotView(tk.Canvas):
             shade = "#" + "".join(f"{c:02x}" for c in rgb)
             self.faces.append((float(depth), polygon, shade))
 
-    def joint_housing(self, center, axis, radius, length):
-        # Aluminum motor body, dark seal rings, recessed UR-blue end caps.
-        self.cylinder(center-axis*length/2, center+axis*length/2, radius, "#c9d4dc")
+    def socket_head(self, center, normal, tangent, radius):
+        """Small machined fastener with a dark hex socket, kept inexpensive to draw."""
+        tangent = tangent / np.linalg.norm(tangent)
+        other = np.cross(normal, tangent)
+        for count, scale, offset, color in ((16, 1., 0., "#aebdc7"),
+                                          (6, .48, radius*.015, "#19242c")):
+            angles = np.arange(count)*2*math.pi/count
+            ring = center + normal*offset + radius*scale*(
+                np.cos(angles)[:, None]*tangent + np.sin(angles)[:, None]*other)
+            self.shaded_faces(ring[None, :, :], normal[None, :], color)
+
+    def joint_housing(self, center, axis, tangent, radius, length):
+        # Aluminum motor body, dark seals, satin-blue cap and recessed fasteners.
+        self.cylinder(center-axis*length/2, center+axis*length/2, radius, "#c4cdd3")
+        other = np.cross(axis, tangent)
         for direction in (-1, 1):
-            face = center + direction*axis*length/2
-            self.cylinder(face-direction*axis*radius*.08, face+direction*axis*radius*.05,
-                          radius*.98, "#273b49", bevel=False)
-            self.cylinder(face+direction*axis*radius*.05, face+direction*axis*radius*.15,
-                          radius*.87, "#73b8dc")
-            self.cylinder(face+direction*axis*radius*.15, face+direction*axis*radius*.17,
-                          radius*.26, "#a5cce1", bevel=False)
+            normal = axis*direction
+            face = center + normal*length/2
+            self.cylinder(face-normal*radius*.08, face+normal*radius*.05,
+                          radius*.98, "#273b49", bevel=False, segments=32)
+            self.cylinder(face+normal*radius*.05, face+normal*radius*.15,
+                          radius*.87, "#72b4d7")
+            cap = face+normal*radius*.153
+            self.cylinder(cap, cap+normal*radius*.012, radius*.2,
+                          "#84bedc", bevel=False, segments=20)
+            for angle in np.arange(4)*math.pi/2 + math.pi/4:
+                screw = cap + radius*.70*(math.cos(angle)*tangent + math.sin(angle)*other)
+                self.socket_head(screw, normal, tangent, radius*.047)
 
     def robot_mesh(self, frames, size):
         points = np.array([frame[:3, 3] for frame in frames])
         base_axis = frames[0][:3, 2]
+        # Mounting plate and its socket-head bolts orient with the robot base.
+        self.cylinder(points[0]-base_axis*.058, points[0]-base_axis*.044,
+                      size*1.95, "#9cabb5")
+        for angle in np.arange(6)*math.pi/3:
+            bolt = points[0]-base_axis*.043 + size*1.73*(
+                math.cos(angle)*frames[0][:3, 0] + math.sin(angle)*frames[0][:3, 1])
+            self.socket_head(bolt, base_axis, frames[0][:3, 0], size*.105)
         self.cylinder(points[0]-base_axis*.045, points[0], size*1.65, "#344957")
         self.cylinder(points[0], points[0]+base_axis*.06, size*1.55, "#aabdc9",
                       end_radius=size*1.3)
@@ -165,17 +205,19 @@ class RobotView(tk.Canvas):
                     self.cylinder(point-direction*size*.12, point+direction*size*.12,
                                   radius*1.07, "#8c9eaa", bevel=False)
             joint_radius = size*(1.16 if i < 3 else .86)
-            self.joint_housing(start, frames[i][:3, 2], joint_radius, joint_radius*1.6)
+            self.joint_housing(start, frames[i][:3, 2], frames[i][:3, 0], joint_radius, joint_radius*1.6)
         # Tool flange: a dark adapter rim and machined silver mounting face.
         tool_axis = frames[-1][:3, 2]
         flange = points[-1]
         self.cylinder(flange-tool_axis*size*.28, flange, size*.79, "#253844")
         self.cylinder(flange-tool_axis*size*.09, flange+tool_axis*size*.035, size*.74, "#d6dee3")
+        self.cylinder(flange+tool_axis*size*.036, flange+tool_axis*size*.038,
+                      size*.26, "#23323d", bevel=False, segments=24)
         for angle in np.arange(6)*math.pi/3:
             bolt = flange + size*.52*(math.cos(angle)*frames[-1][:3, 0]
                                       + math.sin(angle)*frames[-1][:3, 1])
             self.cylinder(bolt+tool_axis*size*.035, bolt+tool_axis*size*.05,
-                          size*.075, "#34414a", bevel=False)
+                          size*.075, "#34414a", bevel=False, segments=16)
 
     def frame_axes(self, transform, size=.1, labels=False):
         origin = transform[:3, 3]
@@ -209,7 +251,8 @@ class RobotView(tk.Canvas):
             return
         data = self.installation
         mount = mounting_matrix(*data.mounting) if data and data.mounting is not None else np.eye(4)
-        mount = view_base_transform(self.view_frame, mount, self.sample.tcp_pose)
+        reference = self.tcp_view_reference if self.view_frame == "Live TCP" else self.sample.tcp_pose
+        mount = view_base_transform(self.view_frame, mount, reference)
         frames = forward_kinematics(self.model, self.sample.joints, mount)
         points = np.array([f[:3, 3] for f in frames])
         self.faces = []
@@ -218,12 +261,12 @@ class RobotView(tk.Canvas):
         self.itemconfigure("mesh", state="normal")
         for index, (_, xy, color) in enumerate(sorted(self.faces, key=lambda f: f[0], reverse=True)):
             if index == len(self.mesh_items):
-                item = self.create_polygon(*xy.ravel(), fill=color, outline=color, tags="mesh")
+                item = self.create_polygon(*xy.ravel().tolist(), fill=color, outline=color, tags="mesh")
                 self.mesh_items.append(item)
                 self.mesh_colors.append(color)
             else:
                 item = self.mesh_items[index]
-                self.coords(item, *xy.ravel())
+                self.coords(item, *xy.ravel().tolist())
                 if self.mesh_colors[index] != color:
                     self.itemconfigure(item, fill=color, outline=color)
                     self.mesh_colors[index] = color

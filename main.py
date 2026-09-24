@@ -136,7 +136,7 @@ class SimulatorApp:
                                            values=VIEW_FRAMES, state="readonly", width=20)
         self.frame_selector.pack(side="left")
         self.frame_selector.bind("<<ComboboxSelected>>", self.change_view_frame)
-        ttk.Label(controls, text="Grid origin and XYZ axes follow the selected frame.").pack(side="left", padx=12)
+        ttk.Label(controls, text="TCP alignment locks to the pose at selection; select it again to realign.").pack(side="left", padx=12)
         content = ttk.Frame(self.root)
         content.pack(fill="both", expand=True)
         self.viewer = RobotView(content, self.settings.model)

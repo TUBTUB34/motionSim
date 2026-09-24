@@ -79,6 +79,38 @@ class UITests(unittest.TestCase):
             time.sleep(.01)
         self.fail("Timed out waiting for UI state")
 
+    def test_tcp_alignment_locks_until_reselected(self):
+        import tkinter as tk
+        import numpy as np
+        from view import RobotView
+        from rtde_client import RobotSample
+        from kinematics import forward_kinematics, pose_matrix
+        self.root = tk.Tk()
+        viewer = RobotView(self.root, "UR15")
+        first = RobotSample(1, (0, -1, 1, 0, 0, 0), (.3, -.2, .7, .4, -.5, 1.2), time.monotonic())
+        moved = RobotSample(2, (.2, -.8, 1.2, 0, 0, 0), (.6, -.1, .8, .6, -.4, 1.4), time.monotonic())
+        try:
+            viewer.set_view_frame("Live TCP")
+            self.assertIsNone(viewer.tcp_view_reference)
+            with patch("view.forward_kinematics", wraps=forward_kinematics) as fk:
+                viewer.update_robot(first, None)
+                locked = fk.call_args.args[2].copy()
+                np.testing.assert_allclose(locked @ pose_matrix(first.tcp_pose), np.eye(4), atol=1e-12)
+                viewer.update_robot(moved, None)
+                np.testing.assert_allclose(fk.call_args.args[2], locked, atol=1e-12)
+                self.assertFalse(np.allclose(locked @ pose_matrix(moved.tcp_pose), np.eye(4)))
+                self.assertEqual(viewer.tcp_view_reference, first.tcp_pose)
+                viewer.reset_camera()
+                np.testing.assert_allclose(fk.call_args.args[2], locked, atol=1e-12)
+                viewer.set_view_frame("Live TCP")
+                np.testing.assert_allclose(fk.call_args.args[2] @ pose_matrix(moved.tcp_pose),
+                                           np.eye(4), atol=1e-12)
+                viewer.set_view_frame("Robot base")
+                self.assertIsNone(viewer.tcp_view_reference)
+                np.testing.assert_allclose(fk.call_args.args[2], np.eye(4), atol=1e-12)
+        finally:
+            self.root.destroy()
+
     def test_connect_live_render_disconnect_reconnect(self):
         import tkinter as tk
         from main import SimulatorApp
