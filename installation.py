@@ -16,6 +16,7 @@ class InstallationData:
     payload_cog: tuple | None = None
     mounting: tuple | None = None  # baseAngle, tiltAngle (radians)
     warnings: tuple = ()
+    payload_name: str = ""
 
 def tag(element):
     return element.tag.rsplit("}", 1)[-1].rsplit(".", 1)[-1].removesuffix("Impl").lower()
@@ -37,13 +38,13 @@ def value(node, *names):
                 return child.get("value", child.text)
     return None
 
-def selected_node(container, candidates, selectors):
+def selected_node(container, candidates, selectors, flags=("active", "default")):
     selected = value(container, *selectors)
     if selected:
         matches = [e for e in candidates if selected in (e.get("id"), e.get("name"))]
     else:
-        matches = [e for e in candidates if e.get("active") == "true" or e.get("default") == "true"]
-        if not matches and len(candidates) == 1:
+        matches = [e for e in candidates if any(e.get(flag) == "true" for flag in flags)]
+        if not matches and len(candidates) == 1 and not any(flag in candidates[0].attrib for flag in flags):
             matches = candidates
     if len(matches) != 1:
         raise ValueError("Active entry is missing or ambiguous.")
@@ -62,7 +63,7 @@ def decode_installation(data):
         raise ValueError("Unsupported installation format: expected PolyScope Installation XML.")
     warnings = []
     tcp = cog = mounting = mass = None
-    tcp_name = ""
+    tcp_name = payload_name = ""
     tcp_settings = next((e for e in root if tag(e) == "tcpsettings"), None)
     if tcp_settings is not None:
         try:
@@ -84,7 +85,10 @@ def decode_installation(data):
     try:
         if payload_settings is not None:
             entries = [e for e in payload_settings.iter() if tag(e) == "payload"]
-            payload_node = selected_node(payload_settings, entries, ("activePayload", "defaultPayload"))
+            payload_node = selected_node(
+                payload_settings, entries, ("activePayload", "defaultPayload"),
+                flags=("active", "default", "defaultPayload"))
+            payload_name = payload_node.get("name", "")
             mass_names = ("mass", "payloadMass")
             cog_names = ("centerOfGravity", "cog")
         if payload_node is None:
@@ -106,9 +110,10 @@ def decode_installation(data):
         warnings.append(f"Payload unavailable or incomplete: {error}")
 
     # WorldtoMarshal is the mounting transform in the built-in geometry view.
-    # Only look within GeomFeatures, never arbitrary URCap feature transforms.
-    geometry = next((e for e in root if tag(e) == "geomfeatures"), None)
-    mounts = [] if geometry is None else [e for e in geometry.iter() if tag(e) == "worldtomarshal"]
+    # PolyScope 5.22 stores it in Features; earlier versions use GeomFeatures.
+    # Limit the lookup to built-in geometry, excluding arbitrary URCap transforms.
+    geometry = [e for e in root if tag(e) in ("geomfeatures", "features")]
+    mounts = [e for section in geometry for e in section.iter() if tag(e) == "worldtomarshal"]
     try:
         if len(mounts) != 1:
             raise ValueError("Mounting angles missing or ambiguous; showing robot base coordinates.")
@@ -116,4 +121,4 @@ def decode_installation(data):
                     numbers(mounts[0].get("tiltAngle"), 1)[0])
     except ValueError as error:
         warnings.append(str(error))
-    return InstallationData(tcp, tcp_name, mass, cog, mounting, tuple(warnings))
+    return InstallationData(tcp, tcp_name, mass, cog, mounting, tuple(warnings), payload_name)

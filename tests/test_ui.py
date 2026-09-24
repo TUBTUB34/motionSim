@@ -109,6 +109,13 @@ class UITests(unittest.TestCase):
                 self.assertIn("Live", app.status.get())
                 self.assertIn("Payload: 2.5 kg", app.details.get())
                 self.assertGreater(sum(app.viewer.type(i) == "polygon" for i in app.viewer.find_all()), 100)
+                unchanged_joints = app.last_sample.joints
+                for frame in ("Robot base", "World (mounting)", "Live TCP"):
+                    app.view_frame.set(frame)
+                    app.frame_selector.event_generate("<<ComboboxSelected>>")
+                    self.assertEqual(app.viewer.view_frame, frame)
+                    self.assertEqual(app.last_sample.joints, unchanged_joints)
+                    self.assertGreater(sum(app.viewer.type(i) == "polygon" for i in app.viewer.find_all()), 100)
                 app.viewer.zoom_by(1.2)
                 app.viewer.reset_camera()
                 app.disconnect()
@@ -116,6 +123,7 @@ class UITests(unittest.TestCase):
                 last = app.last_sample
                 app.toggle_connection()
                 self.pump_until(lambda: app.last_sample is not None and app.last_sample is not last)
+                self.assertEqual(app.viewer.view_frame, "Live TCP")
                 app.edit_connection()
                 self.assertIsNone(app.session)
                 self.assertEqual(app.model.get(), "UR15")

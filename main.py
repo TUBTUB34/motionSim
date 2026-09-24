@@ -7,7 +7,7 @@ from tkinter import ttk, messagebox
 from tkinter.scrolledtext import ScrolledText
 
 from connection import make_settings
-from kinematics import MODELS
+from kinematics import MODELS, VIEW_FRAMES
 from session import RobotSession
 from view import RobotView
 
@@ -29,6 +29,7 @@ class SimulatorApp:
         self.installation = tk.StringVar()
         self.directory = tk.StringVar(value="/programs")
         self.model = tk.StringVar(value="UR15")
+        self.view_frame = tk.StringVar(value=VIEW_FRAMES[0])
         self.notice = tk.StringVar(value=PAYLOAD_NOTICE)
         self.error = tk.StringVar()
         self.status = tk.StringVar(value="Disconnected")
@@ -128,10 +129,19 @@ class SimulatorApp:
         self.connect_button = ttk.Button(bar, text="Disconnect", command=self.toggle_connection)
         self.connect_button.pack(side="right")
         ttk.Label(self.root, textvariable=self.status, padding=(12, 0, 12, 10)).pack(fill="x")
+        controls = ttk.Frame(self.root, padding=(12, 0, 12, 10))
+        controls.pack(fill="x")
+        ttk.Label(controls, text="Align view to:").pack(side="left", padx=(0, 8))
+        self.frame_selector = ttk.Combobox(controls, textvariable=self.view_frame,
+                                           values=VIEW_FRAMES, state="readonly", width=20)
+        self.frame_selector.pack(side="left")
+        self.frame_selector.bind("<<ComboboxSelected>>", self.change_view_frame)
+        ttk.Label(controls, text="Grid origin and XYZ axes follow the selected frame.").pack(side="left", padx=12)
         content = ttk.Frame(self.root)
         content.pack(fill="both", expand=True)
         self.viewer = RobotView(content, self.settings.model)
         self.viewer.pack(side="left", fill="both", expand=True)
+        self.viewer.set_view_frame(self.view_frame.get())
         sidebar = ttk.Frame(content, padding=16, width=300)
         sidebar.pack(side="right", fill="y")
         sidebar.pack_propagate(False)
@@ -148,6 +158,9 @@ class SimulatorApp:
         ttk.Button(sidebar, text="Reset camera", command=self.viewer.reset_camera).pack(anchor="w", pady=16)
         ttk.Label(self.root, text="Nominal arm geometry · Read-only visualization · Saved payload is not a dynamics simulation",
                   padding=10).pack(fill="x")
+
+    def change_view_frame(self, _event=None):
+        self.viewer.set_view_frame(self.view_frame.get())
 
     def disconnect(self, message="Disconnected · Last received pose retained"):
         if self.session:
@@ -174,7 +187,8 @@ class SimulatorApp:
             lines.append("Offset (m): " + ", ".join(f"{x:.4f}" for x in data.tcp[:3]))
             lines.append("Rotation vector (rad): " + ", ".join(f"{x:.3f}" for x in data.tcp[3:]))
         if data.payload_mass is not None:
-            lines.append(f"Payload: {data.payload_mass:g} kg")
+            name = f" ({data.payload_name})" if data.payload_name else ""
+            lines.append(f"Payload: {data.payload_mass:g} kg{name}")
         if data.payload_cog is not None:
             lines.append("CoG at flange (m): " + ", ".join(f"{x:.4f}" for x in data.payload_cog))
         if data.mounting is not None:

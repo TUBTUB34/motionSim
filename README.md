@@ -31,6 +31,17 @@ On Windows, install Python with Tcl/Tk support and activate with
    your controller stores installations.
 5. Click **Connect**. Drag the 3D view to orbit and scroll to zoom.
 
+Use **Align view to** above the viewport to choose:
+
+- **World (mounting)**: display the installed mounting orientation.
+- **Robot base**: place the base at the grid origin with its XYZ axes aligned.
+- **Live TCP**: place the live TCP at the grid origin with its XYZ axes aligned;
+  the arm moves relative to this tool frame as live data updates.
+
+The arm, saved TCP and payload markers all use the same selected frame. This is
+only a visualization change; the live numeric TCP readout stays in robot-base
+coordinates. Orbit/zoom still work, and the selection persists when reconnecting.
+
 Enable RTDE on the controller and make TCP port **30004** reachable.
 The client negotiates RTDE v2 and requests `actual_q`, `actual_TCP_pose` and
 `timestamp` at 30 Hz. It does not send motion commands, URScript or RTDE inputs.
@@ -56,8 +67,10 @@ center of gravity relative to the flange (metres), and mounting angles.
 
 Supported layouts include `TCPSettings` and Java-qualified `TCPSettingsImpl`
 with `availablePoses/tcp`, legacy `toolPayload` and recognized CoG attributes,
-named `PayloadSettings` collections, and `GeomFeatures/.../WorldtoMarshal`
-mounting angles. Public UR examples from PolyScope 3.2, 5.1 and 5.6 were checked.
+named `PayloadSettings` collections (including per-entry `defaultPayload` flags),
+and mounting angles in `GeomFeatures/.../WorldtoMarshal` or
+`Features/CameraView/worldTransform/WorldtoMarshal`. Public UR examples from
+PolyScope 3.2, 5.1 and 5.6 and a supplied PolyScope 5.22 installation were checked.
 Installation XML is not a stable public schema: **a particular UR15/software
 version may need additional field mappings**. Missing, ambiguous or unrecognized
 fields are reported in the sidebar; they are not presented as successfully loaded.
@@ -69,7 +82,9 @@ shows the saved payload center of gravity and mass. Mounting orients the entire
 arm and its markers; when unavailable, the view uses robot base coordinates.
 Mounting is an orientation, not a surveyed world position.
 
-This is a kinematic visualization with simplified cylindrical link geometry,
+The viewport uses bevelled metal links, blue motor caps, seal rings, and a detailed
+tool flange with directional lighting. It is a kinematic visualization with
+approximate procedural geometry,
 not a collision or dynamics simulator. Payload does not change the measured
 joint angles. Saved installation settings can differ from active values changed
 by a running program. Nominal dimensions do not include robot-specific factory

@@ -10,7 +10,7 @@ from unittest.mock import Mock
 import numpy as np
 from connection import make_settings
 from installation import decode_installation, numbers, MAX_FILE_SIZE
-from kinematics import forward_kinematics, mounting_matrix, pose_matrix
+from kinematics import forward_kinematics, mounting_matrix, pose_matrix, view_base_transform
 from rtde_client import RTDEClient, RobotSample
 from session import RobotSession
 
@@ -26,6 +26,22 @@ XML = b"""<Installation>
 <GeomFeatures><SetupFeatureContainerNode><CameraView><worldTransform>
  <WorldtoMarshal baseAngle="0.3" tiltAngle="1.5707963267948966"/>
 </worldTransform></CameraView></SetupFeatureContainerNode></GeomFeatures>
+</Installation>"""
+
+# Synthetic values with the structure observed in the supplied PolyScope 5.22 file.
+MODERN_XML = b"""<Installation>
+<Version major="5" minor="22" bugfix="0"/>
+<TCPSettings activePose="TCP"><availablePoses>
+ <tcp name="TCP" offset="0, -0.2, 0.15, 3.1416, 0, 0"/>
+</availablePoses></TCPSettings>
+<Features><CameraView><worldTransform>
+ <WorldtoMarshal baseAngle="0.4" tiltAngle="1.2"/>
+</worldTransform></CameraView></Features>
+<PayloadSettings>
+ <Payload name="empty" mass="1" defaultPayload="false" centerOfGravity="0,0,0"/>
+ <Payload name="full" mass="3" defaultPayload="false" centerOfGravity="0,0,0.1"/>
+ <Payload name="tool" mass="2" defaultPayload="true" centerOfGravity="0.01,0.02,0.03"/>
+</PayloadSettings>
 </Installation>"""
 
 def packet(kind, data=b""):
@@ -117,6 +133,36 @@ class InstallationTests(unittest.TestCase):
         self.assertEqual(data.payload_mass, 5)
         self.assertEqual(data.payload_cog, (0, 0, .3))
 
+    def test_polyscope_522_payload_flag_and_features_mounting(self):
+        for raw in (MODERN_XML, gzip.compress(MODERN_XML)):
+            data = decode_installation(raw)
+            self.assertEqual(data.tcp, (0, -.2, .15, 3.1416, 0, 0))
+            self.assertEqual(data.payload_name, "tool")
+            self.assertEqual(data.payload_mass, 2)
+            self.assertEqual(data.payload_cog, (.01, .02, .03))
+            self.assertEqual(data.mounting, (.4, 1.2))
+            self.assertEqual(data.warnings, ())
+
+    def test_multiple_or_no_default_payload_is_not_guessed(self):
+        for raw in (MODERN_XML.replace(b'defaultPayload="false"', b'defaultPayload="true"'),
+                    MODERN_XML.replace(b'defaultPayload="true"', b'defaultPayload="false"')):
+            data = decode_installation(raw)
+            self.assertIsNone(data.payload_mass)
+            self.assertTrue(any("ambiguous" in warning for warning in data.warnings))
+            self.assertEqual(data.mounting, (.4, 1.2))
+
+    def test_explicit_payload_selection_overrides_default_flag(self):
+        raw = MODERN_XML.replace(b"<PayloadSettings>", b'<PayloadSettings activePayload="full">')
+        data = decode_installation(raw)
+        self.assertEqual(data.payload_name, "full")
+        self.assertEqual(data.payload_mass, 3)
+
+    def test_mounting_ignores_urcap_transforms(self):
+        extra = b'<Contributions><WorldtoMarshal baseAngle="9" tiltAngle="9"/></Contributions>'
+        data = decode_installation(MODERN_XML.replace(b"</Installation>", extra+b"</Installation>"))
+        self.assertEqual(data.mounting, (.4, 1.2))
+        self.assertEqual(data.warnings, ())
+
     def test_missing_cog_not_invented(self):
         data = decode_installation(XML.replace(b' toolPayloadCenterOfGravity="0.01, 0.02, 0.1"', b""))
         self.assertEqual(data.payload_mass, 2.5)
@@ -152,6 +198,34 @@ class KinematicsTests(unittest.TestCase):
         for a,b in zip(base, mounted):
             np.testing.assert_allclose(b, m @ a)
         np.testing.assert_allclose(m[:3,:3] @ [0,0,1], [0,0,-1], atol=1e-12)
+
+    def test_display_frame_alignment(self):
+        mount = mounting_matrix(math.pi, math.pi/4)
+        pose = [.3, -.2, .7, .4, -.5, 1.2]
+        np.testing.assert_allclose(view_base_transform("World (mounting)", mount, pose), mount)
+        np.testing.assert_allclose(view_base_transform("Robot base", mount, pose), np.eye(4))
+        tcp_base = view_base_transform("Live TCP", mount, pose)
+        np.testing.assert_allclose(tcp_base @ pose_matrix(pose), np.eye(4), atol=1e-12)
+        with self.assertRaises(ValueError):
+            view_base_transform("invalid", mount, pose)
+
+    def test_view_frames_preserve_arm_and_marker_geometry(self):
+        mount = mounting_matrix(math.pi, math.pi/4)
+        pose = [.3, -.2, .7, .4, -.5, 1.2]
+        q = [.1, -1.2, .3, -.7, .5, .9]
+        world_frames = forward_kinematics("UR15", q, mount)
+        saved_offset = pose_matrix([0, 0, .2, .3, 0, 0])
+        cog = np.array([.02, .04, .1, 1])
+        for frame in ("World (mounting)", "Robot base", "Live TCP"):
+            base = view_base_transform(frame, mount, pose)
+            world_to_view = base @ np.linalg.inv(mount)
+            displayed = forward_kinematics("UR15", q, base)
+            for world, shown in zip(world_frames, displayed):
+                np.testing.assert_allclose(shown, world_to_view @ world, atol=1e-12)
+            np.testing.assert_allclose(displayed[-1] @ saved_offset,
+                                       world_to_view @ world_frames[-1] @ saved_offset, atol=1e-12)
+            np.testing.assert_allclose(displayed[-1] @ cog,
+                                       world_to_view @ world_frames[-1] @ cog, atol=1e-12)
 
     def test_tcp_and_cog_follow_flange(self):
         flange = forward_kinematics("UR15", [0]*6)[-1]

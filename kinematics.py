@@ -50,3 +50,23 @@ def forward_kinematics(model, joints, mounting=None):
                        [0, sa, ca, d], [0, 0, 0, 1]])
         frames.append(frames[-1] @ dh)
     return frames
+
+
+VIEW_FRAMES = ("World (mounting)", "Robot base", "Live TCP")
+
+
+def view_base_transform(frame, mounting, tcp_pose):
+    """Robot-base transform in the selected display frame; robot data is unchanged."""
+    if frame == "World (mounting)":
+        return np.array(mounting, copy=True)
+    if frame == "Robot base":
+        return np.eye(4)
+    if frame == "Live TCP":
+        # RTDE TCP is already expressed relative to the robot base. Its inverse
+        # places the TCP at the display origin and aligns its XYZ axes to the grid.
+        tcp = pose_matrix(tcp_pose)
+        inverse = np.eye(4)
+        inverse[:3, :3] = tcp[:3, :3].T
+        inverse[:3, 3] = -tcp[:3, :3].T @ tcp[:3, 3]
+        return inverse
+    raise ValueError(f"Unknown view frame: {frame}")
