@@ -1,0 +1,11 @@
+# Python 3.10+
+# Install: python -m pip install -r requirements.txt
+# Tkinter is also required but is installed separately, not through pip.
+# Ubuntu/Debian: sudo apt install python3-tk
+# Windows/macOS: install Python with Tcl/Tk support.
+# Transitive dependencies are installed automatically by pip.
+
+numpy>=2.2,<3
+paramiko>=3.5,<5
+scp>=0.15,<1
+defusedxml>=0.7.1,<1
