@@ -33,7 +33,7 @@ On Windows, install Python with Tcl/Tk support and activate with
    your controller stores installations.
 5. Click **Connect**. Drag the 3D view to orbit and scroll to zoom.
 
-Use **Display overlays** above the viewport to toggle the ground grid,
+Use the **Display overlays** checkboxes above the viewport to toggle the ground grid,
 coordinate axes, live TCP, installation TCP, payload/center of gravity, robot
 labels, and viewport information. **Hide all overlays** leaves just the robot;
 **Show all overlays** restores them. These choices persist while editing or
@@ -71,8 +71,11 @@ four long crossbars, sliding jaw rails, pneumatic actuators and orange sensors.
 These directions are relative to the flange, not world gravity.
 
 **Tool working point** defaults to **Installation TCP**, using both its position
-and axis-angle rotation. Choose **Live TCP** to follow the controller's active TCP,
-or **Tool preset** for the illustrative flange-mounted dimensions. If the selected
+and axis-angle rotation. Choose **Live TCP** to place the tool's working point at
+the controller's active TCP position while keeping its flange-mounted orientation.
+For the suction cup, this places the center of its contact face at the live TCP;
+the controller's TCP axis rotation does not flip the cup upside down. Choose
+**Tool preset** for the illustrative flange-mounted dimensions. If the selected
 TCP is unavailable, the preview falls back to its preset and labels that fallback.
 The amber **Tool TCP** marker shows the resulting working point and can be hidden
 in Display overlays. Alignment moves the rigid preview so its working point

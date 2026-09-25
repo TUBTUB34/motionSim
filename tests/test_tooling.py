@@ -9,6 +9,52 @@ from view import RobotView
 
 
 class ToolTests(unittest.TestCase):
+    def test_rendered_suction_contact_face_tracks_live_tcp(self):
+        viewer = RobotView.__new__(RobotView)
+        viewer.tool = "Suction cup"
+        viewer.gripper_opening = .5
+        viewer.center = np.zeros(3)
+        viewer.eye_direction = np.array([0., 0., 1.])
+        viewer.distance, viewer.focal = 5., 800.
+        viewer.shaded_faces = Mock()
+        flange = pose_matrix((.2, -.3, .6, .4, .7, -.2))
+        displays = (np.eye(4), pose_matrix((-.4, .2, .3, -.7, .1, .3)))
+        poses = ((.8, -.1, .4, .1, .9, -.6),
+                 (.3, .2, .7, 2.8, -.2, .4))
+        for display in displays:
+            for pose in poses:
+                with self.subTest(display=display.tolist(), pose=pose):
+                    live = display @ pose_matrix(pose)
+                    mesh, _, _ = tool_placement(
+                        viewer.tool, display @ flange, "Live TCP", live_tcp=live)
+                    viewer.shaded_faces.reset_mock()
+                    viewer.tool_mesh(mesh)
+                    # Exercise the real cylinder geometry, not just the TCP matrix:
+                    # the final cylinder is the cup's bottom contact surface.
+                    caps, normals, _ = viewer.shaded_faces.call_args.args
+                    contact = caps[-1]
+                    np.testing.assert_allclose(contact.mean(axis=0), live[:3, 3], atol=1e-12)
+                    cup_axis = (display @ flange)[:3, 2]
+                    np.testing.assert_allclose(normals[-1], cup_axis, atol=1e-12)
+                    np.testing.assert_allclose(
+                        (contact-live[:3, 3]) @ cup_axis, 0., atol=1e-12)
+
+    def test_upward_live_tcp_axes_do_not_invert_downward_suction_cup(self):
+        flange = pose_matrix((.3, 0., .5, np.pi, 0., 0.))
+        live = pose_matrix((.1, 0., .2, 0., 0., 0.))
+        original_flange, original_live = flange.copy(), live.copy()
+        mesh, working, _ = tool_placement("Suction cup", flange, "Live TCP", live_tcp=live)
+        np.testing.assert_allclose(working[:3, 3], live[:3, 3], atol=1e-12)
+        np.testing.assert_allclose(mesh[:3, :3], flange[:3, :3], atol=1e-12)
+        # The mounting end and stem must stay above the contact face.
+        self.assertGreater(mesh[2, 3], live[2, 3])
+        for _, start, end, *_ in tool_parts("Suction cup"):
+            for point in (start, end):
+                shown = mesh @ np.array((*point, 1.))
+                self.assertGreaterEqual(shown[2], live[2, 3]-1e-12)
+        np.testing.assert_array_equal(flange, original_flange)
+        np.testing.assert_array_equal(live, original_live)
+
     def test_working_point_alignment_includes_rotation_and_display_frame(self):
         flange = pose_matrix((.2, -.3, .6, .4, .7, -.2))
         offset = (.12, -.08, .25, .3, -.5, 1.2)
@@ -23,7 +69,13 @@ class ToolTests(unittest.TestCase):
             np.testing.assert_allclose(shown_target, display @ target, atol=1e-12)
             live = pose_matrix((.8, -.1, .4, .1, .9, -.6))
             mesh, target, _ = tool_placement(tool, flange, "Live TCP", live_tcp=live)
-            np.testing.assert_allclose(mesh @ tool_tcp(tool), live, atol=1e-12)
+            np.testing.assert_allclose(mesh @ tool_tcp(tool), target, atol=1e-12)
+            np.testing.assert_allclose(target[:3, 3], live[:3, 3], atol=1e-12)
+            np.testing.assert_allclose(mesh[:3, :3], flange[:3, :3], atol=1e-12)
+            shown_mesh, shown_target, _ = tool_placement(
+                tool, display @ flange, "Live TCP", live_tcp=display @ live)
+            np.testing.assert_allclose(shown_mesh, display @ mesh, atol=1e-12)
+            np.testing.assert_allclose(shown_target, display @ target, atol=1e-12)
 
     def test_missing_tcp_falls_back_to_preset(self):
         flange = pose_matrix((.1, .2, .3, .4, .5, .6))

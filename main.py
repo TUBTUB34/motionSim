@@ -166,16 +166,18 @@ class SimulatorApp:
                                            values=VIEW_FRAMES, state="readonly", width=20)
         self.frame_selector.pack(side="left")
         self.frame_selector.bind("<<ComboboxSelected>>", self.change_view_frame)
-        display_button = ttk.Menubutton(controls, text="Display overlays")
-        display_button.pack(side="left", padx=12)
-        display_menu = tk.Menu(display_button, tearoff=False)
-        display_button.configure(menu=display_menu)
-        for key, label in DISPLAY_OPTIONS.items():
-            display_menu.add_checkbutton(label=label, variable=self.display_options[key],
-                                         command=self.update_display_options)
-        display_menu.add_separator()
-        display_menu.add_command(label="Hide all overlays", command=lambda: self.set_all_overlays(False))
-        display_menu.add_command(label="Show all overlays", command=lambda: self.set_all_overlays(True))
+        overlays = ttk.LabelFrame(self.root, text="Display overlays", padding=(8, 4))
+        overlays.pack(fill="x", padx=12, pady=(0, 10))
+        for index, (key, label) in enumerate(DISPLAY_OPTIONS.items()):
+            ttk.Checkbutton(overlays, text=label, variable=self.display_options[key],
+                            command=self.update_display_options).grid(
+                row=index // 4, column=index % 4, sticky="w", padx=(0, 12), pady=2)
+        for column in range(4):
+            overlays.columnconfigure(column, weight=1)
+        ttk.Button(overlays, text="Hide all overlays",
+                   command=lambda: self.set_all_overlays(False)).grid(row=0, column=4, sticky="ew", pady=2)
+        ttk.Button(overlays, text="Show all overlays",
+                   command=lambda: self.set_all_overlays(True)).grid(row=1, column=4, sticky="ew", pady=2)
         tool_controls = ttk.Frame(self.root, padding=(12, 0, 12, 10))
         tool_controls.pack(fill="x")
         ttk.Label(tool_controls, text="Preview tool:").pack(side="left", padx=(0, 8))
@@ -196,7 +198,7 @@ class SimulatorApp:
                                    values=TCP_SOURCES, state="readonly", width=20)
         tcp_selector.pack(side="left")
         tcp_selector.bind("<<ComboboxSelected>>", self.update_tool)
-        ttk.Label(tcp_controls, text="Aligns tool position and rotation; missing TCP uses the preset.").pack(
+        ttk.Label(tcp_controls, text="Live TCP aligns the working point; tool keeps its flange orientation.").pack(
             side="left", padx=12)
         content = ttk.Frame(self.root)
         content.pack(fill="both", expand=True)

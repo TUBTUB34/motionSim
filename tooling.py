@@ -28,7 +28,11 @@ def tool_placement(tool, flange, source="Tool preset", installation_tcp=None, li
     if source == "Installation TCP" and installation_tcp is not None:
         target = flange @ pose_matrix(installation_tcp)
     elif source == "Live TCP" and live_tcp is not None:
-        target = live_tcp
+        # The controller's TCP axes may be rotated relative to the physical
+        # mounting direction. Follow its working point without flipping the
+        # tool (and its mounting adapter) around that point.
+        target = flange @ preset
+        target[:3, 3] = live_tcp[:3, 3]
     else:
         return flange, flange @ preset, ("Tool preset" if source == "Tool preset"
                                          else f"{source} unavailable · using tool preset")
