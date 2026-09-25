@@ -62,5 +62,40 @@ class TransferTests(unittest.TestCase):
         client.get_host_keys.return_value.add.assert_called_once_with("robot", "ssh-ed25519", key)
         self.assertTrue(confirm.call_args.args[1].startswith("SHA256:"))
 
+    @patch("transfer.SCPClient")
+    @patch("transfer.paramiko.SSHClient")
+    def test_changed_key_retry_pins_accepted_key(self, ssh_class, scp_class):
+        old, new = Mock(), Mock()
+        old.asbytes.return_value = b"old"
+        new.asbytes.return_value = b"new"
+        new.get_name.return_value = "ssh-ed25519"
+        first, retry = Mock(), Mock()
+        ssh_class.side_effect = [first, retry]
+        first.connect.side_effect = paramiko.BadHostKeyException(self.settings.ip, new, old)
+        scp_class.return_value.__enter__.return_value.get.side_effect = (
+            lambda remote, local: Path(local).write_bytes(XML))
+        confirm = Mock(return_value=True)
+        data = InstallationTransfer().fetch(self.settings, threading.Event(), confirm)
+        self.assertEqual(data.payload_mass, 2.5)
+        self.assertIn("Changed host key", confirm.call_args.args[1])
+        retry.load_system_host_keys.assert_not_called()
+        retry.get_host_keys.return_value.add.assert_called_once_with(
+            self.settings.ip, "ssh-ed25519", new)
+        retry.connect.assert_called_once()
+        first.close.assert_called_once()
+        retry.close.assert_called_once()
+
+    @patch("transfer.SCPClient")
+    @patch("transfer.paramiko.SSHClient")
+    def test_changed_key_rejection_does_not_download(self, ssh_class, scp_class):
+        old, new = Mock(), Mock()
+        old.asbytes.return_value, new.asbytes.return_value = b"old", b"new"
+        ssh_class.return_value.connect.side_effect = paramiko.BadHostKeyException(
+            self.settings.ip, new, old)
+        with self.assertRaisesRegex(paramiko.SSHException, "not accepted"):
+            InstallationTransfer().fetch(self.settings, threading.Event(), Mock(return_value=False))
+        ssh_class.assert_called_once()
+        scp_class.assert_not_called()
+
 if __name__ == "__main__":
     unittest.main()

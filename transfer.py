@@ -9,12 +9,15 @@ import paramiko
 from scp import SCPClient
 from installation import MAX_FILE_SIZE, decode_installation
 
+def host_fingerprint(key):
+    return "SHA256:" + base64.b64encode(hashlib.sha256(key.asbytes()).digest()).decode().rstrip("=")
+
 class ConfirmHostKey(paramiko.MissingHostKeyPolicy):
     def __init__(self, confirm):
         self.confirm = confirm
 
     def missing_host_key(self, client, hostname, key):
-        fingerprint = "SHA256:" + base64.b64encode(hashlib.sha256(key.asbytes()).digest()).decode().rstrip("=")
+        fingerprint = host_fingerprint(key)
         if not self.confirm(hostname, fingerprint):
             raise paramiko.SSHException("SSH host key was not accepted.")
         # Trust only this connection. Do not persist keys or credentials.
@@ -37,9 +40,25 @@ class InstallationTransfer:
             client.set_missing_host_key_policy(ConfirmHostKey(confirm_host))
             if stop.is_set():
                 raise InterruptedError("Download cancelled.")
-            client.connect(settings.ip, username=settings.username, password=settings.password,
-                           timeout=5, banner_timeout=5, auth_timeout=5,
-                           look_for_keys=False, allow_agent=False)
+            connect_args = dict(username=settings.username, password=settings.password,
+                                timeout=5, banner_timeout=5, auth_timeout=5,
+                                look_for_keys=False, allow_agent=False)
+            try:
+                client.connect(settings.ip, **connect_args)
+            except paramiko.BadHostKeyException as error:
+                client.close()
+                details = (f"Changed host key — a different robot may be using this IP.\n\n"
+                           f"Saved: {host_fingerprint(error.expected_key)}\n"
+                           f"Received: {host_fingerprint(error.key)}")
+                if not confirm_host(settings.ip, details):
+                    raise paramiko.SSHException("Changed SSH host key was not accepted.") from None
+                if stop.is_set():
+                    raise InterruptedError("Download cancelled.")
+                # Clear stale trust only for this retry; pin the explicitly accepted key.
+                client = paramiko.SSHClient()
+                self.client = client
+                client.get_host_keys().add(settings.ip, error.key.get_name(), error.key)
+                client.connect(settings.ip, **connect_args)
             deadline = time.monotonic() + 30
 
             def progress(_filename, size, _sent):

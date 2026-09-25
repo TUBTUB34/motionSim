@@ -9,9 +9,33 @@ from tkinter.scrolledtext import ScrolledText
 from connection import make_settings
 from kinematics import MODELS, VIEW_FRAMES
 from session import RobotSession
-from view import RobotView
+from view import RobotView, DISPLAY_OPTIONS
+from tooling import TOOLS, TCP_SOURCES
 
-PAYLOAD_NOTICE = "Payload info will not be loaded without both a username and password."
+PAYLOAD_NOTICE = "Payload info will not be loaded without an SSH password. Blank username uses root."
+DEFAULT_IP = "10.22.33.81"
+DEFAULT_USERNAME = "root"
+
+
+class HintEntry(ttk.Entry):
+    """Display a hint without inserting it into the entry's actual value."""
+    def __init__(self, parent, *, textvariable, hint="", **kwargs):
+        super().__init__(parent, textvariable=textvariable, **kwargs)
+        self.variable = textvariable
+        self.hint = ttk.Label(self, text=hint, foreground="#808080", cursor="xterm")
+        self.hint.bind("<Button-1>", lambda _: self.focus_set())
+        self.trace = textvariable.trace_add("write", self.update_hint)
+        self.update_hint()
+
+    def update_hint(self, *_):
+        if self.variable.get():
+            self.hint.place_forget()
+        else:
+            self.hint.place(x=5, rely=.5, anchor="w")
+
+    def destroy(self):
+        self.variable.trace_remove("write", self.trace)
+        super().destroy()
 
 class SimulatorApp:
     def __init__(self, root):
@@ -27,9 +51,13 @@ class SimulatorApp:
         self.username = tk.StringVar()
         self.password = tk.StringVar()
         self.installation = tk.StringVar()
-        self.directory = tk.StringVar(value="/programs")
+        self.directory = tk.StringVar()
         self.model = tk.StringVar(value="UR15")
         self.view_frame = tk.StringVar(value=VIEW_FRAMES[0])
+        self.display_options = {key: tk.BooleanVar(value=True) for key in DISPLAY_OPTIONS}
+        self.tool = tk.StringVar(value="None")
+        self.tool_tcp_source = tk.StringVar(value="Installation TCP")
+        self.gripper_opening = tk.DoubleVar(value=.5)
         self.notice = tk.StringVar(value=PAYLOAD_NOTICE)
         self.error = tk.StringVar()
         self.status = tk.StringVar(value="Disconnected")
@@ -58,7 +86,7 @@ class SimulatorApp:
             self.details_view.configure(state="disabled")
 
     def update_notice(self, *_):
-        available = self.username.get().strip() and self.password.get()
+        available = self.password.get()
         self.notice.set("" if available else PAYLOAD_NOTICE)
 
     def show_setup(self):
@@ -73,20 +101,21 @@ class SimulatorApp:
         ttk.Label(panel, text="Connect to see your robot’s live joint positions in 3D.").grid(
             row=1, column=0, columnspan=2, sticky="w", pady=(0, 20))
         fields = [
-            ("Robot IP address", self.ip), ("Username (optional)", self.username),
-            ("Password (optional)", self.password), ("Installation name", self.installation),
-            ("Installation folder", self.directory),
+            ("Robot IP address", self.ip, DEFAULT_IP), ("Username", self.username, DEFAULT_USERNAME),
+            ("Password (optional)", self.password, ""), ("Installation name", self.installation, "default"),
+            ("Installation folder", self.directory, "/programs"),
         ]
-        for row, (label, variable) in enumerate(fields, start=2):
+        for row, (label, variable, hint) in enumerate(fields, start=2):
             ttk.Label(panel, text=label).grid(row=row, column=0, sticky="w", padx=(0, 16), pady=8)
-            entry = ttk.Entry(panel, textvariable=variable, show="*" if variable is self.password else "")
+            entry = HintEntry(panel, textvariable=variable, hint=hint,
+                              show="*" if variable is self.password else "")
             entry.grid(row=row, column=1, sticky="ew", pady=8)
             if variable is self.ip:
                 entry.focus_set()
         ttk.Label(panel, text="Robot model").grid(row=7, column=0, sticky="w", pady=8)
         ttk.Combobox(panel, textvariable=self.model, values=tuple(MODELS), state="readonly").grid(
             row=7, column=1, sticky="ew", pady=8)
-        ttk.Label(panel, text="Blank name uses default.installation. Blank folder uses /programs.",
+        ttk.Label(panel, text="Leave fields blank to use the shown defaults. Password is optional.",
                   wraplength=550).grid(row=8, column=0, columnspan=2, sticky="w", pady=10)
         ttk.Label(panel, textvariable=self.notice, wraplength=550, foreground="#805100").grid(
             row=9, column=0, columnspan=2, sticky="w", pady=8)
@@ -99,7 +128,8 @@ class SimulatorApp:
         if self.session is not None:
             return
         try:
-            self.settings = make_settings(self.ip.get(), self.username.get(), self.password.get(),
+            self.settings = make_settings(self.ip.get().strip() or DEFAULT_IP,
+                                          self.username.get().strip() or DEFAULT_USERNAME, self.password.get(),
                                           self.installation.get(), self.directory.get(), self.model.get())
         except ValueError as error:
             self.error.set(str(error))
@@ -136,10 +166,43 @@ class SimulatorApp:
                                            values=VIEW_FRAMES, state="readonly", width=20)
         self.frame_selector.pack(side="left")
         self.frame_selector.bind("<<ComboboxSelected>>", self.change_view_frame)
-        ttk.Label(controls, text="TCP alignment locks to the pose at selection; select it again to realign.").pack(side="left", padx=12)
+        display_button = ttk.Menubutton(controls, text="Display overlays")
+        display_button.pack(side="left", padx=12)
+        display_menu = tk.Menu(display_button, tearoff=False)
+        display_button.configure(menu=display_menu)
+        for key, label in DISPLAY_OPTIONS.items():
+            display_menu.add_checkbutton(label=label, variable=self.display_options[key],
+                                         command=self.update_display_options)
+        display_menu.add_separator()
+        display_menu.add_command(label="Hide all overlays", command=lambda: self.set_all_overlays(False))
+        display_menu.add_command(label="Show all overlays", command=lambda: self.set_all_overlays(True))
+        tool_controls = ttk.Frame(self.root, padding=(12, 0, 12, 10))
+        tool_controls.pack(fill="x")
+        ttk.Label(tool_controls, text="Preview tool:").pack(side="left", padx=(0, 8))
+        tool_selector = ttk.Combobox(tool_controls, textvariable=self.tool, values=TOOLS,
+                                    state="readonly", width=29)
+        tool_selector.pack(side="left")
+        tool_selector.bind("<<ComboboxSelected>>", self.update_tool)
+        ttk.Label(tool_controls, text="Gripper: closed").pack(side="left", padx=(12, 4))
+        self.gripper_slider = ttk.Scale(tool_controls, from_=0, to=1,
+                                       variable=self.gripper_opening, command=self.update_tool)
+        self.gripper_slider.pack(side="left")
+        ttk.Label(tool_controls, text="open").pack(side="left", padx=4)
+        ttk.Label(tool_controls, text="Visual preview only").pack(side="left", padx=12)
+        tcp_controls = ttk.Frame(self.root, padding=(12, 0, 12, 10))
+        tcp_controls.pack(fill="x")
+        ttk.Label(tcp_controls, text="Tool working point:").pack(side="left", padx=(0, 8))
+        tcp_selector = ttk.Combobox(tcp_controls, textvariable=self.tool_tcp_source,
+                                   values=TCP_SOURCES, state="readonly", width=20)
+        tcp_selector.pack(side="left")
+        tcp_selector.bind("<<ComboboxSelected>>", self.update_tool)
+        ttk.Label(tcp_controls, text="Aligns tool position and rotation; missing TCP uses the preset.").pack(
+            side="left", padx=12)
         content = ttk.Frame(self.root)
         content.pack(fill="both", expand=True)
         self.viewer = RobotView(content, self.settings.model)
+        self.update_tool()
+        self.viewer.visibility.update({key: value.get() for key, value in self.display_options.items()})
         self.viewer.pack(side="left", fill="both", expand=True)
         self.viewer.set_view_frame(self.view_frame.get())
         sidebar = ttk.Frame(content, padding=16, width=300)
@@ -161,6 +224,22 @@ class SimulatorApp:
 
     def change_view_frame(self, _event=None):
         self.viewer.set_view_frame(self.view_frame.get())
+
+    def update_display_options(self):
+        self.viewer.visibility.update({key: value.get() for key, value in self.display_options.items()})
+        self.viewer.redraw()
+
+    def update_tool(self, _event=None):
+        self.viewer.tool = self.tool.get()
+        self.viewer.tool_tcp_source = self.tool_tcp_source.get()
+        self.viewer.gripper_opening = self.gripper_opening.get()
+        self.gripper_slider.configure(state="normal" if "gripper" in self.tool.get().lower() else "disabled")
+        self.viewer.redraw()
+
+    def set_all_overlays(self, visible):
+        for value in self.display_options.values():
+            value.set(visible)
+        self.update_display_options()
 
     def disconnect(self, message="Disconnected · Last received pose retained"):
         if self.session:
@@ -221,7 +300,7 @@ class SimulatorApp:
                         self.viewer.update_robot(self.last_sample, data)
                 elif kind == "host_key":
                     data.accepted = messagebox.askyesno("Verify robot SSH host",
-                        f"First SSH connection to {data.hostname}.\n\nHost fingerprint:\n{data.fingerprint}\n\n"
+                        f"SSH connection to {data.hostname}.\n\nHost fingerprint:\n{data.fingerprint}\n\n"
                         "Verify this fingerprint with your robot administrator. Trust it for this connection?",
                         parent=self.root)
                     data.answered.set()

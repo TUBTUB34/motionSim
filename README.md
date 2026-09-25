@@ -1,7 +1,7 @@
 # UR Robot Simulator
 
 A desktop, read-only live viewer for Universal Robots. **UR15 is selected by default**;
-UR3, UR5, UR10, UR3e, UR5e, UR10e, UR16e and UR20 are also selectable.
+UR3, UR5, UR10, UR3e, UR5e, UR10e, UR16e, UR20 and UR30 are also selectable.
 
 ## Run
 
@@ -22,14 +22,22 @@ On Windows, install Python with Tcl/Tk support and activate with
 
 ## Connect
 
-1. Enter the robot IP and select the exact model.
-2. Optionally enter SSH username/password to retrieve its installation.
+1. Enter the robot IP (default **10.22.33.81**) and select the exact model.
+2. Optionally enter an SSH password to retrieve its installation; the username defaults to **root**.
+   Empty fields show their defaults as hints. Leave them blank to use those values,
+   or type to override them. There is no default password.
 3. Leave the installation name blank for `default.installation`, or enter a name
    with or without the `.installation` extension.
 4. Set the remote installation folder. It defaults to **/programs** as configured
    for this project; change it to `/programs` or another folder if that is where
    your controller stores installations.
 5. Click **Connect**. Drag the 3D view to orbit and scroll to zoom.
+
+Use **Display overlays** above the viewport to toggle the ground grid,
+coordinate axes, live TCP, installation TCP, payload/center of gravity, robot
+labels, and viewport information. **Hide all overlays** leaves just the robot;
+**Show all overlays** restores them. These choices persist while editing or
+reconnecting during the current app session and do not affect the robot data.
 
 Use **Align view to** above the viewport to choose:
 
@@ -39,6 +47,40 @@ Use **Align view to** above the viewport to choose:
   hold that reference fixed. The base stays stationary and the TCP moves as the
   joints move. Select Live TCP again to align to its new pose. If selected before
   data arrives, the first received TCP pose becomes the reference.
+
+Use **Preview tool** to attach a default flange-down or flange-out gripper,
+parallel gripper, reference flange-down gripper, wide frame gripper, suction cup, or dispensing
+nozzle to the flange, or select **None** to remove it. The gripper slider moves
+its jaws from closed to an 80 mm gap. Tools follow the flange in every display
+frame, and choices persist across reconnects in the current app session.
+These are illustrative fixed-size tools, not vendor CAD models. They do not
+change the live/saved TCP, payload, or robot settings, send tool commands, or
+simulate contact, gripping forces, suction, or material flow. A live joint
+sample is required to display the robot and attached tool.
+
+The **Flange-down gripper** is a simplified version of the supplied reference
+images, with an open mounting frame, long actuator body, guide rods, two roller
+rails, pneumatic cylinders and orange sensors. The opening slider spreads the
+roller rails. Its roughly 550 mm long body and jaw travel are illustrative;
+dimensions and mechanism motion have not been measured from the real tool.
+
+The **Wide frame gripper** approximates the second reference with an open frame,
+four long crossbars, sliding jaw rails, pneumatic actuators and orange sensors.
+**Default flange-down gripper** points its fingers along flange +Z;
+**Default flange-out gripper** points along flange +X with a right-angle adapter.
+These directions are relative to the flange, not world gravity.
+
+**Tool working point** defaults to **Installation TCP**, using both its position
+and axis-angle rotation. Choose **Live TCP** to follow the controller's active TCP,
+or **Tool preset** for the illustrative flange-mounted dimensions. If the selected
+TCP is unavailable, the preview falls back to its preset and labels that fallback.
+The amber **Tool TCP** marker shows the resulting working point and can be hidden
+in Display overlays. Alignment moves the rigid preview so its working point
+matches the selected TCP; a generic adapter connects any mounting offset. This
+does not infer the real tool's dimensions from a TCP, and the adapter is not a
+mechanical design. Nominal flange calibration differences can affect live alignment.
+Saved payload and CoG remain installation data; tool selection does not estimate
+or replace mass, CoG, or controller settings.
 
 The arm, saved TCP and payload markers all use the same selected frame. This is
 only a visualization change; the live numeric TCP readout stays in robot-base
@@ -53,7 +95,10 @@ The display waits for actual joint samples before drawing an arm.
 SCP uses SSH port **22** and the supplied credentials. SSH must be enabled and the
 account must be able to read the chosen file. Known SSH hosts are checked against
 your existing known-hosts file. An unknown host prompts for fingerprint verification
-and is trusted only for that connection; changed known keys are rejected.
+and is trusted only for that connection. If a different robot reuses the IP and
+its key has changed, a prompt shows the saved and received fingerprints. Accepting
+clears the stale key for that connection and retries with the accepted key;
+your on-disk known-hosts file is unchanged.
 An SCP/login/file error is shown without stopping RTDE or the 3D view.
 Missing either credential skips SCP and displays the payload-info notice.
 
@@ -85,8 +130,9 @@ shows the saved payload center of gravity and mass. Mounting orients the entire
 arm and its markers; when unavailable, the view uses robot base coordinates.
 Mounting is an orientation, not a surveyed world position.
 
-The viewport uses smooth bevelled metal links, satin-blue motor caps with socket
-fasteners, seal rings, a bolted mounting plate, and a detailed tool flange. Metal
+The viewport uses tapered metal arm shoulders, slimmer tubes with recessed end
+seals, satin-blue motor caps with machined rims and socket fasteners, a bolted
+mounting plate, and a tool flange with a concentric center recess. Metal
 and polymer finishes use different lighting; mesh detail adapts to zoom. It is a kinematic visualization with
 approximate procedural geometry,
 not a collision or dynamics simulator. Payload does not change the measured

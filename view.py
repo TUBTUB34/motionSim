@@ -3,8 +3,19 @@ import math
 from functools import lru_cache
 import tkinter as tk
 import numpy as np
+from tooling import tool_parts, tool_placement
 from kinematics import MODELS, VIEW_FRAMES, forward_kinematics, mounting_matrix, pose_matrix, view_base_transform
 
+DISPLAY_OPTIONS = {
+    "grid": "Ground grid",
+    "axes": "Coordinate axes",
+    "live_tcp": "Live TCP",
+    "saved_tcp": "Installation TCP",
+    "tool_tcp": "Preview tool TCP",
+    "payload": "Payload / center of gravity",
+    "labels": "Robot labels",
+    "info": "Viewport information",
+}
 
 @lru_cache(maxsize=256)
 def cylinder_geometry(length, radius, end_radius, bevel, segments=40):
@@ -27,6 +38,10 @@ class RobotView(tk.Canvas):
     def __init__(self, parent, model):
         super().__init__(parent, background="#101923", highlightthickness=0, width=700, height=560)
         self.model = model
+        self.tool = "None"
+        self.tool_tcp_source = "Tool preset"
+        self.gripper_opening = .5
+        self.visibility = dict.fromkeys(DISPLAY_OPTIONS, True)
         self.view_frame = VIEW_FRAMES[0]
         self.tcp_view_reference = None
         self.sample = None
@@ -93,6 +108,8 @@ class RobotView(tk.Canvas):
         self.create_line(*xy.ravel(), fill=color, width=width, dash=dash, tags="scene")
 
     def text3(self, point, text, color):
+        if not self.visibility["labels"]:
+            return
         xy, _ = self.project([point])
         self.create_text(*xy[0], text=text, fill=color, anchor="sw",
                          font=("TkDefaultFont", 10), tags="scene")
@@ -170,7 +187,9 @@ class RobotView(tk.Canvas):
             face = center + normal*length/2
             self.cylinder(face-normal*radius*.08, face+normal*radius*.05,
                           radius*.98, "#273b49", bevel=False, segments=32)
-            self.cylinder(face+normal*radius*.05, face+normal*radius*.15,
+            self.cylinder(face+normal*radius*.05, face+normal*radius*.09,
+                          radius*.91, "#a6b8c3", bevel=False)
+            self.cylinder(face+normal*radius*.09, face+normal*radius*.15,
                           radius*.87, "#72b4d7")
             cap = face+normal*radius*.153
             self.cylinder(cap, cap+normal*radius*.012, radius*.2,
@@ -178,6 +197,27 @@ class RobotView(tk.Canvas):
             for angle in np.arange(4)*math.pi/2 + math.pi/4:
                 screw = cap + radius*.70*(math.cos(angle)*tangent + math.sin(angle)*other)
                 self.socket_head(screw, normal, tangent, radius*.047)
+
+    def arm_link(self, start, end, radius):
+        """Turned tube with tapered shoulders and recessed end seals."""
+        delta = end-start
+        length = np.linalg.norm(delta)
+        if length < 1e-8:
+            return
+        axis = delta/length
+        shoulder = min(radius*1.8, length*.22)
+        inner_start, inner_end = start+axis*shoulder, end-axis*shoulder
+        self.cylinder(start, inner_start, radius*1.12, "#b6c4ce",
+                      end_radius=radius*.82)
+        self.cylinder(inner_start, inner_end, radius*.82, "#d4dde3",
+                      end_radius=radius*.76)
+        self.cylinder(inner_end, end, radius*.76, "#b6c4ce",
+                      end_radius=radius*1.04)
+        for point, ring_radius in ((inner_start, radius*.84), (inner_end, radius*.78)):
+            self.cylinder(point-axis*radius*.055, point+axis*radius*.055,
+                          ring_radius, "#30434f", bevel=False)
+            self.cylinder(point+axis*radius*.055, point+axis*radius*.12,
+                          ring_radius*1.03, "#a0b2be", bevel=False)
 
     def robot_mesh(self, frames, size):
         points = np.array([frame[:3, 3] for frame in frames])
@@ -195,15 +235,10 @@ class RobotView(tk.Canvas):
         for i in range(6):
             start, end = points[i], points[i+1]
             radius = size*(.83 if i < 3 else .62)
-            self.cylinder(start, end, radius, "#cbd5dc", end_radius=radius*.88)
-            delta = end-start
-            length = np.linalg.norm(delta)
-            if length > size*3:
-                direction = delta/length
-                # Collars give the long upper-arm and forearm tubes defined ends.
-                for point in (start+direction*size, end-direction*size):
-                    self.cylinder(point-direction*size*.12, point+direction*size*.12,
-                                  radius*1.07, "#8c9eaa", bevel=False)
+            if i in (1, 2):
+                self.arm_link(start, end, radius)
+            else:
+                self.cylinder(start, end, radius, "#cbd5dc", end_radius=radius*.88)
             joint_radius = size*(1.16 if i < 3 else .86)
             self.joint_housing(start, frames[i][:3, 2], frames[i][:3, 0], joint_radius, joint_radius*1.6)
         # Tool flange: a dark adapter rim and machined silver mounting face.
@@ -211,15 +246,39 @@ class RobotView(tk.Canvas):
         flange = points[-1]
         self.cylinder(flange-tool_axis*size*.28, flange, size*.79, "#253844")
         self.cylinder(flange-tool_axis*size*.09, flange+tool_axis*size*.035, size*.74, "#d6dee3")
-        self.cylinder(flange+tool_axis*size*.036, flange+tool_axis*size*.038,
+        self.cylinder(flange+tool_axis*size*.036, flange+tool_axis*size*.045,
+                      size*.37, "#9aadb9", bevel=False)
+        self.cylinder(flange+tool_axis*size*.046, flange+tool_axis*size*.048,
                       size*.26, "#23323d", bevel=False, segments=24)
         for angle in np.arange(6)*math.pi/3:
             bolt = flange + size*.52*(math.cos(angle)*frames[-1][:3, 0]
                                       + math.sin(angle)*frames[-1][:3, 1])
-            self.cylinder(bolt+tool_axis*size*.035, bolt+tool_axis*size*.05,
-                          size*.075, "#34414a", bevel=False, segments=16)
+            self.socket_head(bolt+tool_axis*size*.037, tool_axis,
+                             frames[-1][:3, 0], size*.075)
+
+    def tool_mesh(self, flange):
+        rotation, origin = flange[:3, :3], flange[:3, 3]
+        for kind, *part in tool_parts(self.tool, self.gripper_opening):
+            if kind == "cylinder":
+                start, end, radius, end_radius, color = part
+                self.cylinder(rotation @ start + origin, rotation @ end + origin,
+                              radius, color, end_radius=end_radius)
+            else:
+                center, dimensions, color = part
+                center, half = np.array(center), np.array(dimensions)/2
+                for axis in range(3):
+                    u, v = (axis+1)%3, (axis+2)%3
+                    for sign in (-1, 1):
+                        normal = np.eye(3)[axis]*sign
+                        corners = np.tile(center+normal*half[axis], (4, 1))
+                        corners[:, u] += np.array([-1, 1, 1, -1])*half[u]
+                        corners[:, v] += np.array([-1, -1, 1, 1])*half[v]
+                        self.shaded_faces((corners @ rotation.T+origin)[None, :, :],
+                                          (rotation @ normal)[None, :], color)
 
     def frame_axes(self, transform, size=.1, labels=False):
+        if not self.visibility["axes"]:
+            return
         origin = transform[:3, 3]
         for i, color in enumerate(("#f07178", "#8cce8a", "#7eb8ff")):
             end = origin + size*transform[:3, i]
@@ -240,9 +299,10 @@ class RobotView(tk.Canvas):
         self.up = np.cross(self.eye_direction, self.right)
         self.light = self.eye_direction*.35 - self.right*.45 + self.up*.82
         self.light /= np.linalg.norm(self.light)
-        for step in np.linspace(-reach, reach, 13):
-            self.line3([(step, -reach, 0), (step, reach, 0)], "#233342")
-            self.line3([(-reach, step, 0), (reach, step, 0)], "#233342")
+        if self.visibility["grid"]:
+            for step in np.linspace(-reach, reach, 13):
+                self.line3([(step, -reach, 0), (step, reach, 0)], "#233342")
+                self.line3([(-reach, step, 0), (reach, step, 0)], "#233342")
         self.frame_axes(np.eye(4), .22*reach, labels=True)
         if self.sample is None:
             self.itemconfigure("mesh", state="hidden")
@@ -258,6 +318,14 @@ class RobotView(tk.Canvas):
         self.faces = []
         size = min(.075, reach * .045)
         self.robot_mesh(frames, size)
+        live_tcp = mount @ pose_matrix(self.sample.tcp_pose)
+        tool_mount, preview_tcp, tcp_source = tool_placement(
+            self.tool, frames[-1], self.tool_tcp_source,
+            data.tcp if data else None, live_tcp)
+        if self.tool != "None":
+            # A generic adapter shows any offset introduced by TCP alignment.
+            self.cylinder(points[-1], tool_mount[:3, 3], size*.3, "#667988")
+            self.tool_mesh(tool_mount)
         self.itemconfigure("mesh", state="normal")
         for index, (_, xy, color) in enumerate(sorted(self.faces, key=lambda f: f[0], reverse=True)):
             if index == len(self.mesh_items):
@@ -273,21 +341,29 @@ class RobotView(tk.Canvas):
         for item in self.mesh_items[len(self.faces):]:
             self.itemconfigure(item, state="hidden")
         self.tag_raise("mesh")
-        live_tcp = mount @ pose_matrix(self.sample.tcp_pose)
-        self.line3([points[-1], live_tcp[:3, 3]], "#63e2bb", 3)
-        self.frame_axes(live_tcp, .08*reach)
-        self.text3(live_tcp[:3, 3], "  Live TCP", "#63e2bb")
-        if data and data.tcp is not None:
+        if self.tool != "None" and self.visibility["tool_tcp"]:
+            self.frame_axes(preview_tcp, .055*reach)
+            xy, _ = self.project([preview_tcp[:3, 3]])
+            x, y = xy[0]
+            self.create_oval(x-4, y-4, x+4, y+4, outline="#ffcf80", width=2, tags="scene")
+            self.text3(preview_tcp[:3, 3], f"  Tool TCP · {tcp_source}", "#ffcf80")
+        if self.visibility["live_tcp"]:
+            self.line3([points[-1], live_tcp[:3, 3]], "#63e2bb", 3)
+            self.frame_axes(live_tcp, .08*reach)
+            self.text3(live_tcp[:3, 3], "  Live TCP", "#63e2bb")
+        if self.visibility["saved_tcp"] and data and data.tcp is not None:
             saved_tcp = frames[-1] @ pose_matrix(data.tcp)
             self.line3([points[-1], saved_tcp[:3, 3]], "#c5a0ff", 2, (4, 3))
             self.text3(saved_tcp[:3, 3], "  Installation TCP", "#c5a0ff")
-        if data and data.payload_mass is not None and data.payload_cog is not None and data.payload_mass > 0:
+        if self.visibility["payload"] and data and data.payload_mass is not None and data.payload_cog is not None and data.payload_mass > 0:
             cog = (frames[-1] @ np.array((*data.payload_cog, 1)))[:3]
             self.line3([points[-1], cog], "#ffc574", 2, (2, 3))
             xy, _ = self.project([cog])
             x, y = xy[0]
             self.create_oval(x-5, y-5, x+5, y+5, fill="#ffc574", outline="", tags="scene")
             self.text3(cog, f"  CoG · {data.payload_mass:g} kg", "#ffc574")
+        if not self.visibility["info"]:
+            return
         self.create_text(18, 18, text=f"{self.model}   •   {self.stream_state}   •   {self.view_frame}",
                          fill="#dce7f0", anchor="nw", font=("TkDefaultFont", 12, "bold"), tags="scene")
         self.create_text(18, self.h-18, text="Drag to orbit  ·  Scroll to zoom  ·  Grid and distances in metres",

@@ -1,5 +1,6 @@
 """Nominal UR standard-DH kinematics. Metres and radians.
 Source: https://www.universal-robots.com/articles/ur/application-installation/dh-parameters-for-calculations-of-kinematics-and-dynamics
+UR30: https://www.universal-robots.com/developer/hardware-and-motion/robot-motion-dh-parameters/
 These dimensions do not include the individual robot's factory calibration.
 """
 import math
@@ -16,6 +17,7 @@ MODELS = {
     "UR10e": (-.6127, -.57155, .1807, .17415, .11985, .11655),
     "UR16e": (-.4784, -.36, .1807, .17415, .11985, .11655),
     "UR20": (-.862, -.7287, .2363, .2010, .1593, .1543),
+    "UR30": (-.6370, -.5037, .2363, .2010, .1593, .1543),
 }
 
 def pose_matrix(pose):
