@@ -14,7 +14,7 @@ def model_family(model):
         raise ValueError(f"Unknown robot model: {model}")
     if model.endswith("e"):
         return "e-Series"
-    return "UR Series" if model in ("UR15", "UR20", "UR30") else "CB-Series"
+    return "CB-Series" if model in ("UR3", "UR5", "UR10") else "UR Series"
 
 
 @lru_cache(maxsize=len(MODELS))
@@ -22,7 +22,7 @@ def load_robot_mesh(model):
     """Load seven immutable link meshes once; no network or CAD library at runtime."""
     model_family(model)
     meshes = []
-    with np.load(ASSET_DIRECTORY / f"{model.lower()}.npz", allow_pickle=False) as archive:
+    with np.load(ASSET_DIRECTORY / f"{model.lower().replace(' ', '')}.npz", allow_pickle=False) as archive:
         for index in range(7):
             arrays = tuple(archive[f"{name}_{index}"] for name in ("vertices", "normals", "colors", "shading"))
             for array in arrays:

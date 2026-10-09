@@ -8,6 +8,8 @@ def check(app):
     from log_data import load_log
     from rtde_client import RobotSample
     from view import RobotView
+    from kinematics import MODELS
+    from robot_assets import load_robot_mesh
 
     app.open_logs()
     with tempfile.TemporaryDirectory(prefix='ur-smoke-') as folder:
@@ -18,6 +20,8 @@ def check(app):
         app.root.update()
         assert len(window.selected) == 1, 'Bundled parser did not produce an incident'
         window.figure.savefig(Path(folder) / 'chart.png')
+        for model in MODELS:
+            assert len(load_robot_mesh(model)) == 7, f'Bundled mesh missing: {model}'
         viewer = RobotView(app.root, 'UR15')
         viewer.pack(fill='both', expand=True)
         app.root.update()

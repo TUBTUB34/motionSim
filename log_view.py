@@ -10,6 +10,7 @@ from matplotlib.ticker import MaxNLocator
 
 from log_data import JOINTS, chart_series, select_events
 from log_transfer import DEFAULT_LOG_PATH, LogConnection, LogJob
+from ui_theme import BACKGROUND
 
 COLORS = ('#187eab', '#c27c22', '#409580', '#995a9c', '#db6854', '#596eab')
 
@@ -17,6 +18,7 @@ COLORS = ('#187eab', '#c27c22', '#409580', '#995a9c', '#db6854', '#596eab')
 class LogWindow(tk.Toplevel):
     def __init__(self, app):
         super().__init__(app.root)
+        self.configure(background=BACKGROUND)
         self.app = app
         self.title('UR Motion Studio · Logs & graphs')
         self.geometry('1240x850')
@@ -46,7 +48,7 @@ class LogWindow(tk.Toplevel):
         heading = ttk.Frame(self, padding=(22, 18))
         heading.grid(row=0, column=0, columnspan=2, sticky='ew')
         ttk.Label(heading, text='Logs & graphs', style='Title.TLabel').pack(side='left')
-        ttk.Label(heading, text='UR MOTION STUDIO', style='Muted.TLabel').pack(side='right')
+        ttk.Button(heading, text='Back to simulator', command=self.hide).pack(side='right')
 
         sidebar = ttk.Frame(self, padding=(22, 8, 22, 12), width=280)
         sidebar.grid(row=1, column=0, sticky='ns')
@@ -73,9 +75,6 @@ class LogWindow(tk.Toplevel):
         ttk.Label(sidebar, text='EXPORT', style='Section.TLabel').pack(anchor='w', pady=(0, 12))
         self.csv_button = ttk.Button(sidebar, text='Save filtered incidents…', command=self.export_csv, state='disabled')
         self.csv_button.pack(fill='x')
-        ttk.Label(sidebar, text='Use the chart toolbar to zoom, pan\nand save an image.',
-                  style='Muted.TLabel').pack(anchor='w', pady=12)
-        ttk.Button(sidebar, text='Back to simulator', command=self.hide).pack(side='bottom', fill='x')
 
         body = ttk.Frame(self, padding=(0, 8, 22, 10))
         body.grid(row=1, column=1, sticky='nsew')
@@ -124,6 +123,15 @@ class LogWindow(tk.Toplevel):
         self.axes = self.figure.add_subplot()
         self.canvas = FigureCanvasTkAgg(self.figure, master=chart)
         self.toolbar = NavigationToolbar2Tk(self.canvas, chart, pack_toolbar=False)
+        self.toolbar.configure(background=BACKGROUND)
+        for widget in self.toolbar.winfo_children():
+            try:
+                widget.configure(background=BACKGROUND)
+                if isinstance(widget, (tk.Button, tk.Checkbutton)):
+                    widget.configure(relief='flat', borderwidth=0, highlightthickness=0,
+                                     activebackground='#e5edf3')
+            except tk.TclError:
+                pass
         self.toolbar.pack(side='bottom', fill='x')
         self.canvas.get_tk_widget().pack(fill='both', expand=True, pady=(8, 0))
         self.table = self.make_table(incidents, ('Time', 'Joint', 'Code', 'Type', 'Message'), (155, 90, 90, 130, 400))

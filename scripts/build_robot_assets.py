@@ -56,7 +56,7 @@ def face_colors(mesh):
 
 
 def build(source, output, model):
-    key = model.lower()
+    key = model.lower().replace(' ', '')
     config = source / "config" / key
     visual = yaml.load((config / "visual_parameters.yaml").read_text(), Loader=Loader)["mesh_files"]
     kinematics = yaml.safe_load((config / "default_kinematics.yaml").read_text())["kinematics"]
@@ -118,10 +118,16 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("source", type=Path, help="Checkout of official UR ROS2 Description at the pinned revision")
     parser.add_argument("--output", type=Path, default=Path(__file__).resolve().parents[1]/"assets"/"robots")
+    parser.add_argument("--models", nargs='+', choices=tuple(MODELS), help="Rebuild only selected models")
     args = parser.parse_args()
     manifest = {"repository": "https://github.com/UniversalRobots/Universal_Robots_ROS2_Description",
                 "revision": REVISION, "links": LINKS, "models": {}}
-    for model in MODELS:
+    existing = args.output / 'manifest.json'
+    if args.models and existing.exists():
+        manifest = json.loads(existing.read_text())
+        if manifest['revision'] != REVISION:
+            raise ValueError('Selected-model rebuild requires the same upstream revision')
+    for model in args.models or MODELS:
         result = build(args.source, args.output, model)
         manifest["models"][model] = result
         print(model, sum(result["triangles_per_link"]), "triangles", flush=True)

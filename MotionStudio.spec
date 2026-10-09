@@ -10,7 +10,7 @@ a = Analysis(
     binaries=[], datas=robot_assets + collect_data_files('numba'),
     hiddenimports=['matplotlib.backends.backend_tkagg', 'PIL._tkinter_finder', 'PIL._imagingtk'],
     hookspath=[], hooksconfig={'matplotlib': {'backends': ['TkAgg']}},
-    runtime_hooks=[], excludes=['pytest', 'IPython'], noarchive=False,
+    runtime_hooks=[], excludes=['pytest', 'IPython', 'trimesh', 'collada', 'fast_simplification', 'scipy', 'yaml'], noarchive=False,
 )
 pyz = PYZ(a.pure)
 exe = EXE(pyz, a.scripts, a.binaries, a.datas, [], name='URMotionStudio',

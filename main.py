@@ -13,6 +13,7 @@ from view import RobotView, DISPLAY_OPTIONS
 from tooling import TOOLS, TCP_SOURCES
 from status_view import StatusView
 from telemetry import RUNTIME_STATES, enum_text, script_line_text
+from model_catalog import model_summary, show_catalog
 
 PAYLOAD_NOTICE = "Payload info will not be loaded without an SSH password. Blank username uses root."
 DEFAULT_IP = "10.22.33.81"
@@ -24,7 +25,7 @@ class HintEntry(ttk.Entry):
     def __init__(self, parent, *, textvariable, hint="", **kwargs):
         super().__init__(parent, textvariable=textvariable, **kwargs)
         self.variable = textvariable
-        self.hint = ttk.Label(self, text=hint, foreground="#808080", cursor="xterm")
+        self.hint = ttk.Label(self, text=hint, style="Hint.TLabel", cursor="xterm")
         self.hint.bind("<Button-1>", lambda _: self.focus_set())
         self.trace = textvariable.trace_add("write", self.update_hint)
         self.update_hint()
@@ -33,7 +34,7 @@ class HintEntry(ttk.Entry):
         if self.variable.get():
             self.hint.place_forget()
         else:
-            self.hint.place(x=5, rely=.5, anchor="w")
+            self.hint.place(x=11, rely=.5, anchor="w")
 
     def destroy(self):
         self.variable.trace_remove("write", self.trace)
@@ -49,33 +50,19 @@ class SimulatorApp:
         self.last_sample = None
         self.last_status_update = 0.
         self.program_text = tk.StringVar(value="Waiting for program telemetry…")
-        style = ttk.Style(root)
-        style.theme_use("clam")
-        style.configure(".", background="#eef3f7", foreground="#23394b", font=("TkDefaultFont", 10))
-        style.configure("TButton", padding=(12, 7), background="#ffffff", bordercolor="#c5d2dc")
-        style.map("TButton", background=[("active", "#e0edf4"), ("disabled", "#e6edf2")])
-        style.configure("TEntry", fieldbackground="#ffffff", bordercolor="#c5d2dc", padding=4)
-        style.map("TCombobox", fieldbackground=[("readonly", "#ffffff")],
-                  selectbackground=[("readonly", "#ffffff")], selectforeground=[("readonly", "#23394b")])
-        style.configure("TNotebook.Tab", padding=(20, 9))
-        style.map("TNotebook.Tab", background=[("selected", "#ffffff")])
-        style.configure("Title.TLabel", font=("TkDefaultFont", 15, "bold"), foreground="#17334a")
-        style.configure("Muted.TLabel", foreground="#536a7b")
-        style.configure("Section.TLabel", font=("TkDefaultFont", 9, "bold"), foreground="#536a7b")
-        style.configure("Accent.TButton", background="#186887", foreground="#ffffff")
-        style.map("Accent.TButton", background=[("active", "#12536e"), ("disabled", "#cad5dc")])
-        style.configure("Treeview", rowheight=29, background="#ffffff", fieldbackground="#ffffff")
-        style.configure("Treeview.Heading", padding=8, font=("TkDefaultFont", 10, "bold"))
-        root.configure(background="#eef3f7")
+        from ui_theme import apply_theme
+        apply_theme(root)
         root.title("UR Motion Studio")
-        root.geometry("650x640")
-        root.minsize(600, 580)
+        root.geometry("700x760")
+        root.minsize(660, 720)
         self.ip = tk.StringVar()
         self.username = tk.StringVar()
         self.password = tk.StringVar()
         self.installation = tk.StringVar()
         self.directory = tk.StringVar()
         self.model = tk.StringVar(value="UR15")
+        self.model_details = tk.StringVar(value=model_summary(self.model.get()))
+        self.model.trace_add('write', lambda *_: self.model_details.set(model_summary(self.model.get())))
         self.view_frame = tk.StringVar(value=VIEW_FRAMES[0])
         self.display_options = {key: tk.BooleanVar(value=True) for key in DISPLAY_OPTIONS}
         self.tool = tk.StringVar(value="None")
@@ -115,12 +102,12 @@ class SimulatorApp:
 
     def show_setup(self):
         self.clear()
-        self.root.geometry("650x640")
-        self.root.minsize(600, 580)
+        self.root.geometry("700x760")
+        self.root.minsize(660, 720)
         panel = ttk.Frame(self.root, padding=28)
         panel.pack(fill="both", expand=True)
         panel.columnconfigure(1, weight=1)
-        ttk.Label(panel, text="UR Motion Studio", font=("TkDefaultFont", 20, "bold")).grid(
+        ttk.Label(panel, text="UR Motion Studio", style="Hero.TLabel").grid(
             row=0, column=0, columnspan=2, sticky="w", pady=(0, 8))
         ttk.Label(panel, text="Live robot visualization and log analysis in one desktop app.").grid(
             row=1, column=0, columnspan=2, sticky="w", pady=(0, 20))
@@ -139,14 +126,17 @@ class SimulatorApp:
         ttk.Label(panel, text="Robot model").grid(row=7, column=0, sticky="w", pady=8)
         ttk.Combobox(panel, textvariable=self.model, values=tuple(MODELS), state="readonly").grid(
             row=7, column=1, sticky="ew", pady=8)
-        ttk.Label(panel, text="Leave fields blank to use the shown defaults. Password is optional.",
-                  wraplength=550).grid(row=8, column=0, columnspan=2, sticky="w", pady=10)
+        model_info = ttk.Frame(panel)
+        model_info.grid(row=8, column=0, columnspan=2, sticky='ew', pady=10)
+        ttk.Label(model_info, textvariable=self.model_details, style='Muted.TLabel',
+                  wraplength=320).pack(side='left', fill='x', expand=True)
+        ttk.Button(model_info, text='Compare robot sizes', command=lambda: show_catalog(self.root, self.model)).pack(side='right')
         ttk.Label(panel, textvariable=self.notice, wraplength=550, foreground="#805100").grid(
             row=9, column=0, columnspan=2, sticky="w", pady=8)
         ttk.Label(panel, textvariable=self.error, wraplength=550, foreground="#b42318").grid(
             row=10, column=0, columnspan=2, sticky="w", pady=8)
-        ttk.Button(panel, text="Connect", command=self.submit).grid(row=11, column=1, sticky="e", pady=12)
-        ttk.Button(panel, text="Logs & graphs", command=self.open_logs, style="Accent.TButton").grid(
+        ttk.Button(panel, text="Connect to robot", command=self.submit, style="Accent.TButton").grid(row=11, column=1, sticky="e", pady=12)
+        ttk.Button(panel, text="Logs & graphs", command=self.open_logs).grid(
             row=11, column=0, sticky="w", pady=12)
         self.root.bind("<Return>", self.submit)
 

@@ -8,8 +8,8 @@ pinned to commit `6662e15f32c23c12ece57d0050aee9a716e4fc41`.
 | Family | Models |
 | --- | --- |
 | CB-Series | UR3, UR5, UR10 |
-| e-Series | UR3e, UR5e, UR10e, UR16e |
-| UR Series | UR15, UR20, UR30 |
+| e-Series | UR3e, UR5e, UR7e, UR10e, UR12e, UR16e |
+| UR Series | UR8 Long, UR15, UR18, UR20, UR30 |
 
 Each NumPy archive contains seven rigid visual links in the application's DH
 frames, face normals for visibility, vertex normals for smooth lighting, and
@@ -31,7 +31,7 @@ calibrated metrology or collision meshes.
 © 2023 Universal Robots A/S. Use hereof is subject to Universal Robots A/S’
 Terms and Conditions for Use of Graphical Documentation.
 
-- UR15, UR20, UR30 meshes and textures: [UR graphical documentation terms](LICENSE-UR-GRAPHICS.txt).
+- UR8 Long, UR15, UR18, UR20, UR30 meshes and textures: [UR graphical documentation terms](LICENSE-UR-GRAPHICS.txt).
 - Other upstream content: [BSD 3-Clause license](LICENSE-BSD.txt).
 - [Upstream licensing statement](https://github.com/UniversalRobots/Universal_Robots_ROS2_Description/blob/6662e15f32c23c12ece57d0050aee9a716e4fc41/README.md#license).
 
@@ -47,6 +47,11 @@ Check out the official repository at the pinned commit, then run:
 ```bash
 python scripts/build_robot_assets.py /path/to/Universal_Robots_ROS2_Description
 ```
+
+Use `--models UR7e UR12e "UR8 Long" UR18` for a partial rebuild at the same
+pinned revision. UR7e and UR12e reuse the official UR5e and UR10e visual sources
+respectively, as specified in their own upstream configuration files. UR8 Long
+and UR18 use their own arm links with the shared UR15 base and wrist meshes.
 
 Keep the upstream licenses and original textures alongside rebuilt archives.
 The builder is an offline conversion tool and does not contact the robot.

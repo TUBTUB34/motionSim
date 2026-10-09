@@ -210,6 +210,86 @@
         "meshes/ur20/visual/wrist2.dae": "ba20b26ac45e934efc804d3376fe5bf0d2c2fda6f9563a48b60d926e76404a43",
         "meshes/ur20/visual/wrist3.dae": "8440f202606a4c1325a2f31b45ae19ab439c99db0842f2ce7637dd789563ead9"
       }
+    },
+    "UR7e": {
+      "triangles_per_link": [
+        3998,
+        5243,
+        9128,
+        5607,
+        3997,
+        3996,
+        911
+      ],
+      "sources_sha256": {
+        "meshes/ur5e/visual/base.dae": "c30e4d7228ef633dca2a02c26df2316741f6642cb6333e8289dba6e6d0b22819",
+        "meshes/ur5e/visual/shoulder.dae": "c581bfa55b86061d9b99d315ed53817b6b693e6a500643bbf9bbb783322d585d",
+        "meshes/ur5e/visual/upperarm.dae": "c040a05bb224f14cfab6aa6704d70cbb773ada940eca9a3e34e6ce486c4c4c29",
+        "meshes/ur5e/visual/forearm.dae": "04694bf57dac46e9b8bc7c30f2eec75a1bc762e1f1a879ea30c944f24cacbad8",
+        "meshes/ur5e/visual/wrist1.dae": "a07a3d96d2540f9be12e4a07bcb8577d9f1e36005920c396a407804343a3b588",
+        "meshes/ur5e/visual/wrist2.dae": "982fa42933c6f81629882ad7975e9ba5dac5d474a6b56694e233708376cf840e",
+        "meshes/ur5e/visual/wrist3.dae": "7a7664ac4adcd53b0870fe6a2b8b975693d846dd4d07a5f44194c7d16f4890ba"
+      }
+    },
+    "UR12e": {
+      "triangles_per_link": [
+        3998,
+        3995,
+        10833,
+        5918,
+        3997,
+        3998,
+        978
+      ],
+      "sources_sha256": {
+        "meshes/ur10e/visual/base.dae": "28226d95af8c1579a49fe69b62a00d9133a2a05258dad550bb9b583c80dc938f",
+        "meshes/ur10e/visual/shoulder.dae": "1c38a6afedfb8f064117da87b60c2dcb9ccd107f957e4c5e0a198f4c2bb63d36",
+        "meshes/ur10e/visual/upperarm.dae": "f9d2380d14127440f4a50ed79ab4e7562f86289cd6131016c3d49a3e7483e6ed",
+        "meshes/ur10e/visual/forearm.dae": "24d909834c380cceb0490181dae40bcdfcfa4a7fb0c6807d6e58794cdfadcf6e",
+        "meshes/ur10e/visual/wrist1.dae": "643717d042920313dd9daa81511bd9afa66a877625967e6dd8d359ec851b4237",
+        "meshes/ur10e/visual/wrist2.dae": "b820e8c8a4488563c7a21fe73bf2fa4038ec9f882dcf9db12e2d1df928253793",
+        "meshes/ur10e/visual/wrist3.dae": "52ace7588f131dc43b49ba88d1c83c1f871e6d00659ea84b1f437e2a7f1ab7fe"
+      }
+    },
+    "UR8 Long": {
+      "triangles_per_link": [
+        1840,
+        892,
+        3144,
+        3208,
+        1188,
+        872,
+        1390
+      ],
+      "sources_sha256": {
+        "meshes/ur15/visual/base.dae": "c9d71006313dd957a92162bc78ca8ee1b841b189fb85771d83a115d16677e482",
+        "meshes/ur15/visual/shoulder.dae": "9327c9065dc4fbb8fb5082330bef558fee6598b03424bea4399ea8ada75f04e1",
+        "meshes/ur8long/visual/upperarm.dae": "46d97b64ebe9c99a8e11d3c07acd22c34b0f3b2c37b55be0c394295b27801ba5",
+        "meshes/ur8long/visual/forearm.dae": "376292ca4c516a049a9bacc54f0cf07368108e73b250c67405a4f4ed8b4a2575",
+        "meshes/ur15/visual/wrist1.dae": "350055a89b091529493f1e9bef660ac38cc9e234ce78b7f91401221c49a98b61",
+        "meshes/ur15/visual/wrist2.dae": "07ecccfe96b1e0d065c5e2ded3fde4de0fa57d18203c9b6873feab71c5182fbc",
+        "meshes/ur15/visual/wrist3.dae": "a6a0181aed8602ee423ac1ab8d47fa566b0d2afab12b0e350fc017ee2fff6b25"
+      }
+    },
+    "UR18": {
+      "triangles_per_link": [
+        1840,
+        892,
+        3144,
+        3144,
+        1188,
+        872,
+        1390
+      ],
+      "sources_sha256": {
+        "meshes/ur15/visual/base.dae": "c9d71006313dd957a92162bc78ca8ee1b841b189fb85771d83a115d16677e482",
+        "meshes/ur15/visual/shoulder.dae": "9327c9065dc4fbb8fb5082330bef558fee6598b03424bea4399ea8ada75f04e1",
+        "meshes/ur18/visual/upperarm.dae": "0b7adf13f4fdeaccd3f902f667e668759ae8a8f77e2ca020349e892a753525a7",
+        "meshes/ur18/visual/forearm.dae": "86f232de6e70897e04742a14657aadf1f8baeadddb83e1c0eed50d1f67b1a4c7",
+        "meshes/ur15/visual/wrist1.dae": "350055a89b091529493f1e9bef660ac38cc9e234ce78b7f91401221c49a98b61",
+        "meshes/ur15/visual/wrist2.dae": "07ecccfe96b1e0d065c5e2ded3fde4de0fa57d18203c9b6873feab71c5182fbc",
+        "meshes/ur15/visual/wrist3.dae": "a6a0181aed8602ee423ac1ab8d47fa566b0d2afab12b0e350fc017ee2fff6b25"
+      }
     }
   }
 }

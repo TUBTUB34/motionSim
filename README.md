@@ -81,7 +81,28 @@ available in the Linux development environment used for this integration.
 ## Existing simulator
 
 A desktop, read-only live viewer for Universal Robots. **UR15 is selected by default**;
-UR3, UR5, UR10, UR3e, UR5e, UR10e, UR16e, UR20 and UR30 are also selectable.
+UR3, UR5, UR10, UR3e, UR5e, UR7e, UR8 Long, UR10e, UR12e, UR16e, UR18, UR20
+and UR30 are also selectable. All 14 include offline model meshes and nominal
+kinematics from the [official UR robot description](https://github.com/UniversalRobots/Universal_Robots_ROS2_Description/tree/6662e15f32c23c12ece57d0050aee9a716e4fc41/config).
+
+**Compare robot sizes** on the connection screen lists published reach and
+payload for 22 model names across legacy CB, e-Series, UR Series and Gen 7.
+The selected model's reach/payload also appears below the model selector.
+The reference was checked on 9 October 2026 against the [current UR lineup](https://www.universal-robots.com/products/robot-arms/),
+[manufacturer datasheets](https://www.universal-robots.com/manuals/EN/HTML/MainLanding/Content/Landingpages/LandingSheets.htm)
+and [legacy CB brochure](https://www.universal-robots.com/media/1801258/eng_199901_ur_main-product_brochure_web_1.pdf).
+
+The eight newer Gen 7 names are **reference only**, since their model-specific
+geometry is absent from that official robot-description release. They cannot
+be selected for simulation. The UR3e-540 and UR7e-920 product pages also disagree
+with their linked legacy datasheets on reach; the catalog marks this discrepancy
+and retains the verified legacy dimensions. Reach ratings are not used to scale
+or invent robot kinematics. Extended payload ratings depend on the manufacturer's
+operating conditions; this viewer does not enforce robot load limits.
+
+The desktop uses rounded native ttk controls, visible keyboard focus, lighter
+tabs and consistent spacing. The theme uses the existing Pillow dependency and
+ships inside the Windows executable; no web view or theme download is needed.
 
 ## Run
 

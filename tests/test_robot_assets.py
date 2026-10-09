@@ -37,7 +37,7 @@ class RobotAssetTests(unittest.TestCase):
         poses = [np.zeros(6), [.4, -1.2, 1.4, -.8, .6, 2.1], [-2, .8, -.7, 1.8, -.9, -.4]]
         mounting = pose_matrix((.2, -.4, .3, .7, -.2, .5))
         for model in MODELS:
-            with np.load(ASSET_DIRECTORY / f"{model.lower()}.npz", allow_pickle=False) as data:
+            with np.load(ASSET_DIRECTORY / f"{model.lower().replace(' ', '')}.npz", allow_pickle=False) as data:
                 for joints in poses:
                     frames = forward_kinematics(model, joints, mounting)
                     source = mounting.copy()
