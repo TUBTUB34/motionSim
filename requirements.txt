@@ -13,3 +13,6 @@ defusedxml>=0.7.1,<1
 # Depth-buffered, antialiased arm rendering.
 Pillow>=10,<13
 numba>=0.61,<1
+
+# Embedded desktop charts (no browser or web server).
+matplotlib>=3.9,<4

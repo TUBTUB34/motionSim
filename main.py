@@ -42,6 +42,7 @@ class HintEntry(ttk.Entry):
 class SimulatorApp:
     def __init__(self, root):
         self.root = root
+        self.log_window = None
         self.session = None
         self.settings = None
         self.installation_data = None
@@ -51,15 +52,22 @@ class SimulatorApp:
         style = ttk.Style(root)
         style.theme_use("clam")
         style.configure(".", background="#eef3f7", foreground="#23394b", font=("TkDefaultFont", 10))
-        style.configure("TButton", padding=(12, 7))
+        style.configure("TButton", padding=(12, 7), background="#ffffff", bordercolor="#c5d2dc")
+        style.map("TButton", background=[("active", "#e0edf4"), ("disabled", "#e6edf2")])
+        style.configure("TEntry", fieldbackground="#ffffff", bordercolor="#c5d2dc", padding=4)
+        style.map("TCombobox", fieldbackground=[("readonly", "#ffffff")],
+                  selectbackground=[("readonly", "#ffffff")], selectforeground=[("readonly", "#23394b")])
         style.configure("TNotebook.Tab", padding=(20, 9))
         style.map("TNotebook.Tab", background=[("selected", "#ffffff")])
         style.configure("Title.TLabel", font=("TkDefaultFont", 15, "bold"), foreground="#17334a")
         style.configure("Muted.TLabel", foreground="#536a7b")
+        style.configure("Section.TLabel", font=("TkDefaultFont", 9, "bold"), foreground="#536a7b")
+        style.configure("Accent.TButton", background="#186887", foreground="#ffffff")
+        style.map("Accent.TButton", background=[("active", "#12536e"), ("disabled", "#cad5dc")])
         style.configure("Treeview", rowheight=29, background="#ffffff", fieldbackground="#ffffff")
         style.configure("Treeview.Heading", padding=8, font=("TkDefaultFont", 10, "bold"))
         root.configure(background="#eef3f7")
-        root.title("UR Robot Simulator")
+        root.title("UR Motion Studio")
         root.geometry("650x640")
         root.minsize(600, 580)
         self.ip = tk.StringVar()
@@ -91,7 +99,8 @@ class SimulatorApp:
     def clear(self):
         self.details_view = None
         for widget in self.root.winfo_children():
-            widget.destroy()
+            if widget is not self.log_window:
+                widget.destroy()
 
     def update_details(self, *_):
         if self.details_view is not None:
@@ -111,9 +120,9 @@ class SimulatorApp:
         panel = ttk.Frame(self.root, padding=28)
         panel.pack(fill="both", expand=True)
         panel.columnconfigure(1, weight=1)
-        ttk.Label(panel, text="UR Robot Simulator", font=("TkDefaultFont", 20, "bold")).grid(
+        ttk.Label(panel, text="UR Motion Studio", font=("TkDefaultFont", 20, "bold")).grid(
             row=0, column=0, columnspan=2, sticky="w", pady=(0, 8))
-        ttk.Label(panel, text="Connect to see your robot’s live joint positions in 3D.").grid(
+        ttk.Label(panel, text="Live robot visualization and log analysis in one desktop app.").grid(
             row=1, column=0, columnspan=2, sticky="w", pady=(0, 20))
         fields = [
             ("Robot IP address", self.ip, DEFAULT_IP), ("Username", self.username, DEFAULT_USERNAME),
@@ -137,7 +146,16 @@ class SimulatorApp:
         ttk.Label(panel, textvariable=self.error, wraplength=550, foreground="#b42318").grid(
             row=10, column=0, columnspan=2, sticky="w", pady=8)
         ttk.Button(panel, text="Connect", command=self.submit).grid(row=11, column=1, sticky="e", pady=12)
+        ttk.Button(panel, text="Logs & graphs", command=self.open_logs, style="Accent.TButton").grid(
+            row=11, column=0, sticky="w", pady=12)
         self.root.bind("<Return>", self.submit)
+
+    def open_logs(self):
+        if self.log_window is None or not self.log_window.winfo_exists():
+            from log_view import LogWindow
+            self.log_window = LogWindow(self)
+        self.log_window.deiconify()
+        self.log_window.lift()
 
     def submit(self, _event=None):
         if self.session is not None:
@@ -175,6 +193,7 @@ class SimulatorApp:
         ttk.Button(bar, text="Edit connection", command=self.edit_connection).pack(side="right", padx=6)
         self.connect_button = ttk.Button(bar, text="Disconnect", command=self.toggle_connection)
         self.connect_button.pack(side="right")
+        ttk.Button(bar, text="Logs & graphs", command=self.open_logs, style="Accent.TButton").pack(side="right", padx=6)
         ttk.Label(self.root, textvariable=self.status, padding=(12, 0, 12, 10)).pack(fill="x")
         ttk.Label(self.root, text="Nominal model geometry · Read-only visualization · Saved payload is not a dynamics simulation\n"
                   "© 2023 Universal Robots A/S. Use hereof is subject to Universal Robots A/S’ Terms and Conditions for Use of Graphical Documentation.",
@@ -377,12 +396,27 @@ class SimulatorApp:
 
     def close(self):
         self.closed = True
+        if self.log_window is not None:
+            self.log_window.shutdown()
         if self.session:
             self.session.stop()
         self.root.after_cancel(self.poll_id)
         self.root.destroy()
 
 if __name__ == "__main__":
+    import sys
     root = tk.Tk()
-    SimulatorApp(root)
-    root.mainloop()
+    app = SimulatorApp(root)
+    if '--smoke-test' in sys.argv:
+        try:
+            from desktop_smoke import check
+            check(app)
+        except Exception:
+            import traceback
+            if sys.stderr is not None:
+                traceback.print_exc()
+            sys.exit(1)
+        finally:
+            app.close()
+    else:
+        root.mainloop()

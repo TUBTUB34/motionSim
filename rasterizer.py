@@ -1,11 +1,12 @@
 """Perspective-correct, depth-buffered triangle rendering for the Tk viewport."""
 import math
+import sys
 
 import numpy as np
 from numba import njit
 
 
-@njit(cache=True)
+@njit(cache=not getattr(sys, 'frozen', False))
 def rasterize(points, depths, colors, width, height):
     """Return RGBA pixels; nearer surfaces win regardless of submission order.
 

@@ -13,6 +13,7 @@ class HostKeyQuestion:
     fingerprint: str
     answered: threading.Event = field(default_factory=threading.Event)
     accepted: bool = False
+    replacement: bool = False
 
 class RobotSession:
     def __init__(self, settings, client_factory=RTDEClient, transfer_factory=InstallationTransfer):

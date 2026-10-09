@@ -1,4 +1,84 @@
-# UR Robot Simulator
+# UR Motion Studio
+
+One desktop application for the existing UR simulator and native log analysis.
+Charts open inside the application; no browser, web server or internet connection
+is needed to view them. The simulator's motion, camera, overlays, tooling and RTDE
+behavior are retained.
+
+## Logs & graphs
+
+1. Run `python main.py` and click **Logs & graphs**. This is also available while
+   the simulator is connected; log analysis does not require an RTDE connection.
+2. Enter the robot IP, SSH username (usually `root`) and password. The setup
+   screen's credentials are copied when the log workspace first opens.
+3. Check **Remote log file**. The suggested path is
+   `/root/log_history.txt`, matching the [UR service manual](https://www.universal-robots.com/manuals/EN/HTML/SW5_22/Content/prod-serv-man/E-series/serv-man-SD-data.htm);
+   change it for your controller if necessary.
+   SSH/SFTP access must be enabled and reachable on port 22.
+4. Click **Fetch log & graph** and verify the displayed SSH host fingerprint.
+   The app retrieves both `log_history.bak` and `log_history.txt` from that folder,
+   reads the older backup first, and combines them into one timeline. Overlapping
+   incidents are counted once while distinct robot sessions remain separate.
+   If the backup does not exist, the current log loads with a visible notice;
+   other transfer failures retain the previous report.
+   The download is read-only. Credentials stay in memory; temporary downloads
+   are removed after parsing. If a different robot reuses an IP, a popup shows the
+   old and new SSH fingerprints. Accepting replaces that IP's saved key after a
+   successful reconnection; declining leaves it unchanged. Other hosts are kept.
+   This uses the current user's `.ssh/known_hosts`: the Windows profile when run
+   on Windows, or the Linux home directory when run in WSL. Those stores are separate.
+5. Choose joints, incident types, codes and optional `YYYY-MM-DD` dates. Switch
+   among bar, line and scatter charts, with daily, calendar-week or calendar-month
+   buckets. The toolbar supports zoom, pan and saving a chart image.
+
+**Open local log…** supports offline `.txt`, `.bak` and `.log` files in the original UR
+log-history format. Selecting a `.txt` or `.bak` automatically includes its matching
+partner in the same folder when present. **Incident details** shows up to 500 latest matches; CSV
+export includes all filtered incidents. **Joint overview** summarizes the full
+loaded log, independently of chart filters. Closing the log window retains its
+data until you exit the application. An unsuccessful load retains the previous log.
+
+The original graph generator's parser, incident deduplication, monitored codes and
+joint diagnostic summaries are reused. Counts represent monitored joint incidents,
+not all controller messages or failure predictions. Missing joint mappings and
+malformed records are reported. Downloads/local files are limited to 64 MiB each (128 MiB per pair);
+chart bins widen beyond 366 periods, and more than 18 code series are combined
+into the 17 most frequent plus **Other series**, preserving total counts.
+Transfers and parsing run in the background. Download status shows the current
+file, transferred/total MiB and download speed. Downloads have no overall time
+limit while data is arriving; a stalled read times out after 60 seconds without
+incoming data. Initial connection/authentication timeouts remain separate.
+Cancellation closes the connection. No robot credentials are stored on disk.
+
+## Build a standalone Windows executable
+
+On **Windows**, install 64-bit Python 3.12 with Tcl/Tk, then run:
+
+```bat
+build_windows.bat
+```
+
+The result is **`dist\URMotionStudio.exe`**, a single executable containing Python,
+Tk, chart libraries and robot assets. Copy it to a Windows PC; the target does
+not need Python or a browser. First launch/first simulator rendering can take
+longer while libraries unpack and the renderer compiles. Keep the generated
+executable outside the source tree when distributing it. Builds are unsigned.
+The build runs an offline smoke check of the packaged parser, chart and robot
+renderer. You can repeat it with `URMotionStudio.exe --smoke-test` (exit code 0
+means success). It never connects to a robot.
+
+Alternatively, run the repository's **Windows desktop executable** workflow from
+GitHub Actions and download its artifact. It runs mocked desktop/simulator tests
+before packaging. This workflow is manual and must be run after these files are
+committed to the repository.
+
+Windows executables must be built and tested on Windows; PyInstaller is not a
+cross-compiler ([PyInstaller documentation](https://pyinstaller.org/en/latest/)).
+Before distributing, launch the EXE on a clean Windows machine and check a local
+log, a robot connection and the simulator. No physical robot or Windows host is
+available in the Linux development environment used for this integration.
+
+## Existing simulator
 
 A desktop, read-only live viewer for Universal Robots. **UR15 is selected by default**;
 UR3, UR5, UR10, UR3e, UR5e, UR10e, UR16e, UR20 and UR30 are also selectable.

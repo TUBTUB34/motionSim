@@ -1,0 +1,33 @@
+name: Windows desktop executable
+on:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          architecture: x64
+      - run: python -m pip install -r requirements-build.txt
+      - name: Test desktop and simulator with mocked robot
+        env:
+          MOTIONSIM_UI_TESTS: '1'
+        run: python -m unittest discover -s tests
+      - name: Test original log parser
+        run: python -m unittest discover -s Vibe_UR_Graph_generator -p test_graph_generator.py
+      - run: python -m PyInstaller --noconfirm --clean MotionStudio.spec
+      - name: Smoke test the standalone executable
+        shell: pwsh
+        run: |
+          $process = Start-Process -FilePath dist/URMotionStudio.exe -ArgumentList '--smoke-test' -PassThru
+          if (-not $process.WaitForExit(120000)) {
+            $process.Kill()
+            throw 'Packaged application timed out'
+          }
+          if ($process.ExitCode -ne 0) { throw 'Packaged application smoke test failed' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: URMotionStudio-Windows-x64
+          path: dist/URMotionStudio.exe
