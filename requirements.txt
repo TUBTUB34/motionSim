@@ -9,3 +9,7 @@ numpy>=2.2,<3
 paramiko>=3.5,<5
 scp>=0.15,<1
 defusedxml>=0.7.1,<1
+
+# Depth-buffered, antialiased arm rendering.
+Pillow>=10,<13
+numba>=0.61,<1

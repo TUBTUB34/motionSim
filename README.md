@@ -20,6 +20,40 @@ python main.py
 On Windows, install Python with Tcl/Tk support and activate with
 `.venv\Scripts\activate` instead.
 
+## Simulator and Status tabs
+
+The **Simulator** tab gives the viewport more space and displays program state
+and the controlling **URScript line number** above the robot. **View options**
+contains the existing alignment, overlays and tool preview controls.
+
+The **Status** tab groups controller, safety, motion, joint, TCP, electrical,
+I/O, tool and live payload readings. Expand robot/safety flags to see individual
+Yes/No states. Digital signals list standard, configurable and tool channels;
+analog readings include controller-reported units. Horizontal and vertical
+scrollbars keep long values accessible. Unknown enum values retain their numeric
+code, and unsupported fields say **Unavailable on this controller**.
+
+The client removes optional fields explicitly rejected by firmware and retries
+without losing joint/TCP visualization. It never substitutes missing telemetry
+with healthy/zero values. Live payload readings are separate from the saved
+installation values used by the existing payload overlay.
+
+The line readout uses `script_control_line`, available since PolyScope 5.9 / 3.14.
+It identifies the script thread currently controlling motion; zero means no
+thread holds that control. It is **not the PolyScope program-tree line**, and
+RTDE does not supply the corresponding source text. Fast-changing lines can be
+missed between samples; this is a monitor, not an execution trace or debugger.
+
+Status readouts refresh at 5 Hz while the receiver continuously drains the
+30 Hz stream into a single latest snapshot. Stationary poses skip mesh work;
+hidden simulator tabs retain the newest pose without rendering every sample.
+Disconnected/stale readouts are explicitly marked as last received values.
+
+Sources: [UR RTDE field and protocol reference](https://www.universal-robots.com/manuals/EN/HTML/SW10_10/Content/Prod-RTDE/Real_Time_Data_Exchange_RTDE.htm),
+[UR telemetry and state constants](https://docs.universal-robots.com/tutorials/communication-protocol-tutorials/rtde-guide.html).
+Actual availability depends on controller firmware. No physical robot was used
+for automated verification; tests use synthetic packets and a loopback robot.
+
 ## Connect
 
 1. Enter the robot IP (default **10.22.33.81**) and select the exact model.
@@ -33,13 +67,13 @@ On Windows, install Python with Tcl/Tk support and activate with
    your controller stores installations.
 5. Click **Connect**. Drag the 3D view to orbit and scroll to zoom.
 
-Use the **Display overlays** checkboxes above the viewport to toggle the ground grid,
+Use the **Display overlays** checkboxes in **View options** to toggle the ground grid,
 coordinate axes, live TCP, installation TCP, payload/center of gravity, robot
 labels, and viewport information. **Hide all overlays** leaves just the robot;
 **Show all overlays** restores them. These choices persist while editing or
 reconnecting during the current app session and do not affect the robot data.
 
-Use **Align view to** above the viewport to choose:
+Use **Align view to** in **View options** to choose:
 
 - **World (mounting)**: display the installed mounting orientation.
 - **Robot base**: place the base at the grid origin with its XYZ axes aligned.
@@ -91,8 +125,8 @@ coordinates. Orbit/zoom and Reset camera preserve the locked reference. The
 selected mode persists when reconnecting; a new connection captures a fresh TCP reference.
 
 Enable RTDE on the controller and make TCP port **30004** reachable.
-The client negotiates RTDE v2 and requests `actual_q`, `actual_TCP_pose` and
-`timestamp` at 30 Hz. It does not send motion commands, URScript or RTDE inputs.
+The client negotiates RTDE v2 and requests joint, TCP and supported status outputs
+at 30 Hz. It does not send motion commands, URScript or RTDE inputs.
 The display waits for actual joint samples before drawing an arm.
 
 SCP uses SSH port **22** and the supplied credentials. SSH must be enabled and the
@@ -133,11 +167,21 @@ shows the saved payload center of gravity and mass. Mounting orients the entire
 arm and its markers; when unavailable, the view uses robot base coordinates.
 Mounting is an orientation, not a surveyed world position.
 
-The viewport uses tapered metal arm shoulders, slimmer tubes with recessed end
-seals, satin-blue motor caps with machined rims and socket fasteners, a bolted
-mounting plate, and a tool flange with a concentric center recess. Metal
-and polymer finishes use different lighting; mesh detail adapts to zoom. It is a kinematic visualization with
-approximate procedural geometry,
+The viewport uses Universal Robots' official model-specific visual geometry:
+CB-Series for UR3/UR5/UR10, e-Series for UR3e/UR5e/UR10e/UR16e, and UR Series
+for UR15/UR20/UR30. The selected model supplies its own shoulder housings,
+blue covers, link proportions, wrist assembly and flange. These are compact
+meshes derived from UR's published robot descriptions, not generic cylinders.
+
+A depth buffer resolves overlapping housings correctly. Smooth surface lighting
+and supersampling soften curved joints and silhouettes. The renderer draws only
+the robot's screen region into a single Tk image and caches model geometry.
+The first render may take a moment while Numba compiles its pixel renderer;
+subsequent runs use its disk cache. Install the updated `requirements.txt` for
+Numba and Pillow. Model assets are bundled and require no runtime downloads.
+See [asset provenance, licenses and rebuild instructions](assets/robots/README.md).
+
+Small surface markings are approximated. It is a kinematic visualization,
 not a collision or dynamics simulator. Payload does not change the measured
 joint angles. Saved installation settings can differ from active values changed
 by a running program. Nominal dimensions do not include robot-specific factory

@@ -237,7 +237,7 @@ class KinematicsTests(unittest.TestCase):
 class RTDETests(unittest.TestCase):
     def make_client(self, incoming):
         sock = FragmentedSocket(incoming)
-        client = RTDEClient("127.0.0.1", socket_factory=lambda *a, **kw: sock)
+        client = RTDEClient("127.0.0.1", socket_factory=lambda *a, **kw: sock, telemetry=False)
         return client, sock
 
     def test_fragmented_handshake_and_data(self):

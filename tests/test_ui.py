@@ -47,19 +47,24 @@ class MockRobot:
             with sock:
                 sock.settimeout(1)
                 try:
-                    for expected, response in [(86,b"\1"), (79,b"\7DOUBLE,VECTOR6D,VECTOR6D"), (83,b"\1")]:
+                    from telemetry import BASE_FIELDS, STATUS_FIELDS
+                    from tests.test_telemetry import recipe, data_packet
+                    fields = BASE_FIELDS + STATUS_FIELDS
+                    for expected, response in [(86, packet(86, b"\1")), (79, recipe(fields)), (83, packet(83, b"\1"))]:
                         size, kind = struct.unpack("!HB", self.read(sock, 3))
                         payload = self.read(sock, size-3)
                         self.messages.append((kind, payload))
                         if kind != expected:
                             raise ValueError("Unexpected RTDE request")
-                        sock.sendall(packet(kind, response))
+                        sock.sendall(response)
                     tick = 0
                     while not self.stop.wait(.025):
                         tick += 1
                         values = (tick*.025, math.sin(tick*.02)*.4,-1.2,1.6,-1.8,-1.57,0,
                                   -.7,-.25,.7,0,0,0)
-                        sock.sendall(packet(85,b"\7"+struct.pack("!13d",*values)))
+                        sock.sendall(data_packet(fields, {"timestamp": values[0], "actual_q": values[1:7],
+                            "actual_TCP_pose": values[7:], "script_control_line": 42, "runtime_state": 2,
+                            "safety_mode": 1, "safety_status": 1, "robot_mode": 7, "payload": 2.5}))
                 except (OSError, ConnectionError):
                     pass
 
@@ -111,6 +116,29 @@ class UITests(unittest.TestCase):
         finally:
             self.root.destroy()
 
+    def test_stationary_and_hidden_poses_skip_mesh_work(self):
+        import tkinter as tk
+        from dataclasses import replace
+        from rtde_client import RobotSample
+        from view import RobotView
+        self.root = tk.Tk()
+        viewer = RobotView(self.root, "UR15")
+        sample = RobotSample(1, (0, -1, 1, 0, 0, 0), (.3, -.2, .7, 0, 0, 0), time.monotonic())
+        try:
+            viewer.update_robot(sample, None)
+            with patch.object(viewer, "redraw", wraps=viewer.redraw) as draw:
+                for i in range(100):
+                    viewer.update_robot(replace(sample, timestamp=i), None)
+                self.assertEqual(draw.call_count, 0)
+                moved = replace(sample, joints=(.2, -1, 1, 0, 0, 0))
+                viewer.update_robot(moved, None, render=False)
+                self.assertEqual(draw.call_count, 0)
+                self.assertIs(viewer.sample, moved)
+                viewer.update_robot(sample, None)
+                self.assertEqual(draw.call_count, 1)
+        finally:
+            self.root.destroy()
+
     def test_connect_live_render_disconnect_reconnect(self):
         import tkinter as tk
         from main import SimulatorApp
@@ -139,19 +167,31 @@ class UITests(unittest.TestCase):
                 first = app.last_sample.timestamp
                 self.pump_until(lambda: app.last_sample.timestamp > first)
                 self.assertIn("Live", app.status.get())
+                self.pump_until(lambda: "URScript line 42" in app.program_text.get())
+                self.assertEqual(app.status_panel.tree.item("payload", "values"), ("2.500 kg",))
+                app.tabs.select(app.status_panel)
+                self.root.update()
+                with patch.object(app.viewer, "redraw", wraps=app.viewer.redraw) as draw:
+                    timestamp = app.last_sample.timestamp
+                    self.pump_until(lambda: app.last_sample.timestamp > timestamp)
+                    self.assertEqual(draw.call_count, 0)
+                app.tabs.select(app.simulator_tab)
+                self.root.update()
                 self.assertIn("Payload: 2.5 kg", app.details.get())
-                self.assertGreater(sum(app.viewer.type(i) == "polygon" for i in app.viewer.find_all()), 100)
+                self.assertGreater(app.viewer.rendered_triangles, 100)
                 unchanged_joints = app.last_sample.joints
                 for frame in ("Robot base", "World (mounting)", "Live TCP"):
                     app.view_frame.set(frame)
                     app.frame_selector.event_generate("<<ComboboxSelected>>")
                     self.assertEqual(app.viewer.view_frame, frame)
                     self.assertEqual(app.last_sample.joints, unchanged_joints)
-                    self.assertGreater(sum(app.viewer.type(i) == "polygon" for i in app.viewer.find_all()), 100)
+                    self.assertGreater(app.viewer.rendered_triangles, 100)
                 app.viewer.zoom_by(1.2)
                 app.viewer.reset_camera()
                 app.disconnect()
                 self.assertIsNone(app.session)
+                self.assertIn("Last received", app.program_text.get())
+                self.assertIn("Last:", app.status_panel.summary_labels["safety_status"].cget("text"))
                 last = app.last_sample
                 app.toggle_connection()
                 self.pump_until(lambda: app.last_sample is not None and app.last_sample is not last)

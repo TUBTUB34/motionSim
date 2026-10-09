@@ -11,6 +11,8 @@ from kinematics import MODELS, VIEW_FRAMES
 from session import RobotSession
 from view import RobotView, DISPLAY_OPTIONS
 from tooling import TOOLS, TCP_SOURCES
+from status_view import StatusView
+from telemetry import RUNTIME_STATES, enum_text, script_line_text
 
 PAYLOAD_NOTICE = "Payload info will not be loaded without an SSH password. Blank username uses root."
 DEFAULT_IP = "10.22.33.81"
@@ -44,6 +46,19 @@ class SimulatorApp:
         self.settings = None
         self.installation_data = None
         self.last_sample = None
+        self.last_status_update = 0.
+        self.program_text = tk.StringVar(value="Waiting for program telemetry…")
+        style = ttk.Style(root)
+        style.theme_use("clam")
+        style.configure(".", background="#eef3f7", foreground="#23394b", font=("TkDefaultFont", 10))
+        style.configure("TButton", padding=(12, 7))
+        style.configure("TNotebook.Tab", padding=(20, 9))
+        style.map("TNotebook.Tab", background=[("selected", "#ffffff")])
+        style.configure("Title.TLabel", font=("TkDefaultFont", 15, "bold"), foreground="#17334a")
+        style.configure("Muted.TLabel", foreground="#536a7b")
+        style.configure("Treeview", rowheight=29, background="#ffffff", fieldbackground="#ffffff")
+        style.configure("Treeview.Heading", padding=8, font=("TkDefaultFont", 10, "bold"))
+        root.configure(background="#eef3f7")
         root.title("UR Robot Simulator")
         root.geometry("650x640")
         root.minsize(600, 580)
@@ -142,6 +157,8 @@ class SimulatorApp:
         self.details.set("Installation will load after RTDE connects." if self.settings.can_load_payload else PAYLOAD_NOTICE)
         self.joints.set("Waiting for joints…")
         self.tcp_text.set("")
+        self.program_text.set("Waiting for program telemetry…")
+        self.last_status_update = 0.
         self.show_view()
         self.session = RobotSession(self.settings)
         self.session.start()
@@ -159,26 +176,43 @@ class SimulatorApp:
         self.connect_button = ttk.Button(bar, text="Disconnect", command=self.toggle_connection)
         self.connect_button.pack(side="right")
         ttk.Label(self.root, textvariable=self.status, padding=(12, 0, 12, 10)).pack(fill="x")
-        controls = ttk.Frame(self.root, padding=(12, 0, 12, 10))
+        ttk.Label(self.root, text="Nominal model geometry · Read-only visualization · Saved payload is not a dynamics simulation\n"
+                  "© 2023 Universal Robots A/S. Use hereof is subject to Universal Robots A/S’ Terms and Conditions for Use of Graphical Documentation.",
+                  padding=(10, 6), wraplength=950, style="Muted.TLabel").pack(side="bottom", fill="x")
+        self.tabs = ttk.Notebook(self.root)
+        self.tabs.pack(fill="both", expand=True, padx=12)
+        self.simulator_tab = ttk.Frame(self.tabs)
+        self.status_panel = StatusView(self.tabs)
+        options_tab = ttk.Frame(self.tabs, padding=16)
+        self.tabs.add(self.simulator_tab, text="Simulator")
+        self.tabs.add(self.status_panel, text="Status")
+        self.tabs.add(options_tab, text="View options")
+        self.tabs.bind("<<NotebookTabChanged>>", self.tab_changed)
+        program_bar = ttk.Frame(self.simulator_tab, padding=(12, 10))
+        program_bar.pack(fill="x")
+        ttk.Label(program_bar, textvariable=self.program_text, font=("TkDefaultFont", 11, "bold")).pack(anchor="w")
+        ttk.Label(program_bar, text="Controller URScript line · Different from the PolyScope program-tree line",
+                  style="Muted.TLabel").pack(anchor="w", pady=(4, 0))
+        controls = ttk.Frame(options_tab, padding=(12, 0, 12, 10))
         controls.pack(fill="x")
         ttk.Label(controls, text="Align view to:").pack(side="left", padx=(0, 8))
         self.frame_selector = ttk.Combobox(controls, textvariable=self.view_frame,
                                            values=VIEW_FRAMES, state="readonly", width=20)
         self.frame_selector.pack(side="left")
         self.frame_selector.bind("<<ComboboxSelected>>", self.change_view_frame)
-        overlays = ttk.LabelFrame(self.root, text="Display overlays", padding=(8, 4))
+        overlays = ttk.LabelFrame(options_tab, text="Display overlays", padding=(8, 4))
         overlays.pack(fill="x", padx=12, pady=(0, 10))
         for index, (key, label) in enumerate(DISPLAY_OPTIONS.items()):
             ttk.Checkbutton(overlays, text=label, variable=self.display_options[key],
                             command=self.update_display_options).grid(
-                row=index // 4, column=index % 4, sticky="w", padx=(0, 12), pady=2)
-        for column in range(4):
+                row=index // 2, column=index % 2, sticky="w", padx=(0, 12), pady=2)
+        for column in range(2):
             overlays.columnconfigure(column, weight=1)
         ttk.Button(overlays, text="Hide all overlays",
-                   command=lambda: self.set_all_overlays(False)).grid(row=0, column=4, sticky="ew", pady=2)
+                   command=lambda: self.set_all_overlays(False)).grid(row=0, column=2, sticky="ew", pady=2)
         ttk.Button(overlays, text="Show all overlays",
-                   command=lambda: self.set_all_overlays(True)).grid(row=1, column=4, sticky="ew", pady=2)
-        tool_controls = ttk.Frame(self.root, padding=(12, 0, 12, 10))
+                   command=lambda: self.set_all_overlays(True)).grid(row=1, column=2, sticky="ew", pady=2)
+        tool_controls = ttk.Frame(options_tab, padding=(12, 0, 12, 10))
         tool_controls.pack(fill="x")
         ttk.Label(tool_controls, text="Preview tool:").pack(side="left", padx=(0, 8))
         tool_selector = ttk.Combobox(tool_controls, textvariable=self.tool, values=TOOLS,
@@ -191,7 +225,7 @@ class SimulatorApp:
         self.gripper_slider.pack(side="left")
         ttk.Label(tool_controls, text="open").pack(side="left", padx=4)
         ttk.Label(tool_controls, text="Visual preview only").pack(side="left", padx=12)
-        tcp_controls = ttk.Frame(self.root, padding=(12, 0, 12, 10))
+        tcp_controls = ttk.Frame(options_tab, padding=(12, 0, 12, 10))
         tcp_controls.pack(fill="x")
         ttk.Label(tcp_controls, text="Tool working point:").pack(side="left", padx=(0, 8))
         tcp_selector = ttk.Combobox(tcp_controls, textvariable=self.tool_tcp_source,
@@ -200,7 +234,7 @@ class SimulatorApp:
         tcp_selector.bind("<<ComboboxSelected>>", self.update_tool)
         ttk.Label(tcp_controls, text="Live TCP aligns the working point; tool keeps its flange orientation.").pack(
             side="left", padx=12)
-        content = ttk.Frame(self.root)
+        content = ttk.Frame(self.simulator_tab)
         content.pack(fill="both", expand=True)
         self.viewer = RobotView(content, self.settings.model)
         self.update_tool()
@@ -217,12 +251,25 @@ class SimulatorApp:
         ttk.Label(sidebar, text="Installation", font=("TkDefaultFont", 11, "bold")).pack(anchor="w")
         ttk.Label(sidebar, text=self.settings.remote_path, wraplength=265).pack(anchor="w", pady=6)
         self.details_view = ScrolledText(sidebar, width=28, height=4, wrap="word",
+                                         background="#ffffff", foreground="#23394b",
                                          font=("TkDefaultFont", 10), relief="flat", padx=6, pady=6)
         self.details_view.pack(fill="both", expand=True, pady=6)
         self.update_details()
         ttk.Button(sidebar, text="Reset camera", command=self.viewer.reset_camera).pack(anchor="w", pady=16)
-        ttk.Label(self.root, text="Nominal arm geometry · Read-only visualization · Saved payload is not a dynamics simulation",
-                  padding=10).pack(fill="x")
+
+    def tab_changed(self, _event=None):
+        if not hasattr(self, "viewer"):
+            return
+        self.last_status_update = 0.
+        if self.tabs.select() == str(self.simulator_tab):
+            self.viewer.redraw()
+
+    def update_telemetry(self, sample, fresh):
+        prefix = "" if fresh else "Last received · "
+        values = sample.telemetry
+        self.program_text.set(prefix + enum_text(values.get("runtime_state"), RUNTIME_STATES)
+                              + "  ·  " + script_line_text(values))
+        self.status_panel.update_sample(sample, fresh)
 
     def change_view_frame(self, _event=None):
         self.viewer.set_view_frame(self.view_frame.get())
@@ -248,6 +295,8 @@ class SimulatorApp:
             self.session.stop()
             self.session = None
         self.status.set(message)
+        if self.last_sample:
+            self.update_telemetry(self.last_sample, False)
         self.viewer.set_stream_state("Disconnected · Last received pose")
         self.connect_button.configure(text="Reconnect")
 
@@ -310,12 +359,16 @@ class SimulatorApp:
                 sample = session.sample()
                 if sample and sample is not self.last_sample:
                     self.last_sample = sample
-                    self.viewer.update_robot(sample, self.installation_data)
+                    self.viewer.update_robot(sample, self.installation_data,
+                                             render=self.tabs.select() == str(self.simulator_tab))
                     names = ("Base", "Shoulder", "Elbow", "Wrist 1", "Wrist 2", "Wrist 3")
                     self.joints.set("\n".join(f"{name:9} {math.degrees(q):8.2f}°" for name, q in zip(names, sample.joints)))
                     self.tcp_text.set("\n".join(f"{name:2}  {v: .5f}" for name, v in zip(("X", "Y", "Z", "RX", "RY", "RZ"), sample.tcp_pose)))
                 if sample:
                     age = time.monotonic() - sample.received_at
+                    if time.monotonic() - self.last_status_update >= .2:
+                        self.update_telemetry(sample, age < 1)
+                        self.last_status_update = time.monotonic()
                     self.viewer.set_stream_state("Live joint geometry" if age < 1 else "Stale · Last received pose")
                     self.status.set(f"Live · RTDE · data age {age*1000:.0f} ms" if age < 1
                                     else f"Stale data · No update for {age:.1f} s · Last pose retained")

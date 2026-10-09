@@ -1,5 +1,8 @@
 """Read-only RTDE v2 client. No input recipes, scripts, or motion commands."""
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from types import MappingProxyType
+from typing import Mapping
+from telemetry import BASE_FIELDS, STATUS_FIELDS, TYPE_FORMATS
 import math
 import socket
 import struct
@@ -11,13 +14,16 @@ class RobotSample:
     joints: tuple
     tcp_pose: tuple
     received_at: float
+    telemetry: Mapping = field(default_factory=lambda: MappingProxyType({}))
 
 class RTDEClient:
-    def __init__(self, host, port=30004, timeout=3., socket_factory=socket.create_connection):
+    def __init__(self, host, port=30004, timeout=3., socket_factory=socket.create_connection, telemetry=True):
         self.host, self.port, self.timeout = host, port, timeout
         self.socket_factory = socket_factory
         self.sock = None
         self.recipe_id = None
+        self.fields = BASE_FIELDS + (STATUS_FIELDS if telemetry else ())
+        self.decoder = None
 
     def close(self):
         sock, self.sock = self.sock, None
@@ -63,16 +69,41 @@ class RTDEClient:
             self.sock.settimeout(self.timeout)
             if self._request(86, struct.pack("!H", 2)) != b"\x01":
                 raise ConnectionError("Robot does not support RTDE protocol v2.")
-            names = b"timestamp,actual_q,actual_TCP_pose"
-            response = self._request(79, struct.pack("!d", 30.) + names)
-            if not response or response[0] == 0 or response[1:] != b"DOUBLE,VECTOR6D,VECTOR6D":
-                raise ConnectionError("Robot rejected the joint/TCP RTDE output recipe.")
-            self.recipe_id = response[0]
+            self._setup_outputs()
             if self._request(83) != b"\x01":
                 raise ConnectionError("Robot refused to start the RTDE stream.")
         except Exception:
             self.close()
             raise
+
+    def _setup_outputs(self):
+        # Older firmware rejects the entire recipe when any field is NOT_FOUND.
+        # Remove only explicitly unsupported optional fields, then renegotiate.
+        while True:
+            names = ",".join(f.name for f in self.fields).encode("ascii")
+            response = self._request(79, struct.pack("!d", 30.) + names)
+            if not response:
+                raise ConnectionError("Empty RTDE output recipe response.")
+            try:
+                kinds = response[1:].decode("ascii").split(",")
+            except UnicodeDecodeError as error:
+                raise ConnectionError("Invalid RTDE output types.") from error
+            if len(kinds) != len(self.fields):
+                raise ConnectionError("Robot returned an incomplete RTDE output recipe.")
+            missing = []
+            for item, kind in zip(self.fields, kinds):
+                if kind == "NOT_FOUND" and item not in BASE_FIELDS:
+                    missing.append(item)
+                elif kind != item.kind:
+                    raise ConnectionError(f"Robot rejected RTDE output {item.name}: {kind}.")
+            if missing:
+                self.fields = tuple(f for f in self.fields if f not in missing)
+                continue
+            if response[0] == 0:
+                raise ConnectionError("Robot rejected the RTDE output recipe.")
+            self.recipe_id = response[0]
+            self.decoder = struct.Struct("!" + "".join(TYPE_FORMATS[f.kind] for f in self.fields))
+            return
 
     def receive(self):
         deadline = time.monotonic() + self.timeout
@@ -80,10 +111,17 @@ class RTDEClient:
             kind, data = self._packet()
             if kind == 77:
                 continue
-            if kind != 85 or len(data) != 105 or data[0] != self.recipe_id:
-                raise ConnectionError("Invalid RTDE joint data packet.")
-            values = struct.unpack("!13d", data[1:])
-            if not all(math.isfinite(v) for v in values):
-                raise ConnectionError("Robot sent non-finite joint/TCP values.")
-            return RobotSample(values[0], values[1:7], values[7:13], time.monotonic())
-        raise TimeoutError("No joint data received from RTDE.")
+            if kind != 85 or len(data) != self.decoder.size + 1 or data[0] != self.recipe_id:
+                raise ConnectionError("Invalid RTDE data packet.")
+            unpacked = self.decoder.unpack(data[1:])
+            if not all(math.isfinite(v) for v in unpacked):
+                raise ConnectionError("Robot sent non-finite RTDE values.")
+            values = {}
+            offset = 0
+            for item in self.fields:
+                count = int(item.kind[6]) if item.kind.startswith("VECTOR") else 1
+                values[item.name] = unpacked[offset:offset+count] if count > 1 else unpacked[offset]
+                offset += count
+            return RobotSample(values["timestamp"], values["actual_q"], values["actual_TCP_pose"],
+                               time.monotonic(), MappingProxyType(values))
+        raise TimeoutError("No data received from RTDE.")

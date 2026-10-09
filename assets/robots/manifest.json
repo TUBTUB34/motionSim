@@ -1,0 +1,215 @@
+{
+  "repository": "https://github.com/UniversalRobots/Universal_Robots_ROS2_Description",
+  "revision": "6662e15f32c23c12ece57d0050aee9a716e4fc41",
+  "links": [
+    "base",
+    "shoulder",
+    "upper_arm",
+    "forearm",
+    "wrist_1",
+    "wrist_2",
+    "wrist_3"
+  ],
+  "models": {
+    "UR15": {
+      "triangles_per_link": [
+        1840,
+        892,
+        3144,
+        3208,
+        1188,
+        872,
+        1390
+      ],
+      "sources_sha256": {
+        "meshes/ur15/visual/base.dae": "c9d71006313dd957a92162bc78ca8ee1b841b189fb85771d83a115d16677e482",
+        "meshes/ur15/visual/shoulder.dae": "9327c9065dc4fbb8fb5082330bef558fee6598b03424bea4399ea8ada75f04e1",
+        "meshes/ur15/visual/upperarm.dae": "a794cc25ce3ecbaeb34ae6cd03b55bab4fd9990d2f7104986ebd6640d044b9d0",
+        "meshes/ur15/visual/forearm.dae": "9b264db399a026a6876a4780ec3e55866c82f51b382d139080fd65105dd462ce",
+        "meshes/ur15/visual/wrist1.dae": "350055a89b091529493f1e9bef660ac38cc9e234ce78b7f91401221c49a98b61",
+        "meshes/ur15/visual/wrist2.dae": "07ecccfe96b1e0d065c5e2ded3fde4de0fa57d18203c9b6873feab71c5182fbc",
+        "meshes/ur15/visual/wrist3.dae": "a6a0181aed8602ee423ac1ab8d47fa566b0d2afab12b0e350fc017ee2fff6b25"
+      }
+    },
+    "UR3": {
+      "triangles_per_link": [
+        3999,
+        3297,
+        3825,
+        3816,
+        3776,
+        3830,
+        528
+      ],
+      "sources_sha256": {
+        "meshes/ur3/visual/base.dae": "cebc07433aa6be5d38efa7fd7f8bef5b886add457631caa194fa3d4de7b8d764",
+        "meshes/ur3/visual/shoulder.dae": "53bfe7808ad7bfe7260818022fdf18bf2c3640fa9cc7cb3b571d527ef0d53e5a",
+        "meshes/ur3/visual/upperarm.dae": "6b8c8a4d68ce0a964abd7c3f493728b3d0d10921ee378c857bcf15b8dd2f9869",
+        "meshes/ur3/visual/forearm.dae": "c059ae9d135dff9c2b6319d6d07c44f4470b84d61398a85a15262c9cde893393",
+        "meshes/ur3/visual/wrist1.dae": "0a9302c733b031d7b33aa3c0a8ea0d8c3180bc98c819fb6e7f0e0803a851d9c5",
+        "meshes/ur3/visual/wrist2.dae": "ff6a157c9dc6174082b7a595bbf8024051ceace6c34911b405b48ebf76b4523e",
+        "meshes/ur3/visual/wrist3.dae": "24f68bc002b640779d3632716e07867288f08c01cbd5f3351ce67b94290e44ce"
+      }
+    },
+    "UR5": {
+      "triangles_per_link": [
+        1932,
+        4400,
+        8014,
+        4092,
+        4062,
+        4061,
+        1658
+      ],
+      "sources_sha256": {
+        "meshes/ur5/visual/base.dae": "366e6cb99a2bf5027dae92d2bd428d27224b0a5af96ca9f1e68f5b92860c2011",
+        "meshes/ur5/visual/shoulder.dae": "fd15be6d2edbc6403e00f4f6e00bd3970491d3d53cc77eeb55c98bcd8f6b49ca",
+        "meshes/ur5/visual/upperarm.dae": "06b46dce3dadb55a71dc55dc710a3a6206006a902e507f05267dde6ffe4c9c8c",
+        "meshes/ur5/visual/forearm.dae": "2fabc6738b33365b5c54b59304f128907c5e214d25d5e4cc40487b67718a3dbe",
+        "meshes/ur5/visual/wrist1.dae": "3eb98c0a440ea8f4e91fd2cbb3bf39bd8b96acbb5ebdb697e64603395f1d0a79",
+        "meshes/ur5/visual/wrist2.dae": "2a60ae57fd85ee06e77482029b10fe09fd53dc68169138380e64d98d5f134f09",
+        "meshes/ur5/visual/wrist3.dae": "23430d8b8ec0c94c5a69fe5e70931399d3d8e07d40f277334fe62d82b959cef5"
+      }
+    },
+    "UR10": {
+      "triangles_per_link": [
+        2000,
+        3989,
+        4384,
+        4102,
+        3971,
+        3987,
+        1200
+      ],
+      "sources_sha256": {
+        "meshes/ur10/visual/base.dae": "30a52b32d9ac63403a18829d20d13447e08b298727c7c3c038212c6937051ddb",
+        "meshes/ur10/visual/shoulder.dae": "ab45cd1eb68fc34814cff13ec1593456c03cea009812d7541b90dca098e5ee37",
+        "meshes/ur10/visual/upperarm.dae": "ee7f0295d1e8e26856344b02cc9aef28f530b854b1700640f92925847b4c13bc",
+        "meshes/ur10/visual/forearm.dae": "d371c043095a04436ae058c47cd923c551937cfb44cc9a144a2053e0cf1691d4",
+        "meshes/ur10/visual/wrist1.dae": "572e276ae8a561c0d722f54279d4c1bb071619e61fd25452f25017f055297aa9",
+        "meshes/ur10/visual/wrist2.dae": "456996b0d0fa07b6f37b2cb14c035e354de74cfc4899abc4c2cbd7dfd51a933a",
+        "meshes/ur10/visual/wrist3.dae": "c95c7ce0d53114c39d896ba350d832ece99498a0e2a25d9b3eff4f7d1637c347"
+      }
+    },
+    "UR3e": {
+      "triangles_per_link": [
+        3306,
+        3997,
+        4860,
+        4000,
+        3997,
+        3998,
+        1127
+      ],
+      "sources_sha256": {
+        "meshes/ur3e/visual/base.dae": "2392d48fd62ec9ab579702ef7548c303bcf2dd41fc895cb7f410d9d2bde5ab9e",
+        "meshes/ur3e/visual/shoulder.dae": "d047f6b253e3c5f295717818923bf337a7d2f2583395cb99a1e60b696b226191",
+        "meshes/ur3e/visual/upperarm.dae": "c1b7280deb24b227903c1f5943b6d50221ef1aa30b92a0709abeb9d93852a879",
+        "meshes/ur3e/visual/forearm.dae": "410cd4771845c9434139e1fe41a4171296f7115b7a82211ebfaefc90732811c1",
+        "meshes/ur3e/visual/wrist1.dae": "de8c42623011c04ab09626f8dfd7e2d07fe05ac04b0e92b765d9b7c924faaa7e",
+        "meshes/ur3e/visual/wrist2.dae": "e010c1d8c1802b150110782cc3ab993e51aeacaa096b871bd72ba8d46ea7b109",
+        "meshes/ur3e/visual/wrist3.dae": "2eec93dd08aa9380763bcb314851558602f015759afb43af9bb249eea0661ed5"
+      }
+    },
+    "UR5e": {
+      "triangles_per_link": [
+        3998,
+        5243,
+        9128,
+        5607,
+        3997,
+        3996,
+        911
+      ],
+      "sources_sha256": {
+        "meshes/ur5e/visual/base.dae": "c30e4d7228ef633dca2a02c26df2316741f6642cb6333e8289dba6e6d0b22819",
+        "meshes/ur5e/visual/shoulder.dae": "c581bfa55b86061d9b99d315ed53817b6b693e6a500643bbf9bbb783322d585d",
+        "meshes/ur5e/visual/upperarm.dae": "c040a05bb224f14cfab6aa6704d70cbb773ada940eca9a3e34e6ce486c4c4c29",
+        "meshes/ur5e/visual/forearm.dae": "04694bf57dac46e9b8bc7c30f2eec75a1bc762e1f1a879ea30c944f24cacbad8",
+        "meshes/ur5e/visual/wrist1.dae": "a07a3d96d2540f9be12e4a07bcb8577d9f1e36005920c396a407804343a3b588",
+        "meshes/ur5e/visual/wrist2.dae": "982fa42933c6f81629882ad7975e9ba5dac5d474a6b56694e233708376cf840e",
+        "meshes/ur5e/visual/wrist3.dae": "7a7664ac4adcd53b0870fe6a2b8b975693d846dd4d07a5f44194c7d16f4890ba"
+      }
+    },
+    "UR10e": {
+      "triangles_per_link": [
+        3998,
+        3995,
+        10833,
+        5918,
+        3997,
+        3998,
+        978
+      ],
+      "sources_sha256": {
+        "meshes/ur10e/visual/base.dae": "28226d95af8c1579a49fe69b62a00d9133a2a05258dad550bb9b583c80dc938f",
+        "meshes/ur10e/visual/shoulder.dae": "1c38a6afedfb8f064117da87b60c2dcb9ccd107f957e4c5e0a198f4c2bb63d36",
+        "meshes/ur10e/visual/upperarm.dae": "f9d2380d14127440f4a50ed79ab4e7562f86289cd6131016c3d49a3e7483e6ed",
+        "meshes/ur10e/visual/forearm.dae": "24d909834c380cceb0490181dae40bcdfcfa4a7fb0c6807d6e58794cdfadcf6e",
+        "meshes/ur10e/visual/wrist1.dae": "643717d042920313dd9daa81511bd9afa66a877625967e6dd8d359ec851b4237",
+        "meshes/ur10e/visual/wrist2.dae": "b820e8c8a4488563c7a21fe73bf2fa4038ec9f882dcf9db12e2d1df928253793",
+        "meshes/ur10e/visual/wrist3.dae": "52ace7588f131dc43b49ba88d1c83c1f871e6d00659ea84b1f437e2a7f1ab7fe"
+      }
+    },
+    "UR16e": {
+      "triangles_per_link": [
+        3998,
+        3995,
+        10732,
+        5876,
+        3997,
+        3998,
+        978
+      ],
+      "sources_sha256": {
+        "meshes/ur10e/visual/base.dae": "28226d95af8c1579a49fe69b62a00d9133a2a05258dad550bb9b583c80dc938f",
+        "meshes/ur10e/visual/shoulder.dae": "1c38a6afedfb8f064117da87b60c2dcb9ccd107f957e4c5e0a198f4c2bb63d36",
+        "meshes/ur16e/visual/upperarm.dae": "9db55f568c57b3b10c424c133a14f66037b9060b4b3504d9d45e902747f6f961",
+        "meshes/ur16e/visual/forearm.dae": "1088ae0f09e0ada13db3f776130918ae54bf264e3a94abea8b83c3fbd3a0100d",
+        "meshes/ur10e/visual/wrist1.dae": "643717d042920313dd9daa81511bd9afa66a877625967e6dd8d359ec851b4237",
+        "meshes/ur10e/visual/wrist2.dae": "b820e8c8a4488563c7a21fe73bf2fa4038ec9f882dcf9db12e2d1df928253793",
+        "meshes/ur10e/visual/wrist3.dae": "52ace7588f131dc43b49ba88d1c83c1f871e6d00659ea84b1f437e2a7f1ab7fe"
+      }
+    },
+    "UR20": {
+      "triangles_per_link": [
+        2120,
+        1112,
+        3900,
+        4292,
+        2099,
+        1442,
+        2020
+      ],
+      "sources_sha256": {
+        "meshes/ur20/visual/base.dae": "dc5673ad78ac29b3c3f6ddd7465529af5eedbd3b76fdf4d2940b0ec2ce05762c",
+        "meshes/ur20/visual/shoulder.dae": "4ac24b17acd73d47d6f4c213e2786abe4d491600363591790ceaa8f601474e20",
+        "meshes/ur20/visual/upperarm.dae": "550f87116f6f75588ee1ab028a1413cffe45546e5bda39a7e22a56888de9a4ad",
+        "meshes/ur20/visual/forearm.dae": "1b9523f0122f7b186a0b0223636b0713e908536f4812cb7ef3ead227e310f09b",
+        "meshes/ur20/visual/wrist1.dae": "40e172b209db1a89f2bc74e4120ab751ba6ca7a13b80aba4fc286280902e6483",
+        "meshes/ur20/visual/wrist2.dae": "ba20b26ac45e934efc804d3376fe5bf0d2c2fda6f9563a48b60d926e76404a43",
+        "meshes/ur20/visual/wrist3.dae": "8440f202606a4c1325a2f31b45ae19ab439c99db0842f2ce7637dd789563ead9"
+      }
+    },
+    "UR30": {
+      "triangles_per_link": [
+        2120,
+        1112,
+        3964,
+        4420,
+        2099,
+        1442,
+        2020
+      ],
+      "sources_sha256": {
+        "meshes/ur20/visual/base.dae": "dc5673ad78ac29b3c3f6ddd7465529af5eedbd3b76fdf4d2940b0ec2ce05762c",
+        "meshes/ur20/visual/shoulder.dae": "4ac24b17acd73d47d6f4c213e2786abe4d491600363591790ceaa8f601474e20",
+        "meshes/ur30/visual/upperarm.dae": "e36ac8d9508459e6d6b56b488da5e2cf12525319d9e1aa5d681cbb6d564d40b0",
+        "meshes/ur30/visual/forearm.dae": "70765d5e0ead8cffb7913c949a665e902e168696e7892b3525190236e389ff02",
+        "meshes/ur20/visual/wrist1.dae": "40e172b209db1a89f2bc74e4120ab751ba6ca7a13b80aba4fc286280902e6483",
+        "meshes/ur20/visual/wrist2.dae": "ba20b26ac45e934efc804d3376fe5bf0d2c2fda6f9563a48b60d926e76404a43",
+        "meshes/ur20/visual/wrist3.dae": "8440f202606a4c1325a2f31b45ae19ab439c99db0842f2ce7637dd789563ead9"
+      }
+    }
+  }
+}
