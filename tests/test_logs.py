@@ -14,6 +14,16 @@ def line(code='C153A0:6', day='2026-04-01', uptime='1s'):
 
 
 class LogTests(unittest.TestCase):
+    def test_parser_cancellation_propagates(self):
+        from log_parser import read_events
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'log.txt'
+            path.write_text(line())
+            cancel = MagicMock(side_effect=InterruptedError('cancelled'))
+            with self.assertRaises(InterruptedError):
+                read_events([path], check_cancel=cancel)
+            cancel.assert_called_once_with()
+
     def test_parse_deduplicate_and_filter(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / 'log.txt'

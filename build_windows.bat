@@ -1,7 +1,7 @@
 @echo off
 setlocal
 cd /d "%~dp0"
-py -3.12 -m venv .venv-build
+py -3.14 -m venv .venv-build
 if errorlevel 1 goto :failed
 .venv-build\Scripts\python -m pip install -r requirements-build.txt
 if errorlevel 1 goto :failed

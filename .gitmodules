@@ -1,0 +1,3 @@
+[submodule "Vibe_UR_Graph_generator"]
+	path = Vibe_UR_Graph_generator
+	url = https://github.com/apexmotion-sandbox/Vibe_UR_Graph_generator.git

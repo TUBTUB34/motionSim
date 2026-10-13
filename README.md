@@ -66,6 +66,8 @@ executable outside the source tree when distributing it. Builds are unsigned.
 The build runs an offline smoke check of the packaged parser, chart and robot
 renderer. You can repeat it with `URMotionStudio.exe --smoke-test` (exit code 0
 means success). It never connects to a robot.
+The desktop log parser is included in `log_parser.py`; no separate
+`Vibe_UR_Graph_generator` checkout is required to run or package the log page.
 
 Alternatively, run the repository's **Windows desktop executable** workflow from
 GitHub Actions and download its artifact. It runs mocked desktop/simulator tests

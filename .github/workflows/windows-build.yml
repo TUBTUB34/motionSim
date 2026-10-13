@@ -15,8 +15,6 @@ jobs:
         env:
           MOTIONSIM_UI_TESTS: '1'
         run: python -m unittest discover -s tests
-      - name: Test original log parser
-        run: python -m unittest discover -s Vibe_UR_Graph_generator -p test_graph_generator.py
       - run: python -m PyInstaller --noconfirm --clean MotionStudio.spec
       - name: Smoke test the standalone executable
         shell: pwsh

@@ -4,8 +4,7 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from pathlib import Path
 
-from Vibe_UR_Graph_generator.graph_generator import JOINTS, read_events
-from Vibe_UR_Graph_generator.joint_diagnostics import summarize
+from log_parser import JOINTS, read_events, summarize
 
 MAX_LOG_BYTES = 64 * 1024 * 1024
 
