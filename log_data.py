@@ -2,6 +2,7 @@
 from collections import Counter
 from dataclasses import dataclass
 from datetime import date, timedelta
+from itertools import accumulate
 from pathlib import Path
 
 from log_parser import JOINTS, read_events, summarize
@@ -60,8 +61,8 @@ def select_events(events, joint="All joints", code="All codes", category="All in
             and (not start or e['date'] >= start) and (not end or e['date'] <= end)]
 
 
-def chart_series(events, period="Day", start="", end="", split_code=False):
-    """Limit chart complexity without dropping counts; return actual bucket width."""
+def chart_series(events, period="Day", start="", end="", split_code=False, aggregate=False):
+    """Bucket filtered incidents, optionally accumulating each series over time."""
     if not events:
         return [], {}, period
     first = date.fromisoformat(start or min(e['date'] for e in events))
@@ -88,6 +89,13 @@ def chart_series(events, period="Day", start="", end="", split_code=False):
         label = 'Calendar weeks · Monday' if period == 'Week' and step == 7 else f'{step}-day bins'
     counts = Counter((bucket(date.fromisoformat(e['date'])),
                       e['joint'] + (" · " + e['code'] if split_code else "")) for e in events)
+    series = _bounded_series(counts, len(labels))
+    if aggregate:
+        series = {name: list(accumulate(values)) for name, values in series.items()}
+    return labels, series, label
+
+
+def _bounded_series(counts, length):
     names = sorted({name for _, name in counts})
     # Keep every incident but combine long tails into a labeled series.
     if len(names) > 18:
@@ -99,5 +107,4 @@ def chart_series(events, period="Day", start="", end="", split_code=False):
         for (bucket, name), count in counts.items():
             reduced[bucket, name if name in keep else "Other series"] += count
         counts, names = reduced, sorted(keep) + ["Other series"]
-    series = {name: [counts[i, name] for i in range(len(labels))] for name in names}
-    return labels, series, label
+    return {name: [counts[i, name] for i in range(length)] for name in names}

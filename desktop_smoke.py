@@ -19,6 +19,9 @@ def check(app):
         window.set_data(load_log(path))
         app.root.update()
         assert len(window.selected) == 1, 'Bundled parser did not produce an incident'
+        window.aggregate.set(True)
+        window.refresh()
+        assert sum(bar.get_height() for bar in window.axes.patches) == 1, 'Aggregate chart lost incidents'
         window.figure.savefig(Path(folder) / 'chart.png')
         for model in MODELS:
             assert len(load_robot_mesh(model)) == 7, f'Bundled mesh missing: {model}'

@@ -3,7 +3,9 @@ from dataclasses import dataclass, field
 from ipaddress import ip_address
 from pathlib import Path, PurePosixPath
 import errno
+import os
 import queue
+import shutil
 import tempfile
 import threading
 import time
@@ -32,14 +34,15 @@ class LogConnection:
         except ValueError:
             raise ValueError("Enter a valid robot IP address.") from None
         if not self.username.strip() or not self.password:
-            raise ValueError("Enter an SSH username and password to fetch logs.")
+            raise ValueError("Enter an SSH username and password to connect to the robot.")
         if not self.path.startswith('/') or any(c in self.path for c in '\x00\r\n'):
             raise ValueError("Enter an absolute robot log path.")
 
 
 class LogJob:
-    def __init__(self, *, path=None, connection=None, client_factory=paramiko.SSHClient, trust_path=None):
+    def __init__(self, *, path=None, connection=None, save_path=None, client_factory=paramiko.SSHClient, trust_path=None):
         self.path, self.connection = path, connection
+        self.save_path = Path(save_path) if save_path else None
         self.client_factory = client_factory
         self.trust_path = Path(trust_path) if trust_path is not None else known_hosts_path()
         self.events = queue.Queue()
@@ -69,7 +72,8 @@ class LogJob:
                 return question.accepted
         return False
 
-    def download(self, destination):
+    def connect(self):
+        """Open a verified SSH connection shared by logs and robot backups."""
         settings = self.connection
         self.check_cancel()
         client = self.client = self.client_factory()
@@ -104,6 +108,11 @@ class LogJob:
             except OSError as save_error:
                 raise OSError(f'Could not update SSH trust file {self.trust_path}: {save_error}') from None
         self.check_cancel()
+        return client
+
+    def download(self, destination):
+        settings = self.connection
+        client = self.connect()
         with client.open_sftp() as sftp:
             # Channel reads time out only while waiting for incoming data. Do not
             # impose a total duration limit on an actively progressing download.
@@ -162,6 +171,31 @@ class LogJob:
                         raise
             return paths, missing_backup
 
+    def save_downloads(self, paths):
+        """Stage the original log bytes before replacing the chosen local files."""
+        destinations = [self.save_path.with_suffix('.bak'), self.save_path] if len(paths) == 2 else [self.save_path]
+        if len(set(destinations)) != len(destinations):
+            raise ValueError('Choose a .txt filename to save both log files.')
+        if len(paths) == 1 and self.save_path.with_suffix('.bak').exists():
+            raise ValueError('Choose a different filename: an older .bak already exists here but the robot has no backup log.')
+        staged = []
+        try:
+            for source, destination in zip(paths, destinations):
+                self.check_cancel()
+                with tempfile.NamedTemporaryFile(dir=destination.parent, prefix='.ur-log-', delete=False) as stream:
+                    staged.append((Path(stream.name), destination))
+                    with source.open('rb') as original:
+                        shutil.copyfileobj(original, stream)
+                    stream.flush()
+                    os.fsync(stream.fileno())
+            self.check_cancel()
+            for temporary, destination in staged:
+                os.replace(temporary, destination)
+            return destinations
+        finally:
+            for temporary, _ in staged:
+                temporary.unlink(missing_ok=True)
+
     def run(self):
         try:
             with tempfile.TemporaryDirectory(prefix='ur-log-') as folder:
@@ -176,6 +210,13 @@ class LogJob:
                     result = load_logs(paths, source, self.check_cancel)
                     if missing_backup:
                         result.metadata['warning'] = 'Backup not found · Current log only'
+                    if self.save_path:
+                        try:
+                            saved = self.save_downloads(paths)
+                            result.metadata['saved_logs'] = [str(path) for path in saved]
+                        except (OSError, ValueError) as error:
+                            self.check_cancel()
+                            result.metadata['save_error'] = str(error).replace(self.connection.password, '[redacted]')
                 else:
                     result = load_log(path, check_cancel=self.check_cancel)
                 self.check_cancel()

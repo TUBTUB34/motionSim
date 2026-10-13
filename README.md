@@ -15,7 +15,12 @@ behavior are retained.
    `/root/log_history.txt`, matching the [UR service manual](https://www.universal-robots.com/manuals/EN/HTML/SW5_22/Content/prod-serv-man/E-series/serv-man-SD-data.htm);
    change it for your controller if necessary.
    SSH/SFTP access must be enabled and reachable on port 22.
-4. Click **Fetch log & graph** and verify the displayed SSH host fingerprint.
+4. Click **Fetch log & graph**. Choose whether to also save the downloaded logs
+   on your PC. If you choose yes, a save dialog lets you name the `.txt` file;
+   the matching `.bak` is saved beside it when available. Declining or cancelling
+   the save dialog still fetches and graphs the logs. The chosen folder is
+   remembered until you exit the application and is also used for robot backups.
+   Verify the displayed SSH host fingerprint.
    The app retrieves both `log_history.bak` and `log_history.txt` from that folder,
    reads the older backup first, and combines them into one timeline. Overlapping
    incidents are counted once while distinct robot sessions remain separate.
@@ -25,11 +30,18 @@ behavior are retained.
    are removed after parsing. If a different robot reuses an IP, a popup shows the
    old and new SSH fingerprints. Accepting replaces that IP's saved key after a
    successful reconnection; declining leaves it unchanged. Other hosts are kept.
+   A local save failure is reported without discarding the loaded graph.
    This uses the current user's `.ssh/known_hosts`: the Windows profile when run
    on Windows, or the Linux home directory when run in WSL. Those stores are separate.
 5. Choose joints, incident types, codes and optional `YYYY-MM-DD` dates. Switch
    among bar, line and scatter charts, with daily, calendar-week or calendar-month
-   buckets. The toolbar supports zoom, pan and saving a chart image.
+   buckets. Check **Aggregate** to show a running total over time for each joint:
+   5 incidents on one day followed by 10 the next plots 5, then 15. Uncheck it to
+   return to counts for each day, week or month. Both modes work with bar, line
+   and scatter charts. Totals start within the selected date range and respect
+   the joint, incident-type and code filters; **Separate codes** keeps a running
+   total for each joint/code series. The toolbar
+   supports zoom, pan and saving a chart image.
 
 **Open local log…** supports offline `.txt`, `.bak` and `.log` files in the original UR
 log-history format. Selecting a `.txt` or `.bak` automatically includes its matching
@@ -38,8 +50,9 @@ export includes all filtered incidents. **Joint overview** summarizes the full
 loaded log, independently of chart filters. Closing the log window retains its
 data until you exit the application. An unsuccessful load retains the previous log.
 
-The original graph generator's parser, incident deduplication, monitored codes and
-joint diagnostic summaries are reused. Counts represent monitored joint incidents,
+The parser, incident deduplication, monitored codes and joint diagnostic summaries
+are maintained in this repository's `log_parser.py`, with chart aggregation in
+`log_data.py`. Counts represent monitored joint incidents,
 not all controller messages or failure predictions. Missing joint mappings and
 malformed records are reported. Downloads/local files are limited to 64 MiB each (128 MiB per pair);
 chart bins widen beyond 366 periods, and more than 18 code series are combined
@@ -49,6 +62,30 @@ file, transferred/total MiB and download speed. Downloads have no overall time
 limit while data is arriving; a stalled read times out after 60 seconds without
 incoming data. Initial connection/authentication timeouts remain separate.
 Cancellation closes the connection. No robot credentials are stored on disk.
+
+## Robot backups
+
+In **Logs & graphs**, enter the robot's SSH credentials and click **Make backup…**.
+This works without loading logs or connecting the simulator. The app runs
+`tar -P -cf backup.tar /programs /data/apps`, using a unique private temporary
+directory on the robot so an existing backup is not overwritten. The uncompressed
+archive includes absolute paths, as requested by `-P`.
+
+Once creation succeeds, choose where to save `backup.tar` on your PC. If you
+already selected a folder for logs or a previous backup in this session, the
+backup saves there automatically. Existing archives are preserved by adding a
+unique suffix to the new backup's name when needed. Download
+progress appears in the status bar. The app checks the downloaded byte count,
+flushes the file to disk and replaces the chosen destination only after the
+complete download. It then removes its archive and temporary directory from the
+robot. Backups have no log-file size limit; both devices need space for the archive.
+
+Cancelling the save dialog, an interrupted transfer or a local save failure keeps
+the robot archive and any existing PC backup. The status shows the remote path
+for manual recovery or cleanup; an archive interrupted during creation may be
+incomplete. If remote cleanup fails after saving, the status confirms the local
+save and identifies the remote location to check. SSH host verification is shared
+with log downloads, and credentials stay in memory.
 
 ## Build a standalone Windows executable
 
@@ -67,7 +104,9 @@ The build runs an offline smoke check of the packaged parser, chart and robot
 renderer. You can repeat it with `URMotionStudio.exe --smoke-test` (exit code 0
 means success). It never connects to a robot.
 The desktop log parser is included in `log_parser.py`; no separate
-`Vibe_UR_Graph_generator` checkout is required to run or package the log page.
+graph-generator checkout or Git submodule is required to run, test or package the
+log page. The retired `Vibe_UR_Graph_generator/` directory is ignored if present,
+so pre-existing local edits can be kept without maintaining a second repository.
 
 Alternatively, run the repository's **Windows desktop executable** workflow from
 GitHub Actions and download its artifact. It runs mocked desktop/simulator tests
@@ -293,7 +332,7 @@ calibration, so the predicted and measured TCP positions may differ.
 ## Verification
 
 ```bash
-python -m unittest discover -v
+python -m unittest discover -s tests -v
 # Also exercise a real Tk window against a loopback mock RTDE robot:
 MOTIONSIM_UI_TESTS=1 python -m unittest tests.test_ui -v
 ```

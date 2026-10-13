@@ -14,6 +14,79 @@ def line(code='C153A0:6', day='2026-04-01', uptime='1s'):
 
 
 class LogTests(unittest.TestCase):
+    def test_fetched_logs_can_be_saved_as_original_bytes(self):
+        content = line().encode()
+        job, _, _ = self.make_job(content)
+        with tempfile.TemporaryDirectory() as folder:
+            job.save_path = Path(folder) / 'chosen.txt'
+            job.run()
+            self.assertEqual(job.save_path.read_bytes(), content)
+            self.assertEqual(job.save_path.with_suffix('.bak').read_bytes(), content)
+            kind, data = self.results(job)[-1]
+            self.assertEqual(kind, 'loaded')
+            self.assertEqual(len(data.metadata['saved_logs']), 2)
+            self.assertEqual(len(list(Path(folder).iterdir())), 2)
+
+    def test_log_save_failure_still_loads_graph(self):
+        job, _, _ = self.make_job(line().encode())
+        with tempfile.TemporaryDirectory() as folder:
+            job.save_path = Path(folder) / 'missing' / 'chosen.txt'
+            job.run()
+        kind, data = self.results(job)[-1]
+        self.assertEqual(kind, 'loaded')
+        self.assertTrue(data.metadata['save_error'])
+        self.assertEqual(len(data.events), 1)
+
+    def test_missing_remote_backup_does_not_mix_with_old_local_backup(self):
+        with tempfile.TemporaryDirectory() as folder:
+            destination = Path(folder) / 'chosen.txt'
+            backup = destination.with_suffix('.bak')
+            backup.write_bytes(b'old backup')
+            source = Path(folder) / 'download.txt'
+            source.write_bytes(b'new log')
+            job = LogJob(save_path=destination)
+            with self.assertRaisesRegex(ValueError, 'older .bak'):
+                job.save_downloads([source])
+            self.assertEqual(backup.read_bytes(), b'old backup')
+            self.assertFalse(destination.exists())
+
+    def test_aggregate_totals_respect_filters_and_separate_codes(self):
+        events = [dict(date=day, joint=joint, code=code, category='Collision')
+                  for day, joint, code in [('2026-04-01', 'Base', 'C157A0'),
+                                           ('2026-04-02', 'Base', 'C157A0'),
+                                           ('2026-04-02', 'Shoulder', 'C157A1')]]
+        labels, series, label = chart_series(events, aggregate=True)
+        self.assertEqual([str(day) for day in labels], ['2026-04-01', '2026-04-02'])
+        self.assertEqual(series['Base'], [1, 2])
+        self.assertEqual(series['Shoulder'], [0, 1])
+        selected = select_events(events, start='2026-04-02', joint='Base')
+        _, series, _ = chart_series(selected, split_code=True, aggregate=True)
+        self.assertEqual(series, {'Base · C157A0': [1]})
+        self.assertEqual(chart_series([], aggregate=True), ([], {}, 'Day'))
+        many_codes = [dict(date='2026-04-01', joint='Base', code=str(n)) for n in range(30)]
+        _, series, _ = chart_series(many_codes, split_code=True, aggregate=True)
+        self.assertEqual(len(series), 18)
+        self.assertEqual(sum(sum(counts) for counts in series.values()), 30)
+
+    def test_aggregate_is_running_total_and_carries_across_empty_days(self):
+        events = [dict(date=day, joint='Base', code='C153A0')
+                  for day, count in [('2026-04-01', 5), ('2026-04-02', 10)]
+                  for _ in range(count)]
+        _, daily, _ = chart_series(events, end='2026-04-03')
+        _, cumulative, _ = chart_series(events, end='2026-04-03', aggregate=True)
+        self.assertEqual(daily['Base'], [5, 10, 0])
+        self.assertEqual(cumulative['Base'], [5, 15, 15])
+        for period in ('Week', 'Month'):
+            with self.subTest(period=period):
+                _, counts, _ = chart_series(events, period, end='2026-06-01', aggregate=True)
+                self.assertTrue(all(value == 15 for value in counts['Base']))
+
+    def test_repeated_undated_session_headers_keep_distinct_incidents(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'log.txt'
+            path.write_text(('******** Log start\n' + line()) * 2)
+            self.assertEqual(len(load_log(path).events), 2)
+
     def test_parser_cancellation_propagates(self):
         from log_parser import read_events
         with tempfile.TemporaryDirectory() as folder:

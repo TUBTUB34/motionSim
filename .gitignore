@@ -4,3 +4,5 @@ __pycache__/
 .venv-build/
 build/
 dist/
+# Retired checkout: preserve local edits without maintaining a second repository.
+Vibe_UR_Graph_generator/

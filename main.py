@@ -64,7 +64,7 @@ class SimulatorApp:
         self.model_details = tk.StringVar(value=model_summary(self.model.get()))
         self.model.trace_add('write', lambda *_: self.model_details.set(model_summary(self.model.get())))
         self.view_frame = tk.StringVar(value=VIEW_FRAMES[0])
-        self.display_options = {key: tk.BooleanVar(value=True) for key in DISPLAY_OPTIONS}
+        self.display_options = {key: tk.BooleanVar(value=(key == "grid")) for key in DISPLAY_OPTIONS}
         self.tool = tk.StringVar(value="None")
         self.tool_tcp_source = tk.StringVar(value="Installation TCP")
         self.gripper_opening = tk.DoubleVar(value=.5)

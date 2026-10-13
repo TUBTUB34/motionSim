@@ -1,6 +1,8 @@
 """Native desktop log analysis; charts never launch a browser."""
 import csv
 import queue
+from pathlib import Path
+from uuid import uuid4
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 
@@ -10,6 +12,7 @@ from matplotlib.ticker import MaxNLocator
 
 from log_data import JOINTS, chart_series, select_events
 from log_transfer import DEFAULT_LOG_PATH, LogConnection, LogJob
+from backup_transfer import BackupJob
 from ui_theme import BACKGROUND
 
 COLORS = ('#187eab', '#c27c22', '#409580', '#995a9c', '#db6854', '#596eab')
@@ -24,6 +27,7 @@ class LogWindow(tk.Toplevel):
         self.geometry('1240x850')
         self.minsize(1060, 740)
         self.job = None
+        self.save_directory = None
         self.data = None
         self.selected = []
         self.closed = False
@@ -41,6 +45,7 @@ class LogWindow(tk.Toplevel):
         self.period = tk.StringVar(value='Day')
         self.chart_kind = tk.StringVar(value='Bar')
         self.split_code = tk.BooleanVar()
+        self.aggregate = tk.BooleanVar(value=False)
         self.start_date = tk.StringVar()
         self.end_date = tk.StringVar()
         self.columnconfigure(1, weight=1)
@@ -65,6 +70,8 @@ class LogWindow(tk.Toplevel):
         self.fetch_button.pack(fill='x', pady=(4, 8))
         self.open_button = ttk.Button(sidebar, text='Open local log…', command=self.open_file)
         self.open_button.pack(fill='x')
+        self.backup_button = ttk.Button(sidebar, text='Make backup…', command=self.make_backup)
+        self.backup_button.pack(fill='x', pady=(8, 0))
         activity = ttk.Frame(sidebar)
         activity.pack(fill='x', pady=8)
         self.cancel_button = ttk.Button(activity, text='Cancel', command=self.cancel, state='disabled')
@@ -119,6 +126,7 @@ class LogWindow(tk.Toplevel):
             combo.pack(side='left', padx=(0, 8))
             combo.bind('<<ComboboxSelected>>', self.refresh)
         ttk.Checkbutton(options, text='Separate codes', variable=self.split_code, command=self.refresh).pack(side='left')
+        ttk.Checkbutton(options, text='Aggregate', variable=self.aggregate, command=self.refresh).pack(side='left', padx=(8, 0))
         self.figure = Figure(figsize=(7, 4), dpi=100, facecolor='#ffffff', layout='constrained')
         self.axes = self.figure.add_subplot()
         self.canvas = FigureCanvasTkAgg(self.figure, master=chart)
@@ -179,7 +187,33 @@ class LogWindow(tk.Toplevel):
         except ValueError as error:
             self.status.set(str(error))
             return
-        self.begin(LogJob(connection=settings))
+        save_path = None
+        if messagebox.askyesno('Save robot logs?', 'Would you also like to save the downloaded log files on this PC?', parent=self):
+            save_path = filedialog.asksaveasfilename(
+                parent=self, title='Save robot logs', initialfile='log_history.txt',
+                initialdir=str(self.save_directory) if self.save_directory else None,
+                defaultextension='.txt', filetypes=[('Robot log', '*.txt')]) or None
+            if save_path:
+                partner = Path(save_path).with_suffix('.bak')
+                if partner == Path(save_path):
+                    self.status.set('Choose a .txt filename to save both log files.')
+                    return
+                if partner.exists() and not messagebox.askyesno(
+                        'Replace saved backup log?', f'Also replace {partner} if the robot has a backup log?',
+                        parent=self, default='no'):
+                    return
+                self.save_directory = Path(save_path).parent
+        self.begin(LogJob(connection=settings, save_path=save_path))
+
+    def make_backup(self):
+        if self.job:
+            return
+        try:
+            settings = LogConnection(self.ip.get().strip(), self.username.get().strip(), self.password.get())
+        except ValueError as error:
+            self.status.set(str(error))
+            return
+        self.begin(BackupJob(connection=settings))
 
     def open_file(self):
         if self.job:
@@ -194,6 +228,7 @@ class LogWindow(tk.Toplevel):
         self.status.set('Starting…')
         self.fetch_button.configure(state='disabled')
         self.open_button.configure(state='disabled')
+        self.backup_button.configure(state='disabled')
         self.cancel_button.configure(state='normal')
         self.progress.start(12)
         job.start()
@@ -209,6 +244,7 @@ class LogWindow(tk.Toplevel):
         self.progress.stop()
         self.fetch_button.configure(state='normal')
         self.open_button.configure(state='normal')
+        self.backup_button.configure(state='normal')
         self.cancel_button.configure(state='disabled')
 
     def poll(self):
@@ -227,6 +263,26 @@ class LogWindow(tk.Toplevel):
                                   f'{value.hostname}\n\n{value.fingerprint}\n\nVerify this fingerprint with your robot administrator. Trust for this connection?')
                         value.accepted = messagebox.askyesno(title, prompt, parent=self, default='no')
                     value.answered.set()
+                elif kind == 'backup_destination':
+                    try:
+                        if not job.stopped.is_set():
+                            if self.save_directory:
+                                destination = self.save_directory / 'backup.tar'
+                                while destination.exists():
+                                    destination = self.save_directory / f'backup-{uuid4().hex[:8]}.tar'
+                                value.path = str(destination)
+                            else:
+                                value.path = filedialog.asksaveasfilename(
+                                    parent=self, title='Save robot backup', initialfile='backup.tar',
+                                    defaultextension='.tar', filetypes=[('Tar archive', '*.tar')]) or None
+                                if value.path:
+                                    self.save_directory = Path(value.path).parent
+                    finally:
+                        value.answered.set()
+                elif kind == 'backup_finished':
+                    self.finish()
+                    self.status.set(value)
+                    break
                 elif kind in ('loaded', 'error', 'cancelled'):
                     cancelled = job.stopped.is_set()
                     self.finish()
@@ -236,6 +292,10 @@ class LogWindow(tk.Toplevel):
                         self.status.set('Log not loaded · ' + value)
                     else:
                         self.set_data(value)
+                        if value.metadata.get('save_error'):
+                            self.status.set('Graph loaded · Could not save logs: ' + value.metadata['save_error'])
+                        elif value.metadata.get('saved_logs'):
+                            self.status.set('Graph loaded · Saved logs: ' + ' + '.join(value.metadata['saved_logs']))
                     break
                 elif kind == 'status' and not job.stopped.is_set():
                     self.status.set(value)
@@ -292,7 +352,8 @@ class LogWindow(tk.Toplevel):
         else:
             axes.set_axis_on()
             labels, series, period = chart_series(events, self.period.get(), self.start_date.get().strip(),
-                                                  self.end_date.get().strip(), self.split_code.get())
+                                                  self.end_date.get().strip(), self.split_code.get(),
+                                                  aggregate=self.aggregate.get())
             x = list(range(len(labels)))
             bottom = [0] * len(labels)
             for index, (name, counts) in enumerate(series.items()):
@@ -309,9 +370,10 @@ class LogWindow(tk.Toplevel):
                 else:
                     axes.scatter(x, counts, color=color, label=name, s=18)
             ticks = list(range(0, len(labels), max(1, (len(labels) + 6) // 7)))
-            axes.set_xticks(ticks, [labels[i].isoformat() for i in ticks], rotation=15, ha='right', fontsize=8)
-            axes.set_ylabel('Incidents', color='#536a7b')
-            axes.set_title(f'Joint incidents · {period}', loc='left', fontsize=11, color='#23394b')
+            axes.set_xticks(ticks, [str(labels[i]) for i in ticks], rotation=15, ha='right', fontsize=8)
+            axes.set_ylabel('Cumulative incidents' if self.aggregate.get() else 'Incidents', color='#536a7b')
+            title = 'Cumulative joint incidents' if self.aggregate.get() else 'Joint incidents'
+            axes.set_title(f'{title} · {period}', loc='left', fontsize=11, color='#23394b')
             axes.yaxis.set_major_locator(MaxNLocator(integer=True))
             axes.set_ylim(bottom=0)
             axes.grid(axis='y', alpha=.18)

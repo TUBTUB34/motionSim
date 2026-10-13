@@ -69,17 +69,29 @@ def read_events(paths, metadata: dict | None = None, check_cancel=None) -> tuple
     seen = set()
     session = 0
     sessions = {}
+    next_session = 0
     skipped = 0
     if isinstance(paths, (str, Path)):
         paths = [paths]
-    for path in paths:
+    for file_index, path in enumerate(paths):
+        occurrences = Counter()
         with Path(path).open("r", encoding="utf-8", errors="replace") as stream:
             for line in stream:
                 if check_cancel:
                     check_cancel()
                 if line.startswith("******** Log start"):
                     header = line.strip()
-                    session = sessions.setdefault(header, len(sessions) + 1)
+                    occurrences[header] += 1
+                    key = (header, occurrences[header])
+                    previous = sessions.get(key)
+                    # Match dated rotation headers, but never merge repeated
+                    # reboot markers within one file or undated sessions.
+                    if '(' in header and previous and previous[0] < file_index:
+                        session = previous[1]
+                    else:
+                        next_session += 1
+                        session = next_session
+                        sessions[key] = (file_index, session)
                     continue
                 if " :: " not in line:
                     continue

@@ -45,7 +45,7 @@ class RobotView(tk.Canvas):
         self.tool = "None"
         self.tool_tcp_source = "Tool preset"
         self.gripper_opening = .5
-        self.visibility = dict.fromkeys(DISPLAY_OPTIONS, True)
+        self.visibility = {key: key == "grid" for key in DISPLAY_OPTIONS}
         self.view_frame = VIEW_FRAMES[0]
         self.tcp_view_reference = None
         self.sample = None
