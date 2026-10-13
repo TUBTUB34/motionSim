@@ -3,6 +3,7 @@ from pathlib import Path
 import sys
 from zipfile import ZipFile
 from PyInstaller.utils.hooks import collect_data_files
+from PyInstaller.config import CONF
 
 root = Path(SPECPATH)
 for module in ('log_parser.py', 'log_data.py', 'log_view.py'):
@@ -18,7 +19,7 @@ for library, destination in (('tcl', '_tcl_data'), ('tk', '_tk_data')):
                 relative = Path(member)
                 if (not member.endswith('/') and relative.parts[0] == f'{library}_library'
                         and '..' not in relative.parts and not relative.is_absolute()):
-                    source = root / 'build' / 'tk-runtime' / relative
+                    source = Path(CONF['workpath']) / 'tk-runtime' / relative
                     source.parent.mkdir(parents=True, exist_ok=True)
                     source.write_bytes(bundle.read(member))
                     tk_data.append((str(source), str(Path(destination) / Path(*relative.parts[1:]).parent)))

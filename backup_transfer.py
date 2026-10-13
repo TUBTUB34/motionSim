@@ -1,5 +1,6 @@
 """Create a robot archive and remove it only after an atomic local save."""
 from dataclasses import dataclass, field
+import errno
 import os
 from pathlib import Path
 import shlex
@@ -22,6 +23,7 @@ class BackupJob(LogJob):
         super().__init__(**kwargs)
         self.remote_dir = f'/tmp/ur-backup-{uuid4().hex}'
         self.remote_path = self.remote_dir + '/backup.tar'
+        self.skipped_apps = False
 
     def check_cancel(self):
         if self.stopped.is_set():
@@ -35,13 +37,14 @@ class BackupJob(LogJob):
         self.check_cancel()
         return Path(question.path) if question.path else None
 
-    def create_archive(self, client):
-        self.events.put(('status', 'Creating backup of /programs and /data/apps on robot…'))
+    def create_archive(self, client, sources=('/programs', '/data/apps')):
+        self.events.put(('status', 'Creating backup of ' + ' and '.join(sources) + ' on robot…'))
         channel = client.get_transport().open_session(timeout=5)
         output = bytearray()
         try:
             channel.set_combine_stderr(True)
-            channel.exec_command(f'tar -P -cf {shlex.quote(self.remote_path)} /programs /data/apps')
+            channel.exec_command(f'tar -P -cf {shlex.quote(self.remote_path)} '
+                                 + ' '.join(shlex.quote(path) for path in sources))
             while True:
                 self.check_cancel()
                 if channel.recv_ready():
@@ -105,9 +108,21 @@ class BackupJob(LogJob):
             with client.open_sftp() as sftp:
                 sftp.get_channel().settimeout(DOWNLOAD_IDLE_TIMEOUT)
                 self.check_cancel()
+                # Programs are required; apps are absent on some controllers.
+                sftp.stat('/programs')
+                sources = ['/programs']
+                try:
+                    sftp.stat('/data/apps')
+                except OSError as error:
+                    if error.errno != errno.ENOENT:
+                        raise
+                    self.skipped_apps = True
+                else:
+                    sources.append('/data/apps')
+                self.check_cancel()
                 sftp.mkdir(self.remote_dir, mode=0o700)
                 created = True
-                self.create_archive(client)
+                self.create_archive(client, sources)
                 self.check_cancel()
                 size = sftp.stat(self.remote_path).st_size
                 if size <= 0:
@@ -122,6 +137,8 @@ class BackupJob(LogJob):
                 sftp.remove(self.remote_path)
                 sftp.rmdir(self.remote_dir)
                 message = f'Saved backup to {saved} · Robot copy removed'
+                if self.skipped_apps:
+                    message += ' · /data/apps absent; backed up /programs only'
         except Exception as error:
             detail = ('Backup cancelled.' if self.stopped.is_set() else str(error) or type(error).__name__)
             message = f'Saved backup to {saved}, but robot cleanup failed: {detail}' if saved else f'Backup not saved · {detail}'

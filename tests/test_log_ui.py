@@ -10,6 +10,23 @@ from tests.test_logs import line
 
 
 class HeadlessLogUITests(unittest.TestCase):
+    def test_missing_password_shows_validation_before_starting_worker(self):
+        from unittest.mock import Mock
+        from log_view import LogWindow
+        for action, title in ((LogWindow.fetch, 'Cannot fetch robot logs'),
+                              (LogWindow.make_backup, 'Cannot make robot backup')):
+            with self.subTest(action=action.__name__):
+                window = Mock(job=None)
+                window.ip.get.return_value = '127.0.0.1'
+                window.username.get.return_value = 'root'
+                window.password.get.return_value = ''
+                window.remote_path.get.return_value = '/root/log_history.txt'
+                with patch('log_view.messagebox.showerror') as popup:
+                    action(window)
+                popup.assert_called_once_with(
+                    title, 'Enter an SSH username and password to connect to the robot.', parent=window)
+                window.begin.assert_not_called()
+
     def test_aggregate_checkbox_toggles_running_total_without_changing_dates(self):
         from types import SimpleNamespace
         from unittest.mock import Mock

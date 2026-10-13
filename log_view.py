@@ -186,6 +186,7 @@ class LogWindow(tk.Toplevel):
                                      self.password.get(), self.remote_path.get().strip())
         except ValueError as error:
             self.status.set(str(error))
+            messagebox.showerror('Cannot fetch robot logs', str(error), parent=self)
             return
         save_path = None
         if messagebox.askyesno('Save robot logs?', 'Would you also like to save the downloaded log files on this PC?', parent=self):
@@ -212,6 +213,7 @@ class LogWindow(tk.Toplevel):
             settings = LogConnection(self.ip.get().strip(), self.username.get().strip(), self.password.get())
         except ValueError as error:
             self.status.set(str(error))
+            messagebox.showerror('Cannot make robot backup', str(error), parent=self)
             return
         self.begin(BackupJob(connection=settings))
 

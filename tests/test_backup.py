@@ -1,5 +1,6 @@
 """Offline backup lifecycle checks; never contact a robot."""
 import io
+import errno
 from pathlib import Path
 import tempfile
 import unittest
@@ -50,6 +51,37 @@ class BackupTests(unittest.TestCase):
         sftp.remove.assert_not_called()
         self.assertIn('cancelled', self.message(job).lower())
         self.assertIn(job.remote_path, self.message(job))
+
+    def test_absent_apps_still_saves_programs_before_remote_cleanup(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'backup.tar'
+            job, _, channel, sftp = self.make_job(path)
+            original_stat = sftp.stat.return_value
+            def stat(remote):
+                if remote == '/data/apps':
+                    raise FileNotFoundError(errno.ENOENT, 'No such file')
+                return original_stat
+            sftp.stat.side_effect = stat
+            sftp.remove.side_effect = lambda remote: self.assertEqual(path.read_bytes(), b'archive content')
+            job.run()
+            self.assertTrue(channel.exec_command.call_args.args[0].endswith(' /programs'))
+            self.assertIn('/programs only', self.message(job))
+            sftp.remove.assert_called_once_with(job.remote_path)
+
+    def test_missing_programs_or_unreadable_apps_does_not_create_archive(self):
+        for remote, code in (('/programs', errno.ENOENT), ('/data/apps', errno.EACCES)):
+            with self.subTest(remote=remote):
+                job, _, channel, sftp = self.make_job(None)
+                original_stat = sftp.stat.return_value
+                def stat(path):
+                    if path == remote:
+                        raise OSError(code, 'unavailable')
+                    return original_stat
+                sftp.stat.side_effect = stat
+                job.run()
+                channel.exec_command.assert_not_called()
+                sftp.mkdir.assert_not_called()
+                sftp.remove.assert_not_called()
 
     def test_tar_failure_never_prompts_or_deletes(self):
         job, _, channel, sftp = self.make_job(None)
