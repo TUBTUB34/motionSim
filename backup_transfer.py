@@ -19,7 +19,10 @@ class BackupDestination:
 
 
 class BackupJob(LogJob):
-    def __init__(self, **kwargs):
+    def __init__(self, sources=('/programs', '/data/apps'), **kwargs):
+        self.sources = tuple(sources)
+        if not self.sources or any(path not in ('/programs', '/data/apps') for path in self.sources):
+            raise ValueError('Select programs, apps, or both for the backup.')
         super().__init__(**kwargs)
         self.remote_dir = f'/tmp/ur-backup-{uuid4().hex}'
         self.remote_path = self.remote_dir + '/backup.tar'
@@ -108,17 +111,16 @@ class BackupJob(LogJob):
             with client.open_sftp() as sftp:
                 sftp.get_channel().settimeout(DOWNLOAD_IDLE_TIMEOUT)
                 self.check_cancel()
-                # Programs are required; apps are absent on some controllers.
-                sftp.stat('/programs')
-                sources = ['/programs']
-                try:
-                    sftp.stat('/data/apps')
-                except OSError as error:
-                    if error.errno != errno.ENOENT:
-                        raise
-                    self.skipped_apps = True
-                else:
-                    sources.append('/data/apps')
+                sources = []
+                for source in self.sources:
+                    try:
+                        sftp.stat(source)
+                    except OSError as error:
+                        if source != '/data/apps' or error.errno != errno.ENOENT or '/programs' not in self.sources:
+                            raise
+                        self.skipped_apps = True
+                    else:
+                        sources.append(source)
                 self.check_cancel()
                 sftp.mkdir(self.remote_dir, mode=0o700)
                 created = True

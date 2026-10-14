@@ -12,7 +12,7 @@ from log_transfer import LogConnection
 
 
 class BackupTests(unittest.TestCase):
-    def make_job(self, destination, content=b'archive content'):
+    def make_job(self, destination, content=b'archive content', sources=('/programs', '/data/apps')):
         client = MagicMock()
         channel = client.get_transport.return_value.open_session.return_value
         channel.recv_ready.return_value = False
@@ -21,13 +21,41 @@ class BackupTests(unittest.TestCase):
         sftp = client.open_sftp.return_value.__enter__.return_value
         sftp.stat.return_value.st_size = len(content)
         sftp.open.side_effect = lambda *args: io.BytesIO(content)
-        job = BackupJob(connection=LogConnection('127.0.0.1', 'root', 'secret'),
+        job = BackupJob(sources=sources, connection=LogConnection('127.0.0.1', 'root', 'secret'),
                         client_factory=lambda: client)
         job.choose_destination = MagicMock(return_value=destination)
         return job, client, channel, sftp
 
     def message(self, job):
         return list(job.events.queue)[-1][1]
+
+    def test_single_folder_backup_never_accesses_unselected_folder(self):
+        for source, unselected in (('/programs', '/data/apps'), ('/data/apps', '/programs')):
+            with self.subTest(source=source), tempfile.TemporaryDirectory() as folder:
+                path = Path(folder) / 'backup.tar'
+                job, _, channel, sftp = self.make_job(path, sources=(source,))
+                original_stat = sftp.stat.return_value
+                def stat(remote):
+                    if remote == unselected:
+                        raise AssertionError('Unselected folder accessed')
+                    return original_stat
+                sftp.stat.side_effect = stat
+                job.run()
+                self.assertTrue(channel.exec_command.call_args.args[0].endswith(' ' + source))
+                self.assertEqual(path.read_bytes(), b'archive content')
+                sftp.remove.assert_called_once_with(job.remote_path)
+
+    def test_empty_selection_is_rejected(self):
+        with self.assertRaises(ValueError):
+            BackupJob(sources=())
+
+    def test_missing_apps_only_does_not_create_archive(self):
+        job, _, channel, sftp = self.make_job(None, sources=('/data/apps',))
+        sftp.stat.side_effect = FileNotFoundError(errno.ENOENT, 'No such file')
+        job.run()
+        channel.exec_command.assert_not_called()
+        sftp.mkdir.assert_not_called()
+        job.choose_destination.assert_not_called()
 
     def test_create_save_then_remove_remote(self):
         with tempfile.TemporaryDirectory() as folder:

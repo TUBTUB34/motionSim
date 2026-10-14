@@ -46,6 +46,8 @@ class LogWindow(tk.Toplevel):
         self.chart_kind = tk.StringVar(value='Bar')
         self.split_code = tk.BooleanVar()
         self.aggregate = tk.BooleanVar(value=False)
+        self.backup_programs = tk.BooleanVar(value=True)
+        self.backup_apps = tk.BooleanVar(value=True)
         self.start_date = tk.StringVar()
         self.end_date = tk.StringVar()
         self.columnconfigure(1, weight=1)
@@ -70,6 +72,9 @@ class LogWindow(tk.Toplevel):
         self.fetch_button.pack(fill='x', pady=(4, 8))
         self.open_button = ttk.Button(sidebar, text='Open local log…', command=self.open_file)
         self.open_button.pack(fill='x')
+        ttk.Label(sidebar, text='BACKUP CONTENTS', style='Section.TLabel').pack(anchor='w', pady=(12, 4))
+        ttk.Checkbutton(sidebar, text='Programs (/programs)', variable=self.backup_programs).pack(anchor='w')
+        ttk.Checkbutton(sidebar, text='Apps (/data/apps)', variable=self.backup_apps).pack(anchor='w')
         self.backup_button = ttk.Button(sidebar, text='Make backup…', command=self.make_backup)
         self.backup_button.pack(fill='x', pady=(8, 0))
         activity = ttk.Frame(sidebar)
@@ -211,11 +216,14 @@ class LogWindow(tk.Toplevel):
             return
         try:
             settings = LogConnection(self.ip.get().strip(), self.username.get().strip(), self.password.get())
+            sources = [path for path, selected in (('/programs', self.backup_programs),
+                                                   ('/data/apps', self.backup_apps)) if selected.get()]
+            job = BackupJob(connection=settings, sources=sources)
         except ValueError as error:
             self.status.set(str(error))
             messagebox.showerror('Cannot make robot backup', str(error), parent=self)
             return
-        self.begin(BackupJob(connection=settings))
+        self.begin(job)
 
     def open_file(self):
         if self.job:

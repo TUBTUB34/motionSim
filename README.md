@@ -65,12 +65,14 @@ Cancellation closes the connection. No robot credentials are stored on disk.
 
 ## Robot backups
 
-In **Logs & graphs**, enter the robot's SSH credentials and click **Make backup…**.
+In **Logs & graphs**, enter the robot's SSH credentials, select **Programs (/programs)**,
+**Apps (/data/apps)**, or both under **Backup contents**, and click **Make backup…**.
+Both folders are selected by default; at least one must be selected.
 This works without loading logs or connecting the simulator. The app runs
-`tar -P -cf backup.tar /programs /data/apps`, using a unique private temporary
+`tar -P -cf backup.tar` with the selected folders, using a unique private temporary
 directory on the robot so an existing backup is not overwritten. If `/data/apps`
-does not exist, only `/programs` is archived and the completion message reports
-that omission. Missing `/programs` or permission errors stop the backup. The uncompressed
+does not exist and both folders are selected, only `/programs` is archived and the completion message reports
+that omission. A missing folder selected on its own, missing selected `/programs`, or permission errors stop the backup. The uncompressed
 archive includes absolute paths, as requested by `-P`.
 
 Once creation succeeds, choose where to save `backup.tar` on your PC. If you

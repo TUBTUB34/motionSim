@@ -10,6 +10,28 @@ from tests.test_logs import line
 
 
 class HeadlessLogUITests(unittest.TestCase):
+    def test_backup_selection_is_passed_to_worker(self):
+        from unittest.mock import Mock
+        from log_view import LogWindow
+        for programs, apps in ((True, True), (True, False), (False, True), (False, False)):
+            with self.subTest(programs=programs, apps=apps):
+                window = Mock(job=None)
+                window.ip.get.return_value = '127.0.0.1'
+                window.username.get.return_value = 'root'
+                window.password.get.return_value = 'secret'
+                window.backup_programs.get.return_value = programs
+                window.backup_apps.get.return_value = apps
+                with patch('log_view.messagebox.showerror') as popup:
+                    LogWindow.make_backup(window)
+                if programs or apps:
+                    job = window.begin.call_args.args[0]
+                    self.assertEqual(job.sources, tuple(path for path, selected in
+                        (('/programs', programs), ('/data/apps', apps)) if selected))
+                    popup.assert_not_called()
+                else:
+                    window.begin.assert_not_called()
+                    popup.assert_called_once()
+
     def test_missing_password_shows_validation_before_starting_worker(self):
         from unittest.mock import Mock
         from log_view import LogWindow
