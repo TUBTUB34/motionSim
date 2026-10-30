@@ -1,106 +1,287 @@
-"""Program Check PDF, using the separate white A4 reference report style."""
+"""Readable, grouped Program Check PDFs; analysis values are never recalculated."""
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 import os
+import re
 import tempfile
 from matplotlib.backends.backend_pdf import PdfPages
-from flight_pdf import _Report, INK, MUTED
+from matplotlib.font_manager import FontProperties
+from flight_pdf import _Report, INK, MUTED, LEFT, RIGHT, BOTTOM
 from flight_charts import RENDER_LOCK
 from program_check import REFERENCES, CATEGORIES
 
-NOTE = ('Independent source review by UR Motion Studio. Not a Universal Robots certification or safety validation. '
-        'Runtime behavior, physical setup and application suitability require verification on the applicable robot.')
+NOTE = ('Independent source review. Not a UR certification or safety validation. '
+        'Validate runtime behavior and physical setup on the robot.')
+STATUS = {'Review recommended': 'Needs attention', 'Manual review': 'Needs verification',
+          'Source observation': 'Source value', 'Within guideline': 'Within guideline'}
+ESTIMATE = re.compile(r'Source-definition estimate using (.*?)\. Initialization order, runtime changes and execution are not proven\.', re.S)
+# Shared qualifications appear once in the interpretation section. Numeric
+# values, comparisons and specific caveats stay intact in each result.
+SHARED_TEXT = (
+    'This is not a safety limit or measured acceleration.',
+    'Configured source value only; runtime motion is not certified.',
+    'Source geometry does not prove a skipped waypoint; controller planning and execution require verification.',
+    'First source occurrence; execution order and physical correctness are not proven.',
+    'Additional source occurrence; execution order and physical correctness are not proven.',
+    'Confirm tool plus workpiece mass, centre of gravity and inertia against the real tool; update payload when the workpiece changes.',
+    'Confirm the configured TCP against the actual tool and each tool change.',
+)
 
 
-def _parameter_rows(findings):
-    """Combine identical results while retaining every source line for review."""
+@dataclass(frozen=True)
+class FindingGroup:
+    category: str
+    status: str
+    detail: str
+    estimated: bool
+    assumptions: tuple
+    findings: tuple
+
+    @property
+    def lines(self):
+        return tuple(sorted({finding.line for finding in self.findings if finding.line}))
+
+    @property
+    def references(self):
+        return tuple(sorted({finding.reference + 1 for finding in self.findings}))
+
+
+def group_findings(findings):
+    """Collapse equivalent results, retaining distinct evidence and assumptions.
+
+    Values, units, limits, status and literal/estimate basis are part of identity.
+    A different expression giving the same estimated result retains its own
+    initializer evidence. No numeric rounding or fuzzy text matching is used.
+    """
     grouped = {}
     for finding in findings:
-        grouped.setdefault((finding.status, finding.detail), []).append(finding.line)
-    rows = []
-    for (status, detail), lines in grouped.items():
-        lines = sorted(set(lines))
-        # Bound row height even for programs with thousands of identical checks.
-        for start in range(0, len(lines), 24):
-            rows.append(('Lines ' + ', '.join(map(str, lines[start:start + 24])),
-                         status + ' · ' + detail))
-    return rows
+        assumptions = tuple(dict.fromkeys(' '.join(m.group(1).split()) for m in ESTIMATE.finditer(finding.detail)))
+        detail = ESTIMATE.sub('', finding.detail)
+        for phrase in SHARED_TEXT:
+            detail = detail.replace(phrase, '')
+        detail = ' '.join(detail.split())
+        category = 'Source files' if detail.startswith('No matching generated .script file.') else finding.category
+        key = (category, finding.status, detail, bool(assumptions), bool(finding.line))
+        members, notes = grouped.setdefault(key, ({}, {}))
+        members.setdefault((finding.line, finding.evidence, finding.detail, finding.reference), finding)
+        notes.update(dict.fromkeys(assumptions))
+    return [FindingGroup(category, status, detail, estimated, tuple(notes), tuple(members.values()))
+            for (category, status, detail, estimated, _), (members, notes) in grouped.items()]
+
+
+def line_ranges(lines):
+    """Compress consecutive lines without concealing gaps."""
+    runs = []
+    for number in sorted(set(lines)):
+        if runs and number == runs[-1][1] + 1:
+            runs[-1][1] = number
+        else:
+            runs.append([number, number])
+    return ', '.join(str(first) if first == last else f'{first}–{last}' for first, last in runs)
+
+
+class _ProgramReport(_Report):
+    """Larger text and bounded pagination, isolated from flight-report styling."""
+    section = 'Program review'
+
+    def lines(self, text, width, size=9, weight='normal'):
+        font = FontProperties(family='DejaVu Sans', size=size, weight=weight)
+        def fits(value):
+            return self.renderer.get_text_width_height_descent(value, font, False)[0] <= width
+        result = []
+        for paragraph in str(text).split('\n'):
+            current = ''
+            for word in paragraph.split():
+                if current and not fits(current + ' ' + word):
+                    result.append(current)
+                    current = ''
+                # Binary search keeps very long source paths inexpensive to wrap.
+                while not fits(word) and len(word) > 1:
+                    low, high = 1, len(word)
+                    while low < high:
+                        middle = (low+high+1)//2
+                        if fits(word[:middle]):
+                            low = middle
+                        else:
+                            high = middle-1
+                    result.append(word[:low])
+                    word = word[low:]
+                current = (current + ' ' + word).strip()
+            result.append(current)
+        return result
+
+    def new_page(self, title=None):
+        if title and not title.endswith(' (continued)'):
+            self.section = title
+        super().new_page(title)
+
+    def paragraph(self, text, x=LEFT, width=RIGHT-LEFT, size=10, color=INK, weight='normal'):
+        leading = size * (1.8 if size >= 15 else 1.45)
+        for line in self.lines(text, width, size, weight):
+            if self.y + leading > BOTTOM:
+                self.new_page(self.section + ' (continued)')
+            self.text(x, self.y, line, size, color, weight)
+            self.y += leading
+
+    def heading(self, title):
+        if self.y + 100 > BOTTOM:
+            self.new_page(self.section + ' (continued)')
+        self.paragraph(title, size=15, weight='bold')
+        self.y += 9
+
+    def rows(self, title, rows, label_width=110):
+        if not rows:
+            return
+        if self.y + 75 > BOTTOM:
+            self.new_page(self.section + ' (continued)')
+        self.bar(title)
+        for index, (label, value) in enumerate(rows):
+            left = self.lines(label, label_width-16, 9, 'bold')
+            right = self.lines(value, RIGHT-LEFT-label_width-16, 9.5)
+            count = max(len(left), len(right))
+            offset = 0
+            while offset < count:
+                room = int((BOTTOM-self.y-14) // 14)
+                remaining = count-offset
+                # Keep ordinary rows together; split oversized evidence safely.
+                if room < 1 or (offset == 0 and remaining <= 32 and remaining > room):
+                    self.new_page(self.section + ' (continued)')
+                    self.bar(title + ' (continued)')
+                    room = int((BOTTOM-self.y-14) // 14)
+                take = min(room, remaining)
+                height = take*14+14
+                self.rect(LEFT, self.y, RIGHT-LEFT, height, '#f0f4f5' if index % 2 == 0 else 'white')
+                for lines, x, size, weight in ((left, LEFT+8, 9, 'bold'),
+                                               (right, LEFT+label_width+8, 9.5, 'normal')):
+                    for n, line in enumerate(lines[offset:offset+take]):
+                        self.text(x, self.y+7+n*14, line, size, INK, weight)
+                self.y += height
+                offset += take
+        self.y += 16
+
+
+def _source_label(group):
+    return 'Lines ' + line_ranges(group.lines) if group.lines else 'Program context'
 
 
 def export_program_pdf(review, destination):
+    groups = group_findings(review.findings)
+    issues = [group for group in groups if group.status == 'Review recommended']
+    remaining = [group for group in groups if group.status != 'Review recommended']
+    affected = {line for group in issues for line in group.lines}
+    definitions = dict.fromkeys(note for group in groups for note in group.assumptions)
+    definitions = {note: f'D{index}' for index, note in enumerate(definitions, 1)}
+    definition_lines = {note: set() for note in definitions}
+    for group in groups:
+        for finding in group.findings:
+            for match in ESTIMATE.finditer(finding.detail):
+                if finding.line:
+                    definition_lines[' '.join(match.group(1).split())].add(finding.line)
+
+    def basis(group):
+        refs = 'UR ' + ', '.join(f'[{n}]' for n in group.references)
+        if group.estimated:
+            return 'Source estimate · ' + ', '.join(definitions[note] for note in group.assumptions) + ' · ' + refs
+        return refs
+
     destination = Path(destination)
     fd, temporary = tempfile.mkstemp(suffix='.pdf', dir=destination.parent)
     os.close(fd)
     try:
         with RENDER_LOCK, PdfPages(temporary, metadata={'Title': f'Program Check — {review.pair.name}', 'Author': 'UR Motion Studio'}) as pdf:
-            page = _Report(pdf, review.pair.name, subtitle='PROGRAM CHECK REPORT', note=NOTE)
-            page.new_page('Program Check Report')
-            page.paragraph('Static review of saved program source against published UR guidance. No program was executed and no robot was commanded. Resolvable numeric assignments and expressions are calculated; runtime inputs, execution order and physical correctness are not inferred.', size=10)
-            page.y += 20
-            page.table('PROGRAM SUMMARY', [
-                ('Program', review.metadata.get('name', review.pair.name)),
-                ('Software saved in URP', review.metadata.get('lastSavedIn', 'Unavailable')),
-                ('Guidance profile', review.profile),
-                ('Installation source', review.metadata.get('reviewInstallation', 'Not matched').replace('\\', '/').rsplit('/', 1)[-1]),
-                ('Installation matching', review.metadata.get('reviewInstallationNote', 'No supplied installation context')),
-                ('Script lines / motion calls', f'{review.script_lines:,} lines; ' + ', '.join(f'{review.counts[name]} {name}' for name in ('movej', 'movel', 'movep'))),
-                ('Other motion commands', ', '.join(f'{count} {name}' for name, count in review.counts.items() if name in ('optimovej', 'optimovel', 'movec', 'servoj', 'speedj', 'speedl')) or 'None identified'),
-                ('Payload / TCP source calls', f'{sum(review.counts[n] for n in ("set_payload", "set_target_payload", "set_payload_mass", "set_payload_cog"))} payload; {review.counts["set_tcp"]} TCP'),
+            page = _ProgramReport(pdf, review.pair.name, subtitle='PROGRAM CHECK REPORT', note=NOTE)
+            page.new_page('Program review')
+            page.paragraph(review.metadata.get('name', review.pair.name), size=17, weight='bold')
+            page.y += 12
+            count = len(issues)
+            page.paragraph(f'{count} issue group' + ('' if count == 1 else 's') + f' · {len(affected)} affected source lines',
+                           size=14, weight='bold', color='#9a4300' if issues else INK)
+            page.paragraph('Repeated results are combined below. Every affected line is retained; different values, limits and calculation bases remain separate.', size=10)
+            page.y += 14
+            page.rows('PROGRAM AT A GLANCE', [
+                ('Saved software', review.metadata.get('lastSavedIn', 'Unavailable')),
+                ('Guidance', review.profile),
+                ('Installation', review.metadata.get('reviewInstallation', 'Unavailable — installation settings omitted').replace('\\', '/').rsplit('/', 1)[-1]),
+                ('Source coverage', f'{review.script_lines:,} script lines; ' + ', '.join(f'{n} {name}' for name, n in review.counts.items() if name in ('movej', 'movel', 'movep', 'movec', 'optimovej', 'optimovel', 'speedj', 'speedl', 'servoj'))),
+                ('Needs verification', f'{sum(group.status == "Manual review" for group in remaining)} grouped checks need runtime evidence or additional information'),
                 ('Generated', datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')),
-                ('Overall result', f'{sum(f.status == "Review recommended" for f in review.findings)} flagged source findings; review required'),
-            ])
-            page.card('SCOPE & INTERPRETATION', [
-                ('UR deployment acceleration values are suggested starting points for CB-Series/e-Series, not specifications or safety limits. Confirm the selected profile, physical payload/TCP, controller version and application before acting.', 9, INK, 'normal'),
-                ('Only supplied source is reviewed. Saved installation settings and source-defined constants are reported separately from runtime values. Helpers, branches, URCaps and motion are not executed. Unresolved inputs remain unassessed. Installation safety serialization is not treated as an active velocity specification. Counts exclude labels/comments but include definitions; they do not indicate execution frequency.', 9, MUTED, 'normal'),
-            ])
-            page.new_page('Review checklist')
-            page.table('CHECKLIST', review.checklist, label_width=265)
-            page.card('READ THE RESULTS', [
-                ('Within guideline: a resolvable classic motion acceleration is within the cited starting value. Review recommended: a concrete source value deserves attention. Source observation: a configuration call exists. Manual review: the evidence cannot establish the runtime or physical result.', 9, INK, 'normal'),
-            ])
-            page.new_page('Detailed findings')
-            for category in CATEGORIES:
-                page.reserve(150)
-                page.paragraph(category, size=16, weight='bold')
-                page.y += 12
-                selected = [f for f in review.findings if f.category == category]
-                detailed = selected
-                if category in (CATEGORIES[4], CATEGORIES[5], CATEGORIES[7], CATEGORIES[8]):
-                    detailed = [f for f in selected if not f.line or f.status == 'Review recommended']
-                    compact = [f for f in selected if f.line and f.status != 'Review recommended']
-                    explanation = {
-                        CATEGORIES[4]: 'Resolved accelerations are checked against entered specifications, or UR starting recommendations when the family is confirmed. Duration-based moves and runtime inputs remain unassessed. OptiMove fractions and ServoJ have distinct semantics.',
-                        CATEGORIES[5]: 'Resolved blend radii are compared with known adjacent move distances and radius sums. Geometric warnings do not prove skipped waypoints; motion version and actual execution still matter.',
-                        CATEGORIES[7]: 'Resolved velocities are checked against entered specifications. No generic robot velocity limit is assumed. Source values do not establish measured speed.',
-                        CATEGORIES[8]: 'Distances are unblended translational lengths for resolvable adjacent source targets. Circular moves use arc length. Shared rigid-frame offsets can establish separation. Unknown starts, joint-space paths and uncertain runtime flow remain unassessed.',
-                    }[category]
-                    page.paragraph(explanation, size=9)
-                    page.y += 14
-                else:
-                    compact = []
-                for finding in detailed:
-                    title = finding.status + (f' · Line {finding.line}' if finding.line else '')
-                    parts = [(finding.detail, 9, INK, 'normal')]
-                    if finding.evidence:
-                        evidence = finding.evidence
-                        if len(evidence) > 650:
-                            evidence = evidence[:650] + '… [excerpt shortened; see source line]'
-                        parts.append((evidence, 8, MUTED, 'normal'))
-                    parts.append((f'UR reference [{finding.reference+1}]', 7, MUTED, 'normal'))
-                    page.card(title, parts)
-                if compact:
-                    page.table('SOURCE PARAMETER EVIDENCE · ' + category.upper(),
-                               _parameter_rows(compact), label_width=115)
-            page.new_page('Sources & next steps')
-            page.paragraph('Confirm matching URP/script versions. Review flagged lines in PolyScope, verify physical payload and TCP, and validate motion using the relevant robot/software manuals. Use flight measurements and incident logs to investigate observed behavior separately.', size=10)
-            page.y += 18
+            ], label_width=115)
+            page.heading('Start here')
+            if issues:
+                page.paragraph('Review the grouped issues on the next pages. Each entry gives the comparison, affected script lines and any source-estimate assumptions.')
+            else:
+                page.paragraph('No explicit source-value warnings were found. This does not establish compliance: check the unresolved items and source coverage below.')
+            page.y += 10
+            page.paragraph('Source estimates substitute saved initializers; initialization and runtime values are not proven. UR acceleration recommendations are starting points, not safety limits. Unknown values are not treated as zero or a pass.', size=10)
+
+            if issues:
+                page.new_page('Issues to review')
+                for index, group in enumerate(issues, 1):
+                    example_text = ''
+                    examples = [f for f in group.findings if f.evidence]
+                    if examples:
+                        example = examples[0]
+                        text = example.evidence
+                        if len(text) > 240:
+                            text = text[:240] + '…'
+                        example_text = f'Example at line {example.line}: {text}'
+                    parts = [(f'{index:02d}  {group.category}', 14), (group.detail, 11),
+                             (_source_label(group), 10), (basis(group), 9), (example_text, 9)]
+                    height = 30 + sum(len(page.lines(text, RIGHT-LEFT, size))*size*(1.8 if size >= 15 else 1.45) for text, size in parts if text)
+                    if page.y + height > BOTTOM and height < BOTTOM-185:
+                        page.new_page('Issues to review (continued)')
+                    page.paragraph(f'{index:02d}  {group.category}', size=14, weight='bold')
+                    page.y += 7
+                    page.paragraph(group.detail, size=11)
+                    page.y += 7
+                    page.paragraph(_source_label(group), size=10, weight='bold')
+                    page.paragraph(basis(group), size=9, color=MUTED)
+                    if example_text:
+                        page.paragraph(example_text, size=9, color=MUTED)
+                    page.y += 16
+
+            page.new_page('Checks & source values')
+            page.paragraph('Issues already listed above are not repeated here. “Needs verification” means runtime evidence or a specification is missing. “Source value” records saved configuration, not physical correctness.', size=10)
+            page.y += 15
+            categories = list(dict.fromkeys([*CATEGORIES, *(group.category for group in remaining)]))
+            for category in categories:
+                selected = [group for group in remaining if group.category == category]
+                if not selected:
+                    continue
+                rows = [(_source_label(group), STATUS.get(group.status, group.status) + '\n' + group.detail + '\n' + basis(group)) for group in selected]
+                page.rows(category.upper(), rows)
+
+            page.new_page('Source notes')
+            page.heading('How to interpret the review')
+            page.paragraph('This is a static source review; no URScript is executed. Counts include definitions and branches, not execution frequency. Source values do not establish measured speeds or accelerations. Blends depend on controller planning; a geometric warning does not prove a skipped waypoint. Validate physical payload, centre of gravity, inertia and TCP, including each workpiece or tool change.')
+            page.y += 12
+            if definitions:
+                page.paragraph('D references identify saved initializer substitutions. They are conditional estimates, not proof that those values were initialized or unchanged when a move ran.')
+                page.y += 10
+                page.rows('INITIALIZER EVIDENCE', [
+                    (label, note + ('\nUsed at script lines ' + line_ranges(definition_lines[note])
+                                    if definition_lines[note] else ''))
+                    for note, label in definitions.items()], label_width=42)
+            page.heading('Reviewed source files')
+            if review.metadata.get('reviewInstallationNote'):
+                page.paragraph(review.metadata['reviewInstallationNote'], size=9)
+                page.y += 10
             for identity, digest in review.hashes.items():
-                page.card('INPUT SOURCE', [(identity, 8, INK, 'normal'), ('SHA-256: '+digest, 7, MUTED, 'normal')])
-            for index, (title, url) in enumerate(REFERENCES, 1):
-                page.reserve(75, heading='UR references (continued)')
-                page.paragraph(f'[{index}] {title}', size=9, weight='bold')
-                page.paragraph(url, size=7, color=MUTED)
+                page.paragraph(identity, size=9)
+                page.paragraph('SHA-256: ' + digest, size=8, color=MUTED)
                 page.y += 12
+            used_refs = sorted({n for group in groups for n in group.references})
+            page.heading('UR references')
+            for number in used_refs:
+                if not 1 <= number <= len(REFERENCES):
+                    continue
+                title, url = REFERENCES[number-1]
+                if page.y + 65 > BOTTOM:
+                    page.new_page('UR references (continued)')
+                page.paragraph(f'[{number}] {title}', size=9, weight='bold')
+                page.paragraph(url, size=8, color=MUTED)
+                page.y += 10
             page.finish_page()
         os.replace(temporary, destination)
     except BaseException:

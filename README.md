@@ -550,6 +550,11 @@ Subfolders are included and paths distinguish programs with the same name.
 The matching `.script` and the URP's referenced `.installation` are loaded for
 that program. **Export report…** saves the selected program's PDF.
 
+The PDF puts issues first and combines repeated results into one entry with all
+affected script lines. Different values, limits, units and literal/estimated
+results stay separate. Larger text and grouped source-value tables make the
+report easier to scan; shared assumptions and references appear at the end.
+
 The Robot option uses the existing SSH credentials when available, or accepts an
 IP, SSH user and password in the report page. Choose where to save the download;
 a new folder preserves the robot's `/programs` hierarchy (with `/program` as a

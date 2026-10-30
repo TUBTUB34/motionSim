@@ -1,0 +1,19 @@
+{
+  "input": "Existing saved review findings; no source program executed",
+  "findings_preserved": 302,
+  "grouped_results": 72,
+  "warnings_before": 17,
+  "issue_groups_after": 5,
+  "affected_warning_lines": 17,
+  "pages_before": 20,
+  "pages_after": 16,
+  "all_original_evidence_preserved": true,
+  "outside_page": [],
+  "text_collisions": [],
+  "footer_overlaps": [],
+  "validation": {
+    "report_and_source_tests": 19,
+    "desktop_export_tests": 1,
+    "rendered_sample_checks": "No clipped text, collisions or footer overlaps"
+  }
+}
