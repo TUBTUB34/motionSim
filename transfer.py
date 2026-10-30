@@ -3,11 +3,11 @@ import base64
 import hashlib
 from pathlib import Path
 import tempfile
-import time
 
 import paramiko
 from scp import SCPClient
 from installation import MAX_FILE_SIZE, decode_installation
+from transfer_stream import DOWNLOAD_IDLE_TIMEOUT, STREAM_BUFFER_SIZE
 
 def host_fingerprint(key):
     return "SHA256:" + base64.b64encode(hashlib.sha256(key.asbytes()).digest()).decode().rstrip("=")
@@ -59,19 +59,18 @@ class InstallationTransfer:
                 self.client = client
                 client.get_host_keys().add(settings.ip, error.key.get_name(), error.key)
                 client.connect(settings.ip, **connect_args)
-            deadline = time.monotonic() + 30
-
             def progress(_filename, size, _sent):
                 if stop.is_set():
                     raise InterruptedError("Download cancelled.")
                 if size > MAX_FILE_SIZE:
                     raise ValueError("Installation file exceeds 16 MiB.")
-                if time.monotonic() > deadline:
-                    raise TimeoutError("Installation download timed out.")
 
             with tempfile.TemporaryDirectory(prefix="ur-installation-") as directory:
                 local_path = Path(directory) / "robot.installation"
-                with SCPClient(client.get_transport(), socket_timeout=5, progress=progress) as scp:
+                # SCP is already a stream (no read-request RTT per packet).
+                # Batch local receives and time out only if incoming data stalls.
+                with SCPClient(client.get_transport(), socket_timeout=DOWNLOAD_IDLE_TIMEOUT,
+                               buff_size=STREAM_BUFFER_SIZE, progress=progress) as scp:
                     scp.get(settings.remote_path, str(local_path))
                 if stop.is_set():
                     raise InterruptedError("Download cancelled.")

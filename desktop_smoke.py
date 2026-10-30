@@ -23,6 +23,78 @@ def check(app):
         window.refresh()
         assert sum(bar.get_height() for bar in window.axes.patches) == 1, 'Aggregate chart lost incidents'
         window.figure.savefig(Path(folder) / 'chart.png')
+        # Exercise the bundled flight parser and vector PDF backend without
+        # packaging private user recordings or contacting a robot.
+        from flight_data import load_flight
+        from flight_pdf import export_flight_pdf
+        flight_path = Path(folder) / 'flight.csv'
+        flight_path.write_text('Timestamp [s],Actual position j0 [rad]\n1,0.1\n1.002,0.2\n', encoding='utf-8')
+        report = load_flight(flight_path)
+        report_path = export_flight_pdf(report, Path(folder) / 'flight.pdf')
+        assert report_path.read_bytes().startswith(b'%PDF-'), 'Bundled flight PDF export failed'
+        app.open_flights()
+        flights = app.flight_window
+        flights.set_report(report)
+        flights.seek(.001)
+        flights.view_mode.set('Compare joints')
+        flights.change_mode()
+        flights.focus.set('Torque')
+        flights.redraw_charts()
+        app.root.update()
+        assert flights.report is report, 'Bundled flight workspace failed'
+        flights.compare_layout.set('Separate joints')
+        flights.redraw_charts()
+        assert len(flights.charts.axes) == 6, 'Bundled separate joint graphs failed'
+        flights.show_simulator()
+        app.root.update()
+        assert app.recorded_panel.mounting.get() == 'TCP mounting'
+        assert app.recorded_source is flights, 'Bundled main-window recorded playback failed'
+        assert 'model unavailable' in app.recorded_panel.note.get().lower()
+        from program_check import CATEGORIES, discover_programs, review_program
+        from program_check_pdf import export_program_pdf
+        from program_transfer import ProgramSourceJob
+        assert ProgramSourceJob, 'Bundled program retrieval module is missing'
+        program = Path(folder) / 'packaging.script'
+        program.write_text(
+            'set_payload(1, [0,0,.1])\n'
+            'base=1.5\nacceleration=base*2\nspeed=sqrt(4)/2\n'
+            'movel(p[0,0,0,0,0,0], a=acceleration, v=speed)\n'
+            'movel(p[.03,.04,0,0,0,0], a=acceleration, v=speed)\n',
+            encoding='utf-8')
+        program.with_suffix('.urp').write_text('<URProgram name="packaging" lastSavedIn="5.24"/>', encoding='utf-8')
+        pairs = discover_programs(program)
+        review = review_program(pairs[0], limits={'tcp_velocity': .8})
+        assert any(f.category == CATEGORIES[4] and f.status == 'Review recommended'
+                   and 'a=3 m/s²' in f.detail for f in review.findings), 'Bundled acceleration calculation failed'
+        assert any(f.category == CATEGORIES[7] and f.status == 'Review recommended'
+                   for f in review.findings), 'Bundled velocity comparison failed'
+        assert any(f.category == CATEGORIES[8] and 'move distance=0.05 m' in f.detail
+                   for f in review.findings), 'Bundled move-distance calculation failed'
+        program_pdf = export_program_pdf(review, Path(folder) / 'program.pdf')
+        assert program_pdf.read_bytes().startswith(b'%PDF-'), 'Bundled program PDF export failed'
+        app.open_program_check()
+        app.program_check_window.executor.submit(lambda: None).result(timeout=10)
+        app.root.update()
+        app.program_check_window.set_pairs(pairs)
+        assert app.program_check_window.review is None, 'Source selection must wait for a URP choice'
+        app.program_check_window.combo.current(0)
+        app.program_check_window.show_review(review)
+        assert 'without installation' in app.program_check_window.warning.get()
+        app.program_check_window.withdraw()
+        flights.open_remote_reports()
+        retrieval = app.flight_retrieval_window
+        app.root.update()
+        assert retrieval.refresh_button.instate(['disabled']), 'Offline retrieval must not connect'
+        from transfer_stream import copy_remote
+        from io import BytesIO
+        saved = BytesIO()
+        assert copy_remote(BytesIO(b'packaged'), saved, 8) == 8
+        assert saved.getvalue() == b'packaged', 'Bundled transfer helper failed'
+        app.open_help('Compare joints')
+        assert 'Target' in app.help_window.text.get('1.0', 'end'), 'Bundled guide is missing'
+        app.help_window.withdraw()
+        retrieval.hide()
+        flights.hide()
         for model in MODELS:
             assert len(load_robot_mesh(model)) == 7, f'Bundled mesh missing: {model}'
         viewer = RobotView(app.root, 'UR15')

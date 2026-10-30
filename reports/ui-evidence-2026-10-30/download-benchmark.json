@@ -1,0 +1,26 @@
+{
+  "measurement": "SIMULATED SFTP RTT only, not real robot throughput",
+  "files": 4,
+  "mib_per_file": 2,
+  "rtt_ms": 4.0,
+  "sha256": "91d3beb88a9b2f778a6c44a1c53b63d3c79931845a9aef84b3fb414610bd1938",
+  "pipeline_requests": 32,
+  "max_inflight_bytes": 1048576,
+  "correctness": "4 files per variant; 8388608 bytes; SHA-256 identical; zero missing files",
+  "before_serial": {
+    "seconds": 1.1325,
+    "mib_per_second": 7.06,
+    "simulated_round_trips": 260
+  },
+  "previous_flight_pipeline_16": {
+    "seconds": 0.0936,
+    "mib_per_second": 85.46,
+    "simulated_round_trips": 20
+  },
+  "after_bounded_pipeline": {
+    "seconds": 0.058,
+    "mib_per_second": 137.87,
+    "simulated_round_trips": 12
+  },
+  "speedup": 19.53
+}

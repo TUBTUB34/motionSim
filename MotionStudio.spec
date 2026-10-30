@@ -5,9 +5,13 @@ from zipfile import ZipFile
 from PyInstaller.utils.hooks import collect_data_files
 
 root = Path(SPECPATH)
-for module in ('log_parser.py', 'log_data.py', 'log_view.py'):
+for module in ('ui_theme.py', 'ui_dialogs.py', 'log_parser.py', 'log_data.py', 'log_view.py', 'flight_data.py',
+               'flight_motion.py', 'flight_view.py', 'flight_charts.py', 'flight_pdf.py',
+               'flight_transfer.py', 'flight_retrieval_view.py', 'transfer_stream.py',
+               'help_view.py', 'help_content.py', 'playback_view.py',
+               'program_check.py', 'program_motion.py', 'program_check_view.py', 'program_check_pdf.py', 'program_transfer.py'):
     if not (root / module).is_file():
-        raise RuntimeError(f'Missing desktop log module: {module}')
+        raise RuntimeError(f'Missing desktop module: {module}')
 # Python 3.14 on Windows ships Tcl/Tk scripts in ZIPs, rather than the
 # directories collected by the standard hook. Supply the runtime directories.
 tk_data = []
@@ -27,7 +31,8 @@ robot_assets = [(str(p), 'assets/robots') for p in (root / 'assets' / 'robots').
 a = Analysis(
     [str(root / 'main.py')], pathex=[str(root)],
     binaries=[], datas=robot_assets + tk_data + collect_data_files('numba'),
-    hiddenimports=['matplotlib.backends.backend_tkagg', 'PIL._tkinter_finder', 'PIL._imagingtk'],
+    hiddenimports=['matplotlib.backends.backend_tkagg', 'matplotlib.backends.backend_pdf',
+                   'PIL._tkinter_finder', 'PIL._imagingtk'],
     hookspath=[], hooksconfig={'matplotlib': {'backends': ['TkAgg']}},
     runtime_hooks=[], excludes=['pytest', 'IPython', 'trimesh', 'collada', 'fast_simplification', 'scipy', 'yaml'], noarchive=False,
 )

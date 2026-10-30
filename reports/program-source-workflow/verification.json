@@ -1,0 +1,41 @@
+{
+  "behavior": [
+    "Local folders and robot snapshots list URPs recursively before any review",
+    "URP selection automatically reviews matched script and referenced installation",
+    "Missing or invalid installation warns while script review proceeds",
+    "Duplicate URP names include folder paths",
+    "Export saves only the selected report",
+    "Robot retrieval uses verified SSH without live telemetry, saves unique snapshots and leaves robot unchanged"
+  ],
+  "source_and_transfer_tests": {
+    "run": 49,
+    "passed": 49,
+    "log": "/tmp/motionsim-program-source-tests.log"
+  },
+  "desktop_ui_tests": {
+    "verified_cases": 10,
+    "all_verified": true,
+    "method": "Native module run with focused reruns after selector-path and validation-retry fixes",
+    "logs": [
+      "/tmp/motionsim-program-source-ui.log",
+      "/tmp/motionsim-program-source-ui-fix.log",
+      "/tmp/motionsim-program-source-validation.log"
+    ]
+  },
+  "layout": {
+    "window": "900x650",
+    "controls_within_window": true,
+    "screenshots": [
+      "local-urp-selection.png",
+      "robot-source.png",
+      "missing-installation-warning.png"
+    ]
+  },
+  "network_verification": "All robot providers mocked; no real robot contacted",
+  "windows": {
+    "build_exit_code": 0,
+    "unit_test_exit_code": 0,
+    "source_manifest_matches_workspace": true,
+    "evidence": "windows-verification.json"
+  }
+}

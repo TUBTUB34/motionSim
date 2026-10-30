@@ -1,0 +1,21 @@
+{
+  "focused_tests": 35,
+  "failed": 0,
+  "modules": [
+    "tests.test_backup",
+    "tests.test_design_ui",
+    "tests.test_log_ui"
+  ],
+  "checks": [
+    "full TAR source list includes programs, both apps locations, current/backup logs and flights",
+    "missing files and directories skipped",
+    "file type and configured-path checks",
+    "remote deletion only after atomic local save",
+    "download failure preserves previous local and remote copy",
+    "simulator button uses active robot settings",
+    "folder cancellation never starts robot work",
+    "full-backup filename collision preserves existing local archive",
+    "native compact layouts inspected"
+  ],
+  "live_robot_used": false
+}

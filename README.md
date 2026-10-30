@@ -65,17 +65,33 @@ Cancellation closes the connection. No robot credentials are stored on disk.
 
 ## Robot backups
 
+Use **Simulator → Full backup…** for a combined robot-data archive. The action
+uses the current robot's SSH settings and opens the transfer workspace. Choose
+a local folder; progress and **Cancel** remain available in **Logs & graphs**.
+If SSH credentials are missing, enter them there and click **Full backup…**.
+The archive includes the available `/programs`, `/apps`, `/data/apps`,
+`/root/log_history.txt`, `/root/log_history.bak`, and `/root/flightreports` sources.
+An edited remote log path or flight-retrieval folder is used when configured.
+Missing files/folders are listed as skipped; access or archive errors still stop
+the job. It saves `full-backup.tar` in the selected directory, adding a unique
+suffix when that name already exists. Cancelling the folder chooser creates no
+robot archive. After the complete download is verified and flushed to disk, the
+app removes only its temporary TAR and directory from the robot.
+
 In **Logs & graphs**, enter the robot's SSH credentials and click **Make backup…**.
 This works without loading logs or connecting the simulator. The app runs
-`tar -P -cf backup.tar /programs /data/apps`, using a unique private temporary
+`tar -P -cf backup.tar` with the available `/programs` and `/data/apps` directories, using a unique private temporary
 directory on the robot so an existing backup is not overwritten. The uncompressed
 archive includes absolute paths, as requested by `-P`.
+Missing directories are skipped and listed in the completion message. If neither
+directory exists, no archive is created. Permission and archive errors still fail
+the backup. **Status details…** opens the full message and lets you copy it.
 
 Once creation succeeds, choose where to save `backup.tar` on your PC. If you
 already selected a folder for logs or a previous backup in this session, the
 backup saves there automatically. Existing archives are preserved by adding a
 unique suffix to the new backup's name when needed. Download
-progress appears in the status bar. The app checks the downloaded byte count,
+progress, speed and estimated remaining time appear in the status bar. The app checks the downloaded byte count,
 flushes the file to disk and replaces the chosen destination only after the
 complete download. It then removes its archive and temporary directory from the
 robot. Backups have no log-file size limit; both devices need space for the archive.
@@ -89,19 +105,23 @@ with log downloads, and credentials stay in memory.
 
 ## Build a standalone Windows executable
 
-On **Windows**, install 64-bit Python 3.12 with Tcl/Tk, then run:
+On **Windows**, install 64-bit (x64) Python 3.14 with Tcl/Tk, then run:
 
 ```bat
 build_windows.bat
 ```
+
+Use a local Windows project folder for builds and tests; loading Python libraries
+through a WSL/network share can be much slower.
 
 The result is **`dist\URMotionStudio.exe`**, a single executable containing Python,
 Tk, chart libraries and robot assets. Copy it to a Windows PC; the target does
 not need Python or a browser. First launch/first simulator rendering can take
 longer while libraries unpack and the renderer compiles. Keep the generated
 executable outside the source tree when distributing it. Builds are unsigned.
-The build runs an offline smoke check of the packaged parser, chart and robot
-renderer. You can repeat it with `URMotionStudio.exe --smoke-test` (exit code 0
+The build runs an offline smoke check of the packaged log and flight workspaces,
+PDF export, retrieval controls, transfer helper and robot renderer. You can repeat
+it with `URMotionStudio.exe --smoke-test` (exit code 0
 means success). It never connects to a robot.
 The desktop log parser is included in `log_parser.py`; no separate
 graph-generator checkout or Git submodule is required to run, test or package the
@@ -116,8 +136,8 @@ committed to the repository.
 Windows executables must be built and tested on Windows; PyInstaller is not a
 cross-compiler ([PyInstaller documentation](https://pyinstaller.org/en/latest/)).
 Before distributing, launch the EXE on a clean Windows machine and check a local
-log, a robot connection and the simulator. No physical robot or Windows host is
-available in the Linux development environment used for this integration.
+log, a robot connection and the simulator. Automated packaging checks run offline
+and do not verify communication with a physical robot.
 
 ## Existing simulator
 
@@ -141,9 +161,176 @@ and retains the verified legacy dimensions. Reach ratings are not used to scale
 or invent robot kinematics. Extended payload ratings depend on the manufacturer's
 operating conditions; this viewer does not enforce robot load limits.
 
-The desktop uses rounded native ttk controls, visible keyboard focus, lighter
-tabs and consistent spacing. The theme uses the existing Pillow dependency and
-ships inside the Windows executable; no web view or theme download is needed.
+The desktop follows the supplied dark reference screenshots throughout: near-black
+canvases, navy panels, fine slate borders, cyan focus and selection, and compact
+native controls. Connection setup, the robot catalog, simulator, Status, View
+options, all log tabs, flight playback, and application confirmation/error dialogs
+share `ui_theme.py` tokens and components. Charts retain distinct series colors;
+recorded actual/target traces remain blue and lime. The theme uses the existing
+Pillow dependency and ships inside the Windows executable.
+
+Tab navigation and visible focus remain available throughout. Enter activates
+the focused dialog action; Escape cancels confirmations. Compact windows keep
+actions available and scroll longer settings panels vertically. File-open/save
+dialogs retain the operating system's file-navigation and overwrite behavior;
+their appearance varies by platform. The separate A4 PDF palette and template
+remain unchanged by the desktop theme.
+
+## Flight reports, graphs and recorded playback
+
+Open **Flight reports & playback** on the connection screen (or **Flight reports**
+in the live viewer). No robot connection is required. Use **Choose folder…** beside
+**Working folder** to list the recording ZIPs and real-time CSVs in that directory,
+including verified downloads in its robot subfolders. **Reload folder** discovers
+new files. Select `assets/flightreports/` to browse the supplied recordings.
+Use **Open…** for another recording ZIP or a real-time CSV. The flight selector
+above the graphs switches all charts, metadata, script context and playback
+together. Failed loads retain the previous flight. Changing the working folder
+clears the previous recording and playback, and synchronizes the retrieval window.
+
+The workspace follows the supplied screenshots and the
+[UR Log Viewer flight-record workflow](https://www.universal-robots.com/articles/ur/robot-care-maintenance/ur-log-viewer-manual/):
+select one of six joints and view position, velocity, acceleration, current,
+torque, temperature, voltage and control mode. **One joint → All readings**
+shows synchronized, vertically scrollable charts; choose a single metric for a
+larger graph. **Compare joints** overlays one measurement for the ticked joints
+on a shared scale. Choose **Actual**, **Target**, or **Actual + target**; each
+joint has a fixed color, with solid actual and dashed target traces. Use the plot toolbar to
+zoom and **Reset zoom** to restore the full recording. Hover while paused or
+click a graph to move the shared playhead. **Play**, **Restart**, the timeline
+slider and speed control drive the robot preview at the top right.
+
+Torque uses the recorded `Target moment j0–j5 [Nm]` channels in the supplied
+recordings. These are target joint torques, as described in the
+[UR RTDE guide](https://docs.universal-robots.com/tutorials/communication-protocol-tutorials/rtde-guide.html).
+Actual torque remains unavailable unless an explicit actual moment/torque channel
+exists; the application never estimates it from current. Temperature and voltage
+use the recorded joint channels, and control mode retains its numeric code.
+The playhead readout shows the selected joints at the same sample; switching
+view mode or metric preserves playback time. Missing selected series stay blank.
+
+The five supplied `recording*.zip` files each contain 15,000 samples over
+29.998 seconds at 500 Hz. Their `files/realtimedata.csv` headers define units:
+joint positions in radians, velocity in rad/s, current in A, and TCP position
+in metres with axis-angle rotation vectors in radians. The graph time axis is
+controller uptime, and playback uses elapsed time from the first sample.
+Incident wall-clock time is shown separately; it is not used to invent sample
+dates. Script context follows the recorded `Script control line` field.
+
+Actual acceleration is a finite-difference derivative of measured velocity
+unless a recorded actual-acceleration channel exists. Missing/invalid samples
+and timestamp discontinuities remain gaps. TCP rotations interpolate using
+quaternion SLERP; wrapped joint angles interpolate across the angular boundary.
+The preview uses recorded joint angles in robot-base coordinates and nominal
+DH geometry, with the supplied recordings matching UR10e dimensions. Factory
+calibration is not applied. If TCP channels are missing, any nominal flange
+pose is explicitly labeled as derived; unknown arm models are not guessed.
+No flight path or unrecorded current-limit envelope is generated.
+
+**Export PDF…** saves a vector PDF for the selected flight, covering the entire
+recording and all six joints regardless of graph zoom or selected joint. It
+adapts the supplied A4 Program Check template: summary, checklist, source
+observations, full-record charts, and action summary. Static script call counts
+are evidence, not proof that branches executed or an automated compliance
+verdict. Dynamic blend overlap and application-specific acceleration limits
+require review. The report uses Motion Studio identification rather than
+presenting the output as a manufacturer-issued assessment.
+The PDF retains its position/velocity/acceleration/current chart template;
+additional measurements and joint overlays are available in the interactive
+workspace and can be saved as images with the chart toolbar.
+
+### How to use the application
+
+Choose **How to** on the connection, live, log, flight or retrieval screen, or
+press **F1** anywhere in the application. The searchable guide works offline and
+is bundled into Windows builds. Topics cover connection and SSH trust, the live
+simulator, Status, View options, the robot catalog, logs and filters, backups,
+flight playback, joint comparison, robot flight retrieval, exports, shortcuts
+and troubleshooting. Search matches both topic names and instructions; Escape
+closes the guide without closing the current workspace.
+**Ctrl+1** returns to the simulator/connection window, **Ctrl+2** opens logs,
+**Ctrl+3** opens flights and **Ctrl+4** opens Program Check. Workspace shortcuts
+wait until any modal confirmation has closed. Dialogs offer **Copy details**;
+**Logs & graphs → Status details…** keeps long transfer errors readable and copyable.
+
+`psm.ura` holds program runtime/invocation statistics; `robot_configuration*.zip`
+contains configuration rather than timestamped flight telemetry. Neither is
+offered as an animated recording. No archive scripts are executed or extracted.
+Parsing and PDF generation run in background workers; recently loaded flights
+are cached. Limits are 256 MiB per telemetry file, 250,000 samples, 256 columns,
+and 4 MiB per context file, with visible errors instead of silent truncation.
+Recording ZIPs are user data and are not bundled into the Windows executable;
+select their folder with **Choose folder…** or use **Open…** for a single file.
+
+### Retrieve reports from a connected robot
+
+Connect the main viewer to the robot, open **Flight reports**, then choose
+**Retrieve from robot…**. The retrieval window uses the active robot address and SSH
+credentials, with the same host-key verification as existing transfers. Enter
+SSH credentials there if the connection was opened without them. Credentials
+remain in memory. The default remote folder, `/root/flightreports`, is evidenced
+by the supplied recordings and UR's service documentation; it can be edited
+for a configured robot installation.
+
+Choose **Refresh reports** to list recording filenames, flight dates or modified
+times, sizes and local download status. Ctrl/Shift selects multiple rows;
+**Download selected** retrieves those files and **Download all new** skips
+unchanged, verified local copies in the selected working folder. **Choose folder…**
+changes that folder in both retrieval and graphs. Refresh after switching folders:
+a report downloaded into another folder is considered new here. Download status
+remains separated by verified source robot identity within each folder.
+Downloaded and validated reports appear automatically in the flight selector.
+Discovery, transfer, validation and parsing run outside the UI thread. Per-file
+and overall progress include transfer speed and an estimate when enough data
+has arrived. Use **Cancel transfer** to stop, or **Retry failed** to retry a
+failed/cancelled batch. Temporary partial files are discarded; retry restarts
+the file because a stable remote snapshot cannot be assumed.
+
+Retrieval only reads the robot's reports. A single persistent SSH/SFTP connection
+serves serialized requests and multiple files. Explicit refresh updates the
+listing, and reconnect invalidates it. Reports are separated by verified SSH
+host identity and the robot serial when readable. Download status compares
+remote path, size and modification time plus a SHA-256 check of the saved local
+file. SFTP does not provide a reliable remote content hash: a remote file
+replaced with identical size and modification time cannot be distinguished
+without downloading it again. Files are checked before and after transfer,
+validated as ZIP/telemetry, flushed to disk and published atomically. Existing
+valid files survive failed transfers. Only validated, registered files appear
+in the local library. Downloads stop on changed metadata, invalid data or disk
+errors; transient connection failures receive two retries with bounded backoff.
+
+### Transfer performance verification
+
+Logs, backups and flight retrieval share bounded SFTP pipelining: at most 32
+requests of 32 KiB, or 1 MiB per window. Previously, logs used serial reads while
+flights and backups pipelined 16 requests. The shared helper overlaps request
+waits without queueing an entire archive in memory. Growing logs still include
+appended bytes within the 64 MiB limit; recordings and archives retain strict
+size checks. Installation SCP already streams data and now uses a 256 KiB receive
+buffer and a 60-second idle timeout, allowing large files to keep progressing.
+
+Run the reproducible offline comparison with:
+
+```bash
+.venv/bin/python scripts/benchmark_transfer.py --rtt-ms 4 --files 4 --mib 2
+```
+
+For identical four 2 MiB files and a simulated 4 ms round-trip delay, the measured
+run took **1.1325 s with serial reads**, **0.0936 s with 16 requests**, and
+**0.0580 s with 32 requests** (19.53× versus serial; 1.61× versus the old pipeline).
+All three variants copied 8,388,608 bytes and matched the source SHA-256 hashes.
+This is an RTT-only simulation using in-memory files: it excludes SSH encryption,
+network bandwidth limits, robot CPU, archive creation and disk I/O. It is not a
+real-robot throughput claim. No robot was available for live verification;
+real device timing and connection behavior still require an integration check.
+
+Listing is measured separately with `scripts/benchmark_flight_listing.py`.
+For five supplied filenames (52,349,926 bytes of files; no payload transferred),
+five repeats at the same simulated 4 ms RTT produced median times of 24.761 ms
+for names plus individual stat calls and 4.438 ms for batched attributes:
+six metadata operations versus one on an already-connected session. The baseline
+is a conventional alternative, since the previous app had no flight listing.
+Connection setup, server work, and hashes of existing local downloads are excluded.
 
 ## Run
 
@@ -207,7 +394,10 @@ for automated verification; tests use synthetic packets and a loopback robot.
 4. Set the remote installation folder. It defaults to **/programs** as configured
    for this project; change it to `/programs` or another folder if that is where
    your controller stores installations.
-5. Click **Connect**. Drag the 3D view to orbit and scroll to zoom.
+5. Click **Connect**. Left-drag the 3D view to rotate, right-drag to pan, and scroll
+   to zoom. The same controls work in recorded playback. **Reset camera** clears
+   panning and centers/fits the current robot pose without changing the locked
+   mounting reference.
 
 Use the **Display overlays** checkboxes in **View options** to toggle the ground grid,
 coordinate axes, live TCP, installation TCP, payload/center of gravity, robot
@@ -345,3 +535,88 @@ Tests use synthetic data and mocked SCP; no physical robot is contacted.
 - [UR nominal kinematic dimensions, including UR15](https://www.universal-robots.com/articles/ur/application-installation/dh-parameters-for-calculations-of-kinematics-and-dynamics)
 - [UR installation example (PolyScope 3.2)](https://www.universal-robots.com/articles/ur/application-installation/using-a-barcode-reader-directly-with-the-robot/)
 - [Official ROS driver's installation fixture (PolyScope 5.1)](https://github.com/UniversalRobots/Universal_Robots_ROS2_Driver/blob/main/.github/dockerursim/.vol/default.installation)
+
+### Program Check reports and full-size flight playback
+
+Use **Program Check & PDF** from the connection screen (or **Program Check** in the
+live/flight workspace). Choose **Local folder → Choose folder…** to scan your
+saved files, or **Robot → Pull programs…** to download the robot's program sources.
+Select a **Program (URP)** from the list to generate its report automatically.
+Subfolders are included and paths distinguish programs with the same name.
+The matching `.script` and the URP's referenced `.installation` are loaded for
+that program. **Export report…** saves the selected program's PDF.
+
+The Robot option uses the existing SSH credentials when available, or accepts an
+IP, SSH user and password in the report page. Choose where to save the download;
+a new folder preserves the robot's `/programs` hierarchy (with `/program` as a
+fallback). Only URP, script and installation sources are downloaded. Existing
+files and robot contents are preserved. SSH host verification and cancellable,
+pipelined transfer are shared with the other robot downloads. Failed or cancelled
+downloads discard the incomplete snapshot; completed snapshots remain available
+through Local folder. Live telemetry is not required.
+
+**Advanced…** is closed by default. It contains the guidance profile, optional
+joint/TCP velocity and acceleration overrides, and alternate ZIP / TAR backup or manual file
+selection. **Generate report** applies changed options to the selected program. Installation
+matching follows the URP's declared path within the supplied files, or the unique
+installation beside the program if no path is declared. Saved payload/TCP values
+and source hashes appear in the findings; ambiguous or missing installations are
+reported as a visible warning. The report continues without installation settings;
+script-derived payload/TCP and motion checks still run. A missing matching script
+produces an explicitly limited metadata review. Nothing executes the source files
+or changes the robot.
+
+Use **Advanced… → Backup / configuration archive…** to review a `full-backup.tar`
+directly. ZIP, TAR and compressed TAR sources are read without extraction;
+missing installation references remain visible as review findings.
+
+This is a static source review: it resolves bounded numeric expressions, aliases,
+pose variables and numeric struct fields without executing URScript. Where runtime
+flow is uncertain, unique unconditional source initializers produce explicitly
+labelled estimates; their initialization and runtime values are not certified.
+The report checks velocity and
+acceleration inputs for MoveJ/L/P/C, OptiMove, speed and servo commands according
+to their parameter semantics. Blank velocity specifications remain unassessed;
+blank acceleration specifications use the selected UR guidance where applicable.
+Duration-controlled moves and unused servo parameters require runtime review.
+The automatic CB/e-Series acceleration recommendations are 800°/s² for joints
+and 2.5 m/s² for linear moves. UR configures joint/tool velocity limits per robot
+and Normal/Reduced safety mode; command defaults and undocumented serialized
+installation fields are not interpreted as universal or active safety limits.
+
+For resolvable Cartesian waypoints it calculates straight or circular move
+distances, flags radii exceeding incoming/outgoing distances, and checks adjacent
+radius sums for potential overlap. It reports the total **known source distance**
+with segment coverage, including offsets of the same named rigid frame;
+unknown initial poses, joint-space trajectories, branches,
+repetitions and rotations are excluded. Runtime variables and uncertain flow stay
+explicitly unresolved. Source lines, file hashes and official UR references are
+included in both the on-screen findings and PDF.
+UR's [deployment recommendations](https://www.universal-robots.com/articles/ur/robot-care-maintenance/important-deployment-points/)
+are starting points for CB-Series/e-Series, not safety limits. The report accounts
+for [motion version 2](https://www.universal-robots.com/manuals/EN/HTML/SW5_22/Content/prod-scriptmanual/all_scripts/motion_version_desc.htm)
+when explaining why static overlap does not prove a skipped waypoint. It never
+executes a program or certifies deployment safety.
+
+**Export measurements** in Flight reports remains the separate recorded-telemetry
+PDF. The flight workspace now defaults to one full-width Position graph; choose
+**All readings** for the stacked measurements, or **Compare joints** to overlay
+one measurement across selected joints. **Sample details** and **Recording & script**
+hold the detailed readouts. **Open simulator** animates the recorded robot at full
+size in the main window, with shared play/pause, speed and scrubbing controls.
+In the **Simulator** tab, **Motion source → Live robot / Flight report** switches
+between the two views. Live telemetry continues independently; switching back to
+live pauses recorded playback and preserves its position. Offline, Live robot
+offers connection setup. Script-line context remains pinned below recorded playback.
+Missing model/joint data stays
+unavailable rather than being guessed.
+
+In **Compare joints**, **Graphs → Separate joints** gives each selected joint its
+own graph with a shared time axis; **Combined** overlays them again.
+Choose **Scale → Per joint** to see each joint’s variation, or **Shared** to
+compare values using identical vertical scales.
+The selection, measurement, actual/target choice and playback time are preserved.
+Recorded playback defaults to **TCP mounting**. Its **Align view to** selector
+switches between TCP mounting and Robot base. TCP alignment captures a fixed
+reference when selected (or at the first valid sample), so the reference does
+not move while playback runs. This changes only the visualization.

@@ -1,0 +1,366 @@
+{
+  "tasks": {
+    "task-1793370597000-manhci": {
+      "taskId": "task-1793370597000-manhci",
+      "type": "bugfix",
+      "description": "Skip absent robot backup source directories while retaining real errors",
+      "priority": "normal",
+      "status": "completed",
+      "progress": 100,
+      "assignedTo": [
+        "motionsim-backup"
+      ],
+      "tags": [
+        "motionSim",
+        "backup"
+      ],
+      "createdAt": "2026-10-30T14:29:57.000Z",
+      "startedAt": "2026-10-30T14:30:42.638Z",
+      "completedAt": "2026-10-30T14:31:22.392Z",
+      "result": {
+        "summary": "Backup preflights source directories through SFTP, skips ENOENT only, reports skipped folders, and fails clearly when none exist. Other errors remain failures.",
+        "validation": "15 offline tests passed; git diff --check clean",
+        "files": [
+          "backup_transfer.py",
+          "tests/test_backup.py"
+        ]
+      }
+    },
+    "task-1793370598670-75e7x1": {
+      "taskId": "task-1793370598670-75e7x1",
+      "type": "feature",
+      "description": "Shared selectable working directory for flight viewing and retrieval with directory-scoped downloaded status",
+      "priority": "normal",
+      "status": "completed",
+      "progress": 100,
+      "assignedTo": [
+        "motionsim-flight"
+      ],
+      "tags": [
+        "motionSim",
+        "flight"
+      ],
+      "createdAt": "2026-10-30T14:29:58.670Z",
+      "startedAt": null,
+      "completedAt": "2026-10-30T14:44:00.114Z",
+      "result": {
+        "tests": "27 flight transfer, 15 flight UI, 12 retrieval UI, playback integration passed in isolated full suite",
+        "review": "Late discovery snapshots invalidated on download; counts updated; folder-switch stale playback cleared"
+      }
+    },
+    "task-1793370599916-sfz823": {
+      "taskId": "task-1793370599916-sfz823",
+      "type": "feature",
+      "description": "Resolve static URScript motion variables and validate velocities accelerations blend radii and move distances",
+      "priority": "normal",
+      "status": "completed",
+      "progress": 100,
+      "assignedTo": [
+        "motionsim-motion"
+      ],
+      "tags": [
+        "motionSim",
+        "motion"
+      ],
+      "createdAt": "2026-10-30T14:29:59.916Z",
+      "startedAt": null,
+      "completedAt": "2026-10-30T14:40:27.276Z",
+      "result": {
+        "summary": "Static expression resolution, motion velocity/acceleration specifications, Cartesian linear/circular move distances, blend checks and computed PDF evidence",
+        "tests": "19 focused analysis/PDF tests plus 1 graphical Program Check workflow passed",
+        "limitations": "Runtime data, unresolved frames, joint-space paths, thread-mutated variables and unknown executed control flow require manual review."
+      }
+    },
+    "task-1793370601601-3nys2p": {
+      "taskId": "task-1793370601601-3nys2p",
+      "type": "feature",
+      "description": "Apply ui-skills guidance to desktop usability and verify integration",
+      "priority": "normal",
+      "status": "completed",
+      "progress": 100,
+      "assignedTo": [
+        "motionsim-ui"
+      ],
+      "tags": [
+        "motionSim",
+        "ui"
+      ],
+      "createdAt": "2026-10-30T14:30:01.601Z",
+      "startedAt": null,
+      "completedAt": "2026-10-30T14:44:51.046Z",
+      "result": {
+        "tests": 250,
+        "skipped": 0,
+        "method": "Isolated module runs; transient desktop grab failure passed on rerun",
+        "docs": "README and offline help updated",
+        "review": "All four requested workstreams integrated"
+      }
+    },
+    "task-1793372291911-mo2h8r": {
+      "taskId": "task-1793372291911-mo2h8r",
+      "type": "feature",
+      "description": "Unify and accelerate all robot downloads; mocked latency benchmark and integrity verification",
+      "priority": "normal",
+      "status": "completed",
+      "progress": 100,
+      "assignedTo": [
+        "motionsim-downloads-2"
+      ],
+      "tags": [
+        "motionSim",
+        "downloads"
+      ],
+      "createdAt": "2026-10-30T14:58:11.911Z",
+      "startedAt": null,
+      "completedAt": "2026-10-30T15:02:16.488Z",
+      "result": {
+        "tests": 81,
+        "checks": "Focused transfer, log, backup and flight tests pass; diff whitespace clean",
+        "benchmark": {
+          "type": "simulated RTT only",
+          "files": 4,
+          "totalBytes": 8388608,
+          "rttMilliseconds": 4,
+          "serialSeconds": 1.1325,
+          "previous16PipelineSeconds": 0.0936,
+          "pipeline32Seconds": 0.058,
+          "speedupVsSerial": 19.53,
+          "integrity": "SHA-256 identical across every file/variant",
+          "remainingFiles": 0
+        },
+        "implementation": "Shared pipelining for logs, flights and backups (32x32KiB bounded); live log growth accepted under64MiB; SCP installation uses256KiB receives,60s idle timeout instead of30s total cutoff"
+      }
+    },
+    "task-1793372296187-ekylf1": {
+      "taskId": "task-1793372296187-ekylf1",
+      "type": "feature",
+      "description": "Folder-first automatic program review including installation context, official UR default guidance, hidden advanced settings",
+      "priority": "normal",
+      "status": "completed",
+      "progress": 100,
+      "assignedTo": [
+        "motionsim-reports-2"
+      ],
+      "tags": [
+        "motionSim",
+        "reports"
+      ],
+      "createdAt": "2026-10-30T14:58:16.187Z",
+      "startedAt": null,
+      "completedAt": "2026-10-30T15:08:29.097Z",
+      "result": {
+        "changes": "Automatic folder batch review, hidden Advanced, referenced installation payload/TCP and source hashes, partial results, cancellation, one PDF per successful program",
+        "validation": "14 source-review tests, 9 motion tests, 2 native report UI workflows passed across focused runs; compile and diff whitespace clean",
+        "guidance": "Official UR CB/e-Series acceleration recommendations retained; no universal velocity default invented; active mode-specific speed limits require optional verified overrides"
+      }
+    },
+    "task-1793372299303-on3hmu": {
+      "taskId": "task-1793372299303-on3hmu",
+      "type": "feature",
+      "description": "Smooth flight chart scrolling without white artifacts; persistent script line number axis/footer",
+      "priority": "normal",
+      "status": "completed",
+      "progress": 100,
+      "assignedTo": [
+        "motionsim-charts-2"
+      ],
+      "tags": [
+        "motionSim",
+        "charts"
+      ],
+      "createdAt": "2026-10-30T14:58:19.303Z",
+      "startedAt": null,
+      "completedAt": "2026-10-30T15:06:04.282Z",
+      "result": {
+        "changes": [
+          "Avoid same-size TkAgg resize/reallocation on scroll; coalesced blit of rendered pixels; dark canvas and pixel wheel deltas",
+          "Script-line formatter retains chronological x coordinates, handles repeated lines and unknown/gaps",
+          "Pinned script-line axis and source.script_position readout remain outside scroll area"
+        ],
+        "tests": "12 headless initially; 28 GUI with one compact-label failure fixed and 2 targeted GUI passes; final 6 chart headless passed including high-resolution wheel delta. All edited files compile; diff-check clean.",
+        "review": "Mocked discover_library in FlightWindow tests to avoid loading user's local reports; screenshots left to parent native capture."
+      }
+    },
+    "task-1793372303804-vtav99": {
+      "taskId": "task-1793372303804-vtav99",
+      "type": "feature",
+      "description": "Simulator tab live/flight source selector and integrated usability verification",
+      "priority": "normal",
+      "status": "completed",
+      "progress": 100,
+      "assignedTo": [
+        "motionsim-simulator-2"
+      ],
+      "tags": [
+        "motionSim",
+        "simulator"
+      ],
+      "createdAt": "2026-10-30T14:58:23.804Z",
+      "startedAt": null,
+      "completedAt": "2026-10-30T15:14:43.558Z",
+      "result": {
+        "tests": 265,
+        "skipped": 0,
+        "failed_modules": 0,
+        "evidence": "reports/ui-evidence-2026-10-30/design-evidence.json",
+        "integration": "All four workstreams complete; UI inspected at six viewport sizes; no live robot"
+      }
+    },
+    "task-1793376098681-2go0rn": {
+      "taskId": "task-1793376098681-2go0rn",
+      "type": "bugfix",
+      "description": "Center recorded robot framing and implement left-drag orbit/right-drag pan shared by live and recorded RobotView; regression checks",
+      "priority": "normal",
+      "status": "completed",
+      "progress": 100,
+      "assignedTo": [],
+      "tags": [
+        "motionSim",
+        "camera"
+      ],
+      "createdAt": "2026-10-30T16:01:38.681Z",
+      "startedAt": null,
+      "completedAt": "2026-10-30T16:08:14.068Z",
+      "result": {
+        "tests_passed": 29,
+        "visual_review": "Centered and right-drag-panned playback screenshots verified",
+        "scope": "Shared live/playback RobotView",
+        "live_robot_used": false
+      }
+    },
+    "task-1793377336205-2m3sgx": {
+      "taskId": "task-1793377336205-2m3sgx",
+      "type": "feature",
+      "description": "Simulator Full backup action: programs/apps/log pair/flight reports into local folder TAR; cleanup only after successful atomic download; preserve missing-source behavior",
+      "priority": "normal",
+      "status": "completed",
+      "progress": 100,
+      "assignedTo": [],
+      "tags": [
+        "motionSim",
+        "backup"
+      ],
+      "createdAt": "2026-10-30T16:22:16.205Z",
+      "startedAt": null,
+      "completedAt": "2026-10-30T16:29:46.535Z",
+      "result": {
+        "tests_passed": 35,
+        "live_robot_used": false,
+        "visual_review": "Simulator 980x620 and transfer workspace 1060x740",
+        "behavior": "Combined full TAR saved to selected folder, temporary robot archive removed after verified local save"
+      }
+    },
+    "task-1793378683043-ose4lp": {
+      "taskId": "task-1793378683043-ose4lp",
+      "type": "feature",
+      "description": "Verify actual Windows build_windows.bat and packaged application smoke on final code; fix build issues",
+      "priority": "normal",
+      "status": "completed",
+      "progress": 100,
+      "assignedTo": [
+        "motionsim-windows"
+      ],
+      "tags": [
+        "motionSim",
+        "verification",
+        "windows"
+      ],
+      "createdAt": "2026-10-30T16:44:43.043Z",
+      "startedAt": "2026-10-30T16:48:03.299Z",
+      "completedAt": null,
+      "result": {
+        "outcome": "Native Windows batch build and standalone GUI smoke passed, exit 0; relevant synthetic unit tests passed. Source hash manifest and artifact validation retained locally."
+      }
+    },
+    "task-1793378688018-x2qq6c": {
+      "taskId": "task-1793378688018-x2qq6c",
+      "type": "feature",
+      "description": "Run App_DoughFactory source review from supplied full-backup.tar, verify/correct expression and motion calculations",
+      "priority": "normal",
+      "status": "completed",
+      "progress": 100,
+      "assignedTo": [
+        "motionsim-motionaudit"
+      ],
+      "tags": [
+        "motionSim",
+        "verification",
+        "motionaudit"
+      ],
+      "createdAt": "2026-10-30T16:44:48.018Z",
+      "startedAt": null,
+      "completedAt": null,
+      "result": {
+        "testsPassed": 27,
+        "realSourceMotionCount": 71,
+        "accelerationWarnings": 17,
+        "memoryKey": "app-doughfactory-motion-audit-2026-10-30"
+      }
+    },
+    "task-1793378692200-s8922e": {
+      "taskId": "task-1793378692200-s8922e",
+      "type": "feature",
+      "description": "Independent expected-value audit of App_DoughFactory script and provided PDF",
+      "priority": "normal",
+      "status": "completed",
+      "progress": 100,
+      "assignedTo": [
+        "motionsim-oracle"
+      ],
+      "tags": [
+        "motionSim",
+        "verification",
+        "oracle"
+      ],
+      "createdAt": "2026-10-30T16:44:52.200Z",
+      "startedAt": null,
+      "completedAt": null,
+      "result": {
+        "oracle": "reports/app-doughfactory-verification/expected-values.json",
+        "notes": "reports/app-doughfactory-verification/independent-audit.md",
+        "motionOccurrences": 71,
+        "tcpAccelerationGuidanceWarnings": 17,
+        "jointAccelerationGuidanceWarnings": 0,
+        "referencePdfCountingBug": "PolyScope labels double-counted; several zero-distance blend false positives",
+        "executedURScript": false
+      }
+    },
+    "task-1793378696596-kvs0oc": {
+      "taskId": "task-1793378696596-kvs0oc",
+      "type": "feature",
+      "description": "Support supplied archive ingestion, compare/generated PDF layout and evidence, integrated tests",
+      "priority": "normal",
+      "status": "completed",
+      "progress": 100,
+      "assignedTo": [
+        "motionsim-reportoutput"
+      ],
+      "tags": [
+        "motionSim",
+        "verification",
+        "reportoutput"
+      ],
+      "createdAt": "2026-10-30T16:44:56.596Z",
+      "startedAt": "2026-10-30T16:49:11.711Z",
+      "completedAt": null
+    },
+    "task-1793379678246-im9kpi": {
+      "taskId": "task-1793379678246-im9kpi",
+      "type": "feature",
+      "description": "Add robot program-source retrieval and URP-first selection for local and robot report sources; preserve report generation when installation is missing.",
+      "priority": "normal",
+      "status": "completed",
+      "progress": 100,
+      "assignedTo": [],
+      "tags": [
+        "motionSim",
+        "program-reports",
+        "source-selection"
+      ],
+      "createdAt": "2026-10-30T17:01:18.246Z",
+      "startedAt": "2026-10-30T17:09:33.229Z",
+      "completedAt": null
+    }
+  },
+  "version": "3.0.0"
+}

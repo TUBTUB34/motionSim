@@ -1,0 +1,2488 @@
+{
+  "metadata": {
+    "name": "App_DoughFactory",
+    "installation": "default",
+    "installationRelativePath": "../default",
+    "directory": "/programs/App_DoughFactory",
+    "createdIn": "5.15.2",
+    "lastSavedIn": "5.24.0",
+    "robotSerialNumber": "20245280511",
+    "createdInPolyscopeProgramVersion": "2",
+    "lastSavedInPolycopeProgramVersion": "2",
+    "crcValue": "1157380947",
+    "reviewInstallation": "/home/apex/workspace/motionSim/tests/full-backup.tar :: /programs/default.installation",
+    "reviewInstallationNote": "URP references ../default"
+  },
+  "hashes": {
+    "/home/apex/workspace/motionSim/tests/full-backup.tar :: /programs/App_DoughFactory/App_DoughFactory.urp": "81e303f2b98254bd259a53cf03e0961e112d9ee66d7a67f3e2194b925c50133b",
+    "/home/apex/workspace/motionSim/tests/full-backup.tar :: /programs/App_DoughFactory/App_DoughFactory.script": "7366e9a00551a3459df57b787d1cfdb21ce15b62fc0d02926533fbd25f89cd5e",
+    "/home/apex/workspace/motionSim/tests/full-backup.tar :: /programs/default.installation": "37475581ef1f1a022997dbc9ba9622de43e4da4355a91d7c00b5dfd90879869e"
+  },
+  "script_lines": 1920,
+  "counts": {
+    "set_target_payload": 3,
+    "motion_version_set": 1,
+    "set_tcp": 2,
+    "movej": 27,
+    "optimovej": 9,
+    "movel": 34,
+    "optimovel": 1,
+    "set_payload": 5
+  },
+  "checklist": [
+    [
+      "Initial payload / CoG / inertia",
+      "Source observation"
+    ],
+    [
+      "Dynamic payload changes",
+      "Manual review"
+    ],
+    [
+      "Initial TCP",
+      "Source observation"
+    ],
+    [
+      "Dynamic TCP changes",
+      "Manual review"
+    ],
+    [
+      "Acceleration recommendations",
+      "Review recommended"
+    ],
+    [
+      "Blend radius overlap",
+      "Manual review"
+    ],
+    [
+      "Blended motion continuation",
+      "Manual review"
+    ],
+    [
+      "Velocity specifications",
+      "Manual review"
+    ],
+    [
+      "Move distances",
+      "Manual review"
+    ]
+  ],
+  "findings": [
+    {
+      "category": "Initial payload / CoG / inertia",
+      "status": "Source observation",
+      "detail": "Saved installation payload: 3.6 kg; CoG=(0.001, 0.0, 0.132) m. URP references ../default. Saved values do not prove the physical tool setup.",
+      "line": 0,
+      "evidence": "",
+      "reference": 0
+    },
+    {
+      "category": "Initial TCP",
+      "status": "Source observation",
+      "detail": "Saved installation TCP dough_factory: (0.0, 0.0, 0.247, -0.0, 3.1414, -0.0). Translation in m, rotation vector in rad. Program set_tcp calls may override this.",
+      "line": 0,
+      "evidence": "",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Joint and tool speed limits depend on the configured Normal/Reduced safety modes and application. Saved installation safety serialization is not interpreted as an active speed specification. Advanced overrides can supply verified limits.",
+      "line": 0,
+      "evidence": "",
+      "reference": 9
+    },
+    {
+      "category": "Initial payload / CoG / inertia",
+      "status": "Source observation",
+      "detail": "First source occurrence; execution order and physical correctness are not proven. Mass: 3.6 kg; cog: [0.001, 0.0, 0.132] m from tool mount; inertia: [0.013017, 0.013017, 0.013017, 0.0, 0.0, 0.0] kg\u00b7m\u00b2. Confirm tool plus workpiece mass, centre of gravity and inertia against the real tool; update payload when the workpiece changes.",
+      "line": 3,
+      "evidence": "set_target_payload(3.600000, [0.001000, 0.000000, 0.132000], [0.013017, 0.013017, 0.013017, 0.000000, 0.000000, 0.000000])",
+      "reference": 4
+    },
+    {
+      "category": "Dynamic payload changes",
+      "status": "Source observation",
+      "detail": "Additional source occurrence; execution order and physical correctness are not proven. Mass: 6.3 kg; cog: [0.0, -0.01, 0.1] m from tool mount; inertia: [0, 0, 0, 0, 0, 0] kg\u00b7m\u00b2. Source-definition estimate using PAYLOADS (line 1261). Initialization order, runtime changes and execution are not proven. Confirm tool plus workpiece mass, centre of gravity and inertia against the real tool; update payload when the workpiece changes.",
+      "line": 514,
+      "evidence": "set_target_payload(PAYLOADS.FULL.M, PAYLOADS.FULL.COG, transition_time=0.25)",
+      "reference": 4
+    },
+    {
+      "category": "Dynamic payload changes",
+      "status": "Source observation",
+      "detail": "Additional source occurrence; execution order and physical correctness are not proven. Mass: 4.7 kg; cog: [0.0, -0.01, 0.1] m from tool mount; inertia: [0, 0, 0, 0, 0, 0] kg\u00b7m\u00b2. Source-definition estimate using PAYLOADS (line 1261). Initialization order, runtime changes and execution are not proven. Confirm tool plus workpiece mass, centre of gravity and inertia against the real tool; update payload when the workpiece changes.",
+      "line": 799,
+      "evidence": "set_target_payload(PAYLOADS.EMPTY.M, PAYLOADS.EMPTY.COG, transition_time=0.25)",
+      "reference": 4
+    },
+    {
+      "category": "Dynamic payload changes",
+      "status": "Source observation",
+      "detail": "Additional source occurrence; execution order and physical correctness are not proven. Mass: 4.7 kg; cog: [0.0, -0.01, 0.1] m from tool mount. Source-definition estimate using PAYLOADS (line 1261). Initialization order, runtime changes and execution are not proven. Confirm tool plus workpiece mass, centre of gravity and inertia against the real tool; update payload when the workpiece changes.",
+      "line": 1535,
+      "evidence": "set_payload(PAYLOADS.EMPTY.M, PAYLOADS.EMPTY.COG)",
+      "reference": 0
+    },
+    {
+      "category": "Dynamic payload changes",
+      "status": "Source observation",
+      "detail": "Additional source occurrence; execution order and physical correctness are not proven. Mass: 6.3 kg; cog: [0.0, -0.01, 0.1] m from tool mount. Source-definition estimate using PAYLOADS (line 1261). Initialization order, runtime changes and execution are not proven. Confirm tool plus workpiece mass, centre of gravity and inertia against the real tool; update payload when the workpiece changes.",
+      "line": 1725,
+      "evidence": "set_payload(PAYLOADS.FULL.M, PAYLOADS.FULL.COG)",
+      "reference": 0
+    },
+    {
+      "category": "Dynamic payload changes",
+      "status": "Source observation",
+      "detail": "Additional source occurrence; execution order and physical correctness are not proven. Mass: 4.7 kg; cog: [0.0, -0.01, 0.1] m from tool mount. Source-definition estimate using PAYLOADS (line 1261). Initialization order, runtime changes and execution are not proven. Confirm tool plus workpiece mass, centre of gravity and inertia against the real tool; update payload when the workpiece changes.",
+      "line": 1731,
+      "evidence": "set_payload(PAYLOADS.EMPTY.M, PAYLOADS.EMPTY.COG)",
+      "reference": 0
+    },
+    {
+      "category": "Dynamic payload changes",
+      "status": "Source observation",
+      "detail": "Additional source occurrence; execution order and physical correctness are not proven. Mass: 6.3 kg; cog: [0.0, -0.01, 0.1] m from tool mount. Source-definition estimate using PAYLOADS (line 1261). Initialization order, runtime changes and execution are not proven. Confirm tool plus workpiece mass, centre of gravity and inertia against the real tool; update payload when the workpiece changes.",
+      "line": 1811,
+      "evidence": "set_payload(PAYLOADS.FULL.M, PAYLOADS.FULL.COG)",
+      "reference": 0
+    },
+    {
+      "category": "Dynamic payload changes",
+      "status": "Source observation",
+      "detail": "Additional source occurrence; execution order and physical correctness are not proven. Mass: 4.7 kg; cog: [0.0, -0.01, 0.1] m from tool mount. Source-definition estimate using PAYLOADS (line 1261). Initialization order, runtime changes and execution are not proven. Confirm tool plus workpiece mass, centre of gravity and inertia against the real tool; update payload when the workpiece changes.",
+      "line": 1817,
+      "evidence": "set_payload(PAYLOADS.EMPTY.M, PAYLOADS.EMPTY.COG)",
+      "reference": 0
+    },
+    {
+      "category": "Dynamic payload changes",
+      "status": "Manual review",
+      "detail": "8 configuration call(s) in source, including definitions and branches. Call counts do not prove updates at every pickup, release or tool change. Confirm tool plus workpiece mass, centre of gravity and inertia against the real tool; update payload when the workpiece changes.",
+      "line": 0,
+      "evidence": "",
+      "reference": 0
+    },
+    {
+      "category": "Initial TCP",
+      "status": "Source observation",
+      "detail": "First source occurrence; execution order and physical correctness are not proven. pose: [0.0, 0.0, 0.247, -0.0, 3.1414, -0.0] (XYZ in m; rotation vector in rad). Confirm the configured TCP against the actual tool and each tool change.",
+      "line": 24,
+      "evidence": "set_tcp(p[0.0,0.0,0.247,-0.0,3.1414,-0.0])",
+      "reference": 0
+    },
+    {
+      "category": "Dynamic TCP changes",
+      "status": "Source observation",
+      "detail": "Additional source occurrence; execution order and physical correctness are not proven. pose: [0.0, 0.0, 0.247, 0.0, 3.1414181206645937, 0.0] (XYZ in m; rotation vector in rad). Source-definition estimate using TCPS (line 1272). Initialization order, runtime changes and execution are not proven. Confirm the configured TCP against the actual tool and each tool change.",
+      "line": 1536,
+      "evidence": "set_tcp(TCPS.UNDER_FLANGE)",
+      "reference": 0
+    },
+    {
+      "category": "Dynamic TCP changes",
+      "status": "Manual review",
+      "detail": "2 configuration call(s) in source, including definitions and branches. Call counts do not prove updates at every pickup, release or tool change. Confirm the configured TCP against the actual tool and each tool change.",
+      "line": 0,
+      "evidence": "",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Manual review",
+      "detail": "Configured a=6.10865 rad/s\u00b2. Within UR suggested starting value \u226413.9626 rad/s\u00b2. This is not a safety limit or measured acceleration. Source-definition estimate using a_scale=2.5 (line 1278), ar3=2.44346095 (line 1297). Initialization order, runtime changes and execution are not proven. ",
+      "line": 138,
+      "evidence": "movej(get_inverse_kin(clear_pos_p, qnear=pick_post_q), v=vr3*v_scale, a=ar3*a_scale, r=0.02)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=9.77384 rad/s. Enter the applicable joint velocity specification to check this value. Source-definition estimate using v_scale=4 (line 1280), vr3=2.44346095 (line 1289). Initialization order, runtime changes and execution are not proven. ",
+      "line": 138,
+      "evidence": "movej(get_inverse_kin(clear_pos_p, qnear=pick_post_q), v=vr3*v_scale, a=ar3*a_scale, r=0.02)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Manual review",
+      "detail": "Configured a=0.8 fraction. Within the documented OptiMove fraction range (0, 1]. Absolute velocity/acceleration varies with the trajectory; physical limits are not established.",
+      "line": 156,
+      "evidence": "optimovej(transition_T_R_q, v=0.85, a=0.8, r=0.1)",
+      "reference": 5
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=0.85 fraction. Within the documented OptiMove fraction range (0, 1]. Absolute velocity/acceleration varies with the trajectory; physical limits are not established.",
+      "line": 156,
+      "evidence": "optimovej(transition_T_R_q, v=0.85, a=0.8, r=0.1)",
+      "reference": 5
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Manual review",
+      "detail": "Configured a=0.8 fraction. Within the documented OptiMove fraction range (0, 1]. Absolute velocity/acceleration varies with the trajectory; physical limits are not established.",
+      "line": 158,
+      "evidence": "optimovej(transition_T1_R_q, v=0.85, a=0.8, r=0.15)",
+      "reference": 5
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=0.85 fraction. Within the documented OptiMove fraction range (0, 1]. Absolute velocity/acceleration varies with the trajectory; physical limits are not established.",
+      "line": 158,
+      "evidence": "optimovej(transition_T1_R_q, v=0.85, a=0.8, r=0.15)",
+      "reference": 5
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Manual review",
+      "detail": "Configured a=0.6 fraction. Within the documented OptiMove fraction range (0, 1]. Absolute velocity/acceleration varies with the trajectory; physical limits are not established.",
+      "line": 161,
+      "evidence": "optimovej(stack_pos_q, v=.7, a=.6)",
+      "reference": 5
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=0.7 fraction. Within the documented OptiMove fraction range (0, 1]. Absolute velocity/acceleration varies with the trajectory; physical limits are not established.",
+      "line": 161,
+      "evidence": "optimovej(stack_pos_q, v=.7, a=.6)",
+      "reference": 5
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Within guideline",
+      "detail": "Configured a=1 m/s\u00b2. Within UR suggested starting value \u22642.5 m/s\u00b2. This is not a safety limit or measured acceleration.",
+      "line": 167,
+      "evidence": "movel(pose_add(get_actual_tcp_pose(), p[0, 0, -1, 0, 0, 0]), v=1, a=1)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=1 m/s. Enter the applicable TCP velocity specification to check this value.",
+      "line": 167,
+      "evidence": "movel(pose_add(get_actual_tcp_pose(), p[0, 0, -1, 0, 0, 0]), v=1, a=1)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Within guideline",
+      "detail": "Configured a=0.05 m/s\u00b2. Within UR suggested starting value \u22642.5 m/s\u00b2. This is not a safety limit or measured acceleration.",
+      "line": 199,
+      "evidence": "movel(pose_add(get_actual_tcp_pose(), p[-0.5, 0, 0, 0, 0, 0]), v=0.05, a=0.05)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=0.05 m/s. Enter the applicable TCP velocity specification to check this value.",
+      "line": 199,
+      "evidence": "movel(pose_add(get_actual_tcp_pose(), p[-0.5, 0, 0, 0, 0, 0]), v=0.05, a=0.05)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Manual review",
+      "detail": "Configured a=1 fraction. Within the documented OptiMove fraction range (0, 1]. Absolute velocity/acceleration varies with the trajectory; physical limits are not established.",
+      "line": 294,
+      "evidence": "optimovej(transition_T_R_p, v=1, a=1, r=0.15)",
+      "reference": 5
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=1 fraction. Within the documented OptiMove fraction range (0, 1]. Absolute velocity/acceleration varies with the trajectory; physical limits are not established.",
+      "line": 294,
+      "evidence": "optimovej(transition_T_R_p, v=1, a=1, r=0.15)",
+      "reference": 5
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Manual review",
+      "detail": "Configured a=1 fraction. Within the documented OptiMove fraction range (0, 1]. Absolute velocity/acceleration varies with the trajectory; physical limits are not established.",
+      "line": 296,
+      "evidence": "optimovej(transition_T1_R_p, v=1, a=1, r=0.25)",
+      "reference": 5
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=1 fraction. Within the documented OptiMove fraction range (0, 1]. Absolute velocity/acceleration varies with the trajectory; physical limits are not established.",
+      "line": 296,
+      "evidence": "optimovej(transition_T1_R_p, v=1, a=1, r=0.25)",
+      "reference": 5
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Manual review",
+      "detail": "Configured a=1 fraction. Within the documented OptiMove fraction range (0, 1]. Absolute velocity/acceleration varies with the trajectory; physical limits are not established.",
+      "line": 303,
+      "evidence": "optimovej(return_pose, v=1, a=1, r=0.12)",
+      "reference": 5
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=1 fraction. Within the documented OptiMove fraction range (0, 1]. Absolute velocity/acceleration varies with the trajectory; physical limits are not established.",
+      "line": 303,
+      "evidence": "optimovej(return_pose, v=1, a=1, r=0.12)",
+      "reference": 5
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Manual review",
+      "detail": "Configured a=0.6 fraction. Within the documented OptiMove fraction range (0, 1]. Absolute velocity/acceleration varies with the trajectory; physical limits are not established.",
+      "line": 307,
+      "evidence": "optimovej(stack_pos_q, v=.5, a=.6)",
+      "reference": 5
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=0.5 fraction. Within the documented OptiMove fraction range (0, 1]. Absolute velocity/acceleration varies with the trajectory; physical limits are not established.",
+      "line": 307,
+      "evidence": "optimovej(stack_pos_q, v=.5, a=.6)",
+      "reference": 5
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Manual review",
+      "detail": "Configured a=1.25 m/s\u00b2. Within UR suggested starting value \u22642.5 m/s\u00b2. This is not a safety limit or measured acceleration. Source-definition estimate using a_scale=2.5 (line 1278), al1=0.5 (line 1291). Initialization order, runtime changes and execution are not proven. ",
+      "line": 327,
+      "evidence": "movel(pose_trans(get_actual_tcp_pose(), p[0, 0.4, 0, 0, 0, 0]), v=vl1*v_scale, a=al1*a_scale)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=2 m/s. Enter the applicable TCP velocity specification to check this value. Source-definition estimate using v_scale=4 (line 1280), vl1=0.5 (line 1283). Initialization order, runtime changes and execution are not proven. ",
+      "line": 327,
+      "evidence": "movel(pose_trans(get_actual_tcp_pose(), p[0, 0.4, 0, 0, 0, 0]), v=vl1*v_scale, a=al1*a_scale)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Manual review",
+      "detail": "Configured a=2.61799 rad/s\u00b2. Within UR suggested starting value \u226413.9626 rad/s\u00b2. This is not a safety limit or measured acceleration. Source-definition estimate using a_scale=2.5 (line 1278), ar1=1.04719755 (line 1295). Initialization order, runtime changes and execution are not proven. ",
+      "line": 329,
+      "evidence": "movej(pre_idle_q, v=vr1*v_scale, a=ar1*a_scale, r=0.01)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=4.18879 rad/s. Enter the applicable joint velocity specification to check this value. Source-definition estimate using v_scale=4 (line 1280), vr1=1.04719755 (line 1287). Initialization order, runtime changes and execution are not proven. ",
+      "line": 329,
+      "evidence": "movej(pre_idle_q, v=vr1*v_scale, a=ar1*a_scale, r=0.01)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Review recommended",
+      "detail": "Configured a=3.125 m/s\u00b2. Exceeds UR suggested starting value \u22642.5 m/s\u00b2. This is not a safety limit or measured acceleration. Source-definition estimate using a_scale=2.5 (line 1278), al2=1.25 (line 1292). Initialization order, runtime changes and execution are not proven. ",
+      "line": 360,
+      "evidence": "movel(pose_trans(pre_pick_pose, p[0.0, -0.0, PRE_PICK_GAP, 0, 0, 0]), v=vl2*v_scale, a=al2*a_scale)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=5 m/s. Enter the applicable TCP velocity specification to check this value. Source-definition estimate using v_scale=4 (line 1280), vl2=1.25 (line 1284). Initialization order, runtime changes and execution are not proven. ",
+      "line": 360,
+      "evidence": "movel(pose_trans(pre_pick_pose, p[0.0, -0.0, PRE_PICK_GAP, 0, 0, 0]), v=vl2*v_scale, a=al2*a_scale)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Within guideline",
+      "detail": "Configured a=0.2 m/s\u00b2. Within UR suggested starting value \u22642.5 m/s\u00b2. This is not a safety limit or measured acceleration.",
+      "line": 390,
+      "evidence": "movel(pose_trans(last_pick_pose, p[0, 0, -0.5, 0, 0, 0]), v=0.2, a=0.2)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=0.2 m/s. Enter the applicable TCP velocity specification to check this value.",
+      "line": 390,
+      "evidence": "movel(pose_trans(last_pick_pose, p[0, 0, -0.5, 0, 0, 0]), v=0.2, a=0.2)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Review recommended",
+      "detail": "Configured a=6.25 m/s\u00b2. Exceeds UR suggested starting value \u22642.5 m/s\u00b2. This is not a safety limit or measured acceleration. Source-definition estimate using a_scale=2.5 (line 1278), al3=2.5 (line 1293). Initialization order, runtime changes and execution are not proven. ",
+      "line": 414,
+      "evidence": "movel(pose_add(get_actual_tcp_pose(), p[0, 0, 0.015, 0, 0, 0]), v=vl3*v_scale, a=al3*a_scale)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=10 m/s. Enter the applicable TCP velocity specification to check this value. Source-definition estimate using v_scale=4 (line 1280), vl3=2.5 (line 1285). Initialization order, runtime changes and execution are not proven. ",
+      "line": 414,
+      "evidence": "movel(pose_add(get_actual_tcp_pose(), p[0, 0, 0.015, 0, 0, 0]), v=vl3*v_scale, a=al3*a_scale)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Within guideline",
+      "detail": "Configured a=1.2 m/s\u00b2. Within UR suggested starting value \u22642.5 m/s\u00b2. This is not a safety limit or measured acceleration.",
+      "line": 427,
+      "evidence": "movel(towardsPos, a=1.2, v=0.25)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=0.25 m/s. Enter the applicable TCP velocity specification to check this value.",
+      "line": 427,
+      "evidence": "movel(towardsPos, a=1.2, v=0.25)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Review recommended",
+      "detail": "Configured a=3 m/s\u00b2. Exceeds UR suggested starting value \u22642.5 m/s\u00b2. This is not a safety limit or measured acceleration.",
+      "line": 448,
+      "evidence": "movel(retractTo, a=3.0, v=0.1)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=0.1 m/s. Enter the applicable TCP velocity specification to check this value.",
+      "line": 448,
+      "evidence": "movel(retractTo, a=3.0, v=0.1)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Within guideline",
+      "detail": "Configured a=0.1 m/s\u00b2. Within UR suggested starting value \u22642.5 m/s\u00b2. This is not a safety limit or measured acceleration.",
+      "line": 482,
+      "evidence": "movel(pose_trans(last_pick_pose, p[0, 0, -0.5, 0, 0, 0]), v=1.5, a=0.1)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=1.5 m/s. Enter the applicable TCP velocity specification to check this value.",
+      "line": 482,
+      "evidence": "movel(pose_trans(last_pick_pose, p[0, 0, -0.5, 0, 0, 0]), v=1.5, a=0.1)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Manual review",
+      "detail": "Configured a=1.25 m/s\u00b2. Within UR suggested starting value \u22642.5 m/s\u00b2. This is not a safety limit or measured acceleration. Source-definition estimate using a_scale=2.5 (line 1278), al1=0.5 (line 1291). Initialization order, runtime changes and execution are not proven. ",
+      "line": 577,
+      "evidence": "movel(pose_trans(get_actual_tcp_pose(),p[0, 0, 0.018, d2r(-4), 0, 0]), v=vl1*v_scale, a=al1*a_scale, r=0.00)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=2 m/s. Enter the applicable TCP velocity specification to check this value. Source-definition estimate using v_scale=4 (line 1280), vl1=0.5 (line 1283). Initialization order, runtime changes and execution are not proven. ",
+      "line": 577,
+      "evidence": "movel(pose_trans(get_actual_tcp_pose(),p[0, 0, 0.018, d2r(-4), 0, 0]), v=vl1*v_scale, a=al1*a_scale, r=0.00)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Manual review",
+      "detail": "Configured a=1.25 m/s\u00b2. Within UR suggested starting value \u22642.5 m/s\u00b2. This is not a safety limit or measured acceleration. Source-definition estimate using a_scale=2.5 (line 1278), al1=0.5 (line 1291). Initialization order, runtime changes and execution are not proven. ",
+      "line": 591,
+      "evidence": "movel(pose_add(get_actual_tcp_pose(),p[0, 0, 0.02, 0, 0, 0]), v=vl1*v_scale, a=al1*a_scale, r=0.00)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=2 m/s. Enter the applicable TCP velocity specification to check this value. Source-definition estimate using v_scale=4 (line 1280), vl1=0.5 (line 1283). Initialization order, runtime changes and execution are not proven. ",
+      "line": 591,
+      "evidence": "movel(pose_add(get_actual_tcp_pose(),p[0, 0, 0.02, 0, 0, 0]), v=vl1*v_scale, a=al1*a_scale, r=0.00)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Manual review",
+      "detail": "Configured a=1.25 m/s\u00b2. Within UR suggested starting value \u22642.5 m/s\u00b2. This is not a safety limit or measured acceleration. Source-definition estimate using a_scale=2.5 (line 1278), al1=0.5 (line 1291). Initialization order, runtime changes and execution are not proven. ",
+      "line": 599,
+      "evidence": "movel(pose_add(get_actual_tcp_pose(),p[0, 0, PAN_LIP, 0, 0, 0]), v=vl1*v_scale, a=al1*a_scale, r=0.003)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=2 m/s. Enter the applicable TCP velocity specification to check this value. Source-definition estimate using v_scale=4 (line 1280), vl1=0.5 (line 1283). Initialization order, runtime changes and execution are not proven. ",
+      "line": 599,
+      "evidence": "movel(pose_add(get_actual_tcp_pose(),p[0, 0, PAN_LIP, 0, 0, 0]), v=vl1*v_scale, a=al1*a_scale, r=0.003)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Review recommended",
+      "detail": "Configured a=3.125 m/s\u00b2. Exceeds UR suggested starting value \u22642.5 m/s\u00b2. This is not a safety limit or measured acceleration. Source-definition estimate using a_scale=2.5 (line 1278), al2=1.25 (line 1292). Initialization order, runtime changes and execution are not proven. ",
+      "line": 616,
+      "evidence": "movel(pose_add(lift_pose, p[-DOLLY_PULL_OUT - 0.0254*12, 0.0254*8, 0.05, 0, 0, 0]), v=vl2*v_scale, a=al2*a_scale, r=0.08)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=5 m/s. Enter the applicable TCP velocity specification to check this value. Source-definition estimate using v_scale=4 (line 1280), vl2=1.25 (line 1284). Initialization order, runtime changes and execution are not proven. ",
+      "line": 616,
+      "evidence": "movel(pose_add(lift_pose, p[-DOLLY_PULL_OUT - 0.0254*12, 0.0254*8, 0.05, 0, 0, 0]), v=vl2*v_scale, a=al2*a_scale, r=0.08)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Manual review",
+      "detail": "Configured a=6.10865 rad/s\u00b2. Within UR suggested starting value \u226413.9626 rad/s\u00b2. This is not a safety limit or measured acceleration. Source-definition estimate using a_scale=2.5 (line 1278), ar3=2.44346095 (line 1297). Initialization order, runtime changes and execution are not proven. ",
+      "line": 618,
+      "evidence": "movej(transition_B_R_q, v=vr3*v_scale, a=ar3*a_scale, r=0.1)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=9.77384 rad/s. Enter the applicable joint velocity specification to check this value. Source-definition estimate using v_scale=4 (line 1280), vr3=2.44346095 (line 1289). Initialization order, runtime changes and execution are not proven. ",
+      "line": 618,
+      "evidence": "movej(transition_B_R_q, v=vr3*v_scale, a=ar3*a_scale, r=0.1)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Review recommended",
+      "detail": "Configured a=3.125 m/s\u00b2. Exceeds UR suggested starting value \u22642.5 m/s\u00b2. This is not a safety limit or measured acceleration. Source-definition estimate using a_scale=2.5 (line 1278), al2=1.25 (line 1292). Initialization order, runtime changes and execution are not proven. ",
+      "line": 623,
+      "evidence": "movel(pose_add(lift_pose, p[-DOLLY_PULL_OUT, 0, 0, 0, 0, 0]), v=vl2*v_scale, a=al2*a_scale, r=0.05)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=5 m/s. Enter the applicable TCP velocity specification to check this value. Source-definition estimate using v_scale=4 (line 1280), vl2=1.25 (line 1284). Initialization order, runtime changes and execution are not proven. ",
+      "line": 623,
+      "evidence": "movel(pose_add(lift_pose, p[-DOLLY_PULL_OUT, 0, 0, 0, 0, 0]), v=vl2*v_scale, a=al2*a_scale, r=0.05)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Review recommended",
+      "detail": "Configured a=3.125 m/s\u00b2. Exceeds UR suggested starting value \u22642.5 m/s\u00b2. This is not a safety limit or measured acceleration. Source-definition estimate using a_scale=2.5 (line 1278), al2=1.25 (line 1292). Initialization order, runtime changes and execution are not proven. ",
+      "line": 637,
+      "evidence": "movel(pose_add(lift_pose, p[-DOLLY_PULL_OUT - 0.0254*12, 0.0254*8, 0.05, 0, 0, 0]), v=vl2*v_scale, a=al2*a_scale, r=0.08)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=5 m/s. Enter the applicable TCP velocity specification to check this value. Source-definition estimate using v_scale=4 (line 1280), vl2=1.25 (line 1284). Initialization order, runtime changes and execution are not proven. ",
+      "line": 637,
+      "evidence": "movel(pose_add(lift_pose, p[-DOLLY_PULL_OUT - 0.0254*12, 0.0254*8, 0.05, 0, 0, 0]), v=vl2*v_scale, a=al2*a_scale, r=0.08)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Manual review",
+      "detail": "Configured a=1 fraction. Within the documented OptiMove fraction range (0, 1]. Absolute velocity/acceleration varies with the trajectory; physical limits are not established.",
+      "line": 639,
+      "evidence": "optimovej(transition_B_R_q, v=1, a=1, r=0.15)",
+      "reference": 5
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=1 fraction. Within the documented OptiMove fraction range (0, 1]. Absolute velocity/acceleration varies with the trajectory; physical limits are not established.",
+      "line": 639,
+      "evidence": "optimovej(transition_B_R_q, v=1, a=1, r=0.15)",
+      "reference": 5
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Review recommended",
+      "detail": "Configured a=3.125 m/s\u00b2. Exceeds UR suggested starting value \u22642.5 m/s\u00b2. This is not a safety limit or measured acceleration. Source-definition estimate using a_scale=2.5 (line 1278), al2=1.25 (line 1292). Initialization order, runtime changes and execution are not proven. ",
+      "line": 644,
+      "evidence": "movel(pose_add(lift_pose, p[-DOLLY_PULL_OUT + 0.0254*3, 0, 0.0254*5, 0, 0, 0]), v=vl2*v_scale, a=al2*a_scale, r=0.05)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=5 m/s. Enter the applicable TCP velocity specification to check this value. Source-definition estimate using v_scale=4 (line 1280), vl2=1.25 (line 1284). Initialization order, runtime changes and execution are not proven. ",
+      "line": 644,
+      "evidence": "movel(pose_add(lift_pose, p[-DOLLY_PULL_OUT + 0.0254*3, 0, 0.0254*5, 0, 0, 0]), v=vl2*v_scale, a=al2*a_scale, r=0.05)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Manual review",
+      "detail": "Configured a=6.10865 rad/s\u00b2. Within UR suggested starting value \u226413.9626 rad/s\u00b2. This is not a safety limit or measured acceleration. Source-definition estimate using a_scale=2.5 (line 1278), ar3=2.44346095 (line 1297). Initialization order, runtime changes and execution are not proven. ",
+      "line": 657,
+      "evidence": "movej(target_post_pick, v=vr3*v_scale, a=ar3*a_scale, r=0.05)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=9.77384 rad/s. Enter the applicable joint velocity specification to check this value. Source-definition estimate using v_scale=4 (line 1280), vr3=2.44346095 (line 1289). Initialization order, runtime changes and execution are not proven. ",
+      "line": 657,
+      "evidence": "movej(target_post_pick, v=vr3*v_scale, a=ar3*a_scale, r=0.05)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Manual review",
+      "detail": "Configured a=6.10865 rad/s\u00b2. Within UR suggested starting value \u226413.9626 rad/s\u00b2. This is not a safety limit or measured acceleration. Source-definition estimate using a_scale=2.5 (line 1278), ar3=2.44346095 (line 1297). Initialization order, runtime changes and execution are not proven. ",
+      "line": 664,
+      "evidence": "movej(target_post_pick, v=vr3*v_scale, a=ar3*a_scale, r=0.05)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=9.77384 rad/s. Enter the applicable joint velocity specification to check this value. Source-definition estimate using v_scale=4 (line 1280), vr3=2.44346095 (line 1289). Initialization order, runtime changes and execution are not proven. ",
+      "line": 664,
+      "evidence": "movej(target_post_pick, v=vr3*v_scale, a=ar3*a_scale, r=0.05)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Manual review",
+      "detail": "Configured a=6.10865 rad/s\u00b2. Within UR suggested starting value \u226413.9626 rad/s\u00b2. This is not a safety limit or measured acceleration. Source-definition estimate using a_scale=2.5 (line 1278), ar3=2.44346095 (line 1297). Initialization order, runtime changes and execution are not proven. ",
+      "line": 672,
+      "evidence": "movej(target_post_pick, v=vr3*v_scale, a=ar3*a_scale, r=0.05)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=9.77384 rad/s. Enter the applicable joint velocity specification to check this value. Source-definition estimate using v_scale=4 (line 1280), vr3=2.44346095 (line 1289). Initialization order, runtime changes and execution are not proven. ",
+      "line": 672,
+      "evidence": "movej(target_post_pick, v=vr3*v_scale, a=ar3*a_scale, r=0.05)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Manual review",
+      "detail": "Configured a=6.10865 rad/s\u00b2. Within UR suggested starting value \u226413.9626 rad/s\u00b2. This is not a safety limit or measured acceleration. Source-definition estimate using a_scale=2.5 (line 1278), ar3=2.44346095 (line 1297). Initialization order, runtime changes and execution are not proven. ",
+      "line": 679,
+      "evidence": "movej(target_post_pick, v=vr3*v_scale, a=ar3*a_scale, r=0.05)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=9.77384 rad/s. Enter the applicable joint velocity specification to check this value. Source-definition estimate using v_scale=4 (line 1280), vr3=2.44346095 (line 1289). Initialization order, runtime changes and execution are not proven. ",
+      "line": 679,
+      "evidence": "movej(target_post_pick, v=vr3*v_scale, a=ar3*a_scale, r=0.05)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Manual review",
+      "detail": "Configured a=1.25 m/s\u00b2. Within UR suggested starting value \u22642.5 m/s\u00b2. This is not a safety limit or measured acceleration. Source-definition estimate using a_scale=2.5 (line 1278), al1=0.5 (line 1291). Initialization order, runtime changes and execution are not proven. ",
+      "line": 707,
+      "evidence": "movel(pre_idle_p, v=vl1*v_scale, a=al1*a_scale)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=2 m/s. Enter the applicable TCP velocity specification to check this value. Source-definition estimate using v_scale=4 (line 1280), vl1=0.5 (line 1283). Initialization order, runtime changes and execution are not proven. ",
+      "line": 707,
+      "evidence": "movel(pre_idle_p, v=vl1*v_scale, a=al1*a_scale)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Manual review",
+      "detail": "Configured a=4.36332 rad/s\u00b2. Within UR suggested starting value \u226413.9626 rad/s\u00b2. This is not a safety limit or measured acceleration. Source-definition estimate using a_scale=2.5 (line 1278), ar2=1.74532925 (line 1296). Initialization order, runtime changes and execution are not proven. ",
+      "line": 711,
+      "evidence": "movej(target_post_pick, v=vr2*v_scale, a=ar2*a_scale)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=6.98132 rad/s. Enter the applicable joint velocity specification to check this value. Source-definition estimate using v_scale=4 (line 1280), vr2=1.74532925 (line 1288). Initialization order, runtime changes and execution are not proven. ",
+      "line": 711,
+      "evidence": "movej(target_post_pick, v=vr2*v_scale, a=ar2*a_scale)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Review recommended",
+      "detail": "Configured a=3.125 m/s\u00b2. Exceeds UR suggested starting value \u22642.5 m/s\u00b2. This is not a safety limit or measured acceleration. Source-definition estimate using a_scale=2.5 (line 1278), vl2=1.25 (line 1284). Initialization order, runtime changes and execution are not proven. ",
+      "line": 737,
+      "evidence": "movel(pose_add(place_above_p, p[0.0254*0.0, -0.0254*0.25, 0, 0, 0, 0]), v=vl2*v_scale, a=vl2*a_scale, r=0.05)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=5 m/s. Enter the applicable TCP velocity specification to check this value. Source-definition estimate using v_scale=4 (line 1280), vl2=1.25 (line 1284). Initialization order, runtime changes and execution are not proven. ",
+      "line": 737,
+      "evidence": "movel(pose_add(place_above_p, p[0.0254*0.0, -0.0254*0.25, 0, 0, 0, 0]), v=vl2*v_scale, a=vl2*a_scale, r=0.05)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Review recommended",
+      "detail": "Configured a=3.125 m/s\u00b2. Exceeds UR suggested starting value \u22642.5 m/s\u00b2. This is not a safety limit or measured acceleration. Source-definition estimate using a_scale=2.5 (line 1278), vl2=1.25 (line 1284). Initialization order, runtime changes and execution are not proven. ",
+      "line": 741,
+      "evidence": "movel(pose_add(place_above_p, p[0.0254*0.0, -0.0254*2, 0, 0, 0, 0]), v=vl2*v_scale, a=vl2*a_scale, r=0.05)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=5 m/s. Enter the applicable TCP velocity specification to check this value. Source-definition estimate using v_scale=4 (line 1280), vl2=1.25 (line 1284). Initialization order, runtime changes and execution are not proven. ",
+      "line": 741,
+      "evidence": "movel(pose_add(place_above_p, p[0.0254*0.0, -0.0254*2, 0, 0, 0, 0]), v=vl2*v_scale, a=vl2*a_scale, r=0.05)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Review recommended",
+      "detail": "Configured a=3.125 m/s\u00b2. Exceeds UR suggested starting value \u22642.5 m/s\u00b2. This is not a safety limit or measured acceleration. Source-definition estimate using a_scale=2.5 (line 1278), al2=1.25 (line 1292). Initialization order, runtime changes and execution are not proven. ",
+      "line": 744,
+      "evidence": "movel(modified_place_q, v=vl2*v_scale, a=al2*a_scale, r=0)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=5 m/s. Enter the applicable TCP velocity specification to check this value. Source-definition estimate using v_scale=4 (line 1280), vl2=1.25 (line 1284). Initialization order, runtime changes and execution are not proven. ",
+      "line": 744,
+      "evidence": "movel(modified_place_q, v=vl2*v_scale, a=al2*a_scale, r=0)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Within guideline",
+      "detail": "Configured a=0.3 m/s\u00b2. Within UR suggested starting value \u22642.5 m/s\u00b2. This is not a safety limit or measured acceleration.",
+      "line": 761,
+      "evidence": "movel(pose_trans(get_actual_tcp_pose(), p[0, 0.5, 0, 0, 0, 0]), v=0.3, a=0.3)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=0.3 m/s. Enter the applicable TCP velocity specification to check this value.",
+      "line": 761,
+      "evidence": "movel(pose_trans(get_actual_tcp_pose(), p[0, 0.5, 0, 0, 0, 0]), v=0.3, a=0.3)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Review recommended",
+      "detail": "Configured a=4.36332 m/s\u00b2. Exceeds UR suggested starting value \u22642.5 m/s\u00b2. This is not a safety limit or measured acceleration. Source-definition estimate using a_scale=2.5 (line 1278), ar2=1.74532925 (line 1296). Initialization order, runtime changes and execution are not proven. ",
+      "line": 797,
+      "evidence": "movel(pose_add(current_pose, p[0, place_y, -0.0, 0, 0, 0]), v=vr2*v_scale, a=ar2*a_scale, r=0.00)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=6.98132 m/s. Enter the applicable TCP velocity specification to check this value. Source-definition estimate using v_scale=4 (line 1280), vr2=1.74532925 (line 1288). Initialization order, runtime changes and execution are not proven. ",
+      "line": 797,
+      "evidence": "movel(pose_add(current_pose, p[0, place_y, -0.0, 0, 0, 0]), v=vr2*v_scale, a=ar2*a_scale, r=0.00)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Review recommended",
+      "detail": "Configured a=4.36332 m/s\u00b2. Exceeds UR suggested starting value \u22642.5 m/s\u00b2. This is not a safety limit or measured acceleration. Source-definition estimate using a_scale=2.5 (line 1278), ar2=1.74532925 (line 1296). Initialization order, runtime changes and execution are not proven. ",
+      "line": 807,
+      "evidence": "movel(pose_add(current_pose, p[0, place_y, -0.005, 0, 0, 0]), v=vr2*v_scale, a=ar2*a_scale, r=0.0025)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=6.98132 m/s. Enter the applicable TCP velocity specification to check this value. Source-definition estimate using v_scale=4 (line 1280), vr2=1.74532925 (line 1288). Initialization order, runtime changes and execution are not proven. ",
+      "line": 807,
+      "evidence": "movel(pose_add(current_pose, p[0, place_y, -0.005, 0, 0, 0]), v=vr2*v_scale, a=ar2*a_scale, r=0.0025)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Review recommended",
+      "detail": "Configured a=4.36332 m/s\u00b2. Exceeds UR suggested starting value \u22642.5 m/s\u00b2. This is not a safety limit or measured acceleration. Source-definition estimate using a_scale=2.5 (line 1278), ar2=1.74532925 (line 1296). Initialization order, runtime changes and execution are not proven. ",
+      "line": 826,
+      "evidence": "movel(transition_pose, v=vr2*v_scale, a=ar2*a_scale, r=0.0025)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=6.98132 m/s. Enter the applicable TCP velocity specification to check this value. Source-definition estimate using v_scale=4 (line 1280), vr2=1.74532925 (line 1288). Initialization order, runtime changes and execution are not proven. ",
+      "line": 826,
+      "evidence": "movel(transition_pose, v=vr2*v_scale, a=ar2*a_scale, r=0.0025)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Review recommended",
+      "detail": "Configured a=4.36332 m/s\u00b2. Exceeds UR suggested starting value \u22642.5 m/s\u00b2. This is not a safety limit or measured acceleration. Source-definition estimate using a_scale=2.5 (line 1278), ar2=1.74532925 (line 1296). Initialization order, runtime changes and execution are not proven. ",
+      "line": 828,
+      "evidence": "movel(pose_trans(transition_pose, p[0,-0.021,0.042,0,0,0]), v=vr2*v_scale, a=ar2*a_scale, r=0.0025)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=6.98132 m/s. Enter the applicable TCP velocity specification to check this value. Source-definition estimate using v_scale=4 (line 1280), vr2=1.74532925 (line 1288). Initialization order, runtime changes and execution are not proven. ",
+      "line": 828,
+      "evidence": "movel(pose_trans(transition_pose, p[0,-0.021,0.042,0,0,0]), v=vr2*v_scale, a=ar2*a_scale, r=0.0025)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Manual review",
+      "detail": "Configured a=4.36332 rad/s\u00b2. Within UR suggested starting value \u226413.9626 rad/s\u00b2. This is not a safety limit or measured acceleration. Source-definition estimate using a_scale=2.5 (line 1278), vr2=1.74532925 (line 1288). Initialization order, runtime changes and execution are not proven. ",
+      "line": 831,
+      "evidence": "movej(place_above_q, v=vr2*v_scale, a=vr2*a_scale, r=0.02)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=6.98132 rad/s. Enter the applicable joint velocity specification to check this value. Source-definition estimate using v_scale=4 (line 1280), vr2=1.74532925 (line 1288). Initialization order, runtime changes and execution are not proven. ",
+      "line": 831,
+      "evidence": "movej(place_above_q, v=vr2*v_scale, a=vr2*a_scale, r=0.02)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Review recommended",
+      "detail": "Configured a=2.61799 m/s\u00b2. Exceeds UR suggested starting value \u22642.5 m/s\u00b2. This is not a safety limit or measured acceleration. Source-definition estimate using a_scale=2.5 (line 1278), ar1=1.04719755 (line 1295). Initialization order, runtime changes and execution are not proven. ",
+      "line": 843,
+      "evidence": "movel(pre_idle_p, v=vr1*v_scale, a=ar1*a_scale, r=0.01)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=4.18879 m/s. Enter the applicable TCP velocity specification to check this value. Source-definition estimate using v_scale=4 (line 1280), vr1=1.04719755 (line 1287). Initialization order, runtime changes and execution are not proven. ",
+      "line": 843,
+      "evidence": "movel(pre_idle_p, v=vr1*v_scale, a=ar1*a_scale, r=0.01)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Manual review",
+      "detail": "Configured a=0.5 fraction. Within the documented OptiMove fraction range (0, 1]. Absolute velocity/acceleration varies with the trajectory; physical limits are not established.",
+      "line": 858,
+      "evidence": "optimovel(target_post_pick, v=0.4, a=0.5, r=0.05)",
+      "reference": 5
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=0.4 fraction. Within the documented OptiMove fraction range (0, 1]. Absolute velocity/acceleration varies with the trajectory; physical limits are not established.",
+      "line": 858,
+      "evidence": "optimovel(target_post_pick, v=0.4, a=0.5, r=0.05)",
+      "reference": 5
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Within guideline",
+      "detail": "Configured a=1.39626 rad/s\u00b2. Within UR suggested starting value \u226413.9626 rad/s\u00b2. This is not a safety limit or measured acceleration.",
+      "line": 865,
+      "evidence": "movej(pose_add(get_target_tcp_pose(), pose_sub(false_move_to_p, false_move_from_p)), a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=1.0472 rad/s. Enter the applicable joint velocity specification to check this value.",
+      "line": 865,
+      "evidence": "movej(pose_add(get_target_tcp_pose(), pose_sub(false_move_to_p, false_move_from_p)), a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Within guideline",
+      "detail": "Configured a=1.39626 rad/s\u00b2. Within UR suggested starting value \u226413.9626 rad/s\u00b2. This is not a safety limit or measured acceleration.",
+      "line": 1471,
+      "evidence": "movej(pre_idle_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=1.0472 rad/s. Enter the applicable joint velocity specification to check this value.",
+      "line": 1471,
+      "evidence": "movej(pre_idle_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Within guideline",
+      "detail": "Configured a=1.39626 rad/s\u00b2. Within UR suggested starting value \u226413.9626 rad/s\u00b2. This is not a safety limit or measured acceleration.",
+      "line": 1473,
+      "evidence": "movej(idle_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=1.0472 rad/s. Enter the applicable joint velocity specification to check this value.",
+      "line": 1473,
+      "evidence": "movej(idle_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Within guideline",
+      "detail": "Configured a=1.39626 rad/s\u00b2. Within UR suggested starting value \u226413.9626 rad/s\u00b2. This is not a safety limit or measured acceleration.",
+      "line": 1476,
+      "evidence": "movej(place_above_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=1.0472 rad/s. Enter the applicable joint velocity specification to check this value.",
+      "line": 1476,
+      "evidence": "movej(place_above_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Within guideline",
+      "detail": "Configured a=1.39626 rad/s\u00b2. Within UR suggested starting value \u226413.9626 rad/s\u00b2. This is not a safety limit or measured acceleration.",
+      "line": 1478,
+      "evidence": "movej(place_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=1.0472 rad/s. Enter the applicable joint velocity specification to check this value.",
+      "line": 1478,
+      "evidence": "movej(place_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Within guideline",
+      "detail": "Configured a=1.39626 rad/s\u00b2. Within UR suggested starting value \u226413.9626 rad/s\u00b2. This is not a safety limit or measured acceleration.",
+      "line": 1481,
+      "evidence": "movej(left_pick_post_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=1.0472 rad/s. Enter the applicable joint velocity specification to check this value.",
+      "line": 1481,
+      "evidence": "movej(left_pick_post_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Within guideline",
+      "detail": "Configured a=1.39626 rad/s\u00b2. Within UR suggested starting value \u226413.9626 rad/s\u00b2. This is not a safety limit or measured acceleration.",
+      "line": 1483,
+      "evidence": "movej(left_pick_top_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=1.0472 rad/s. Enter the applicable joint velocity specification to check this value.",
+      "line": 1483,
+      "evidence": "movej(left_pick_top_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Within guideline",
+      "detail": "Configured a=1.39626 rad/s\u00b2. Within UR suggested starting value \u226413.9626 rad/s\u00b2. This is not a safety limit or measured acceleration.",
+      "line": 1485,
+      "evidence": "movej(left_pick_btm_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=1.0472 rad/s. Enter the applicable joint velocity specification to check this value.",
+      "line": 1485,
+      "evidence": "movej(left_pick_btm_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Within guideline",
+      "detail": "Configured a=1.39626 rad/s\u00b2. Within UR suggested starting value \u226413.9626 rad/s\u00b2. This is not a safety limit or measured acceleration.",
+      "line": 1487,
+      "evidence": "movej(left_btm_trays_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=1.0472 rad/s. Enter the applicable joint velocity specification to check this value.",
+      "line": 1487,
+      "evidence": "movej(left_btm_trays_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Within guideline",
+      "detail": "Configured a=1.39626 rad/s\u00b2. Within UR suggested starting value \u226413.9626 rad/s\u00b2. This is not a safety limit or measured acceleration.",
+      "line": 1490,
+      "evidence": "movej(right_pick_pst_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=1.0472 rad/s. Enter the applicable joint velocity specification to check this value.",
+      "line": 1490,
+      "evidence": "movej(right_pick_pst_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Within guideline",
+      "detail": "Configured a=1.39626 rad/s\u00b2. Within UR suggested starting value \u226413.9626 rad/s\u00b2. This is not a safety limit or measured acceleration.",
+      "line": 1492,
+      "evidence": "movej(right_pick_top_q, a=1.3962634015954636, v=1.0471975511965976, r=0.05)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=1.0472 rad/s. Enter the applicable joint velocity specification to check this value.",
+      "line": 1492,
+      "evidence": "movej(right_pick_top_q, a=1.3962634015954636, v=1.0471975511965976, r=0.05)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Within guideline",
+      "detail": "Configured a=1.39626 rad/s\u00b2. Within UR suggested starting value \u226413.9626 rad/s\u00b2. This is not a safety limit or measured acceleration.",
+      "line": 1494,
+      "evidence": "movej(right_pick_btm_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=1.0472 rad/s. Enter the applicable joint velocity specification to check this value.",
+      "line": 1494,
+      "evidence": "movej(right_pick_btm_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Within guideline",
+      "detail": "Configured a=1.39626 rad/s\u00b2. Within UR suggested starting value \u226413.9626 rad/s\u00b2. This is not a safety limit or measured acceleration.",
+      "line": 1496,
+      "evidence": "movej(right_btm_trays_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=1.0472 rad/s. Enter the applicable joint velocity specification to check this value.",
+      "line": 1496,
+      "evidence": "movej(right_btm_trays_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Within guideline",
+      "detail": "Configured a=1.39626 rad/s\u00b2. Within UR suggested starting value \u226413.9626 rad/s\u00b2. This is not a safety limit or measured acceleration.",
+      "line": 1498,
+      "evidence": "movej(transition_T1_R_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=1.0472 rad/s. Enter the applicable joint velocity specification to check this value.",
+      "line": 1498,
+      "evidence": "movej(transition_T1_R_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Within guideline",
+      "detail": "Configured a=1.39626 rad/s\u00b2. Within UR suggested starting value \u226413.9626 rad/s\u00b2. This is not a safety limit or measured acceleration.",
+      "line": 1500,
+      "evidence": "movej(transition_T_R_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=1.0472 rad/s. Enter the applicable joint velocity specification to check this value.",
+      "line": 1500,
+      "evidence": "movej(transition_T_R_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Within guideline",
+      "detail": "Configured a=1.39626 rad/s\u00b2. Within UR suggested starting value \u226413.9626 rad/s\u00b2. This is not a safety limit or measured acceleration.",
+      "line": 1502,
+      "evidence": "movej(transition_B_R_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=1.0472 rad/s. Enter the applicable joint velocity specification to check this value.",
+      "line": 1502,
+      "evidence": "movej(transition_B_R_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Review recommended",
+      "detail": "Configured a=3.125 m/s\u00b2. Exceeds UR suggested starting value \u22642.5 m/s\u00b2. This is not a safety limit or measured acceleration. Source-definition estimate using a_scale=2.5 (line 1278), al2=1.25 (line 1292). Initialization order, runtime changes and execution are not proven. ",
+      "line": 1747,
+      "evidence": "movel(pose_add(pull_out_pose, p[0.02, 0, 0, 0, 0, 0]), v=v_scale*vl2, a=a_scale*al2)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=5 m/s. Enter the applicable TCP velocity specification to check this value. Source-definition estimate using v_scale=4 (line 1280), vl2=1.25 (line 1284). Initialization order, runtime changes and execution are not proven. ",
+      "line": 1747,
+      "evidence": "movel(pose_add(pull_out_pose, p[0.02, 0, 0, 0, 0, 0]), v=v_scale*vl2, a=a_scale*al2)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Manual review",
+      "detail": "Configured a=1.25 m/s\u00b2. Within UR suggested starting value \u22642.5 m/s\u00b2. This is not a safety limit or measured acceleration. Source-definition estimate using a_scale=2.5 (line 1278), al1=0.5 (line 1291). Initialization order, runtime changes and execution are not proven. ",
+      "line": 1758,
+      "evidence": "movel(pull_out_pose, v=vl1*v_scale, a=al1*a_scale, r=0.05)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=2 m/s. Enter the applicable TCP velocity specification to check this value. Source-definition estimate using v_scale=4 (line 1280), vl1=0.5 (line 1283). Initialization order, runtime changes and execution are not proven. ",
+      "line": 1758,
+      "evidence": "movel(pull_out_pose, v=vl1*v_scale, a=al1*a_scale, r=0.05)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Manual review",
+      "detail": "Configured a=1.25 m/s\u00b2. Within UR suggested starting value \u22642.5 m/s\u00b2. This is not a safety limit or measured acceleration. Source-definition estimate using a_scale=2.5 (line 1278), al1=0.5 (line 1291). Initialization order, runtime changes and execution are not proven. ",
+      "line": 1765,
+      "evidence": "movel(pull_out_pose, v=vl1*v_scale, a=al1*a_scale, r=0.05)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=2 m/s. Enter the applicable TCP velocity specification to check this value. Source-definition estimate using v_scale=4 (line 1280), vl1=0.5 (line 1283). Initialization order, runtime changes and execution are not proven. ",
+      "line": 1765,
+      "evidence": "movel(pull_out_pose, v=vl1*v_scale, a=al1*a_scale, r=0.05)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Manual review",
+      "detail": "Configured a=1.25 m/s\u00b2. Within UR suggested starting value \u22642.5 m/s\u00b2. This is not a safety limit or measured acceleration. Source-definition estimate using a_scale=2.5 (line 1278), al1=0.5 (line 1291). Initialization order, runtime changes and execution are not proven. ",
+      "line": 1782,
+      "evidence": "movel(current_pose, v=vl1*v_scale, a=al1*a_scale, r=0.02)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=2 m/s. Enter the applicable TCP velocity specification to check this value. Source-definition estimate using v_scale=4 (line 1280), vl1=0.5 (line 1283). Initialization order, runtime changes and execution are not proven. ",
+      "line": 1782,
+      "evidence": "movel(current_pose, v=vl1*v_scale, a=al1*a_scale, r=0.02)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Manual review",
+      "detail": "Configured a=1.25 m/s\u00b2. Within UR suggested starting value \u22642.5 m/s\u00b2. This is not a safety limit or measured acceleration. Source-definition estimate using a_scale=2.5 (line 1278), al1=0.5 (line 1291). Initialization order, runtime changes and execution are not proven. ",
+      "line": 1787,
+      "evidence": "movel(current_pose, v=vl1*v_scale, a=al1*a_scale, r=0.02)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=2 m/s. Enter the applicable TCP velocity specification to check this value. Source-definition estimate using v_scale=4 (line 1280), vl1=0.5 (line 1283). Initialization order, runtime changes and execution are not proven. ",
+      "line": 1787,
+      "evidence": "movel(current_pose, v=vl1*v_scale, a=al1*a_scale, r=0.02)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Manual review",
+      "detail": "Configured a=1.25 m/s\u00b2. Within UR suggested starting value \u22642.5 m/s\u00b2. This is not a safety limit or measured acceleration. Source-definition estimate using a_scale=2.5 (line 1278), al1=0.5 (line 1291). Initialization order, runtime changes and execution are not proven. ",
+      "line": 1791,
+      "evidence": "movel(current_pose, v=vl1*v_scale, a=al1*a_scale, r=0.02)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=2 m/s. Enter the applicable TCP velocity specification to check this value. Source-definition estimate using v_scale=4 (line 1280), vl1=0.5 (line 1283). Initialization order, runtime changes and execution are not proven. ",
+      "line": 1791,
+      "evidence": "movel(current_pose, v=vl1*v_scale, a=al1*a_scale, r=0.02)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Manual review",
+      "detail": "Configured a=1.25 m/s\u00b2. Within UR suggested starting value \u22642.5 m/s\u00b2. This is not a safety limit or measured acceleration. Source-definition estimate using a_scale=2.5 (line 1278), al1=0.5 (line 1291). Initialization order, runtime changes and execution are not proven. ",
+      "line": 1793,
+      "evidence": "movel(pre_idle_p, v=vl1*v_scale, a=al1*a_scale, r=0.01)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=2 m/s. Enter the applicable TCP velocity specification to check this value. Source-definition estimate using v_scale=4 (line 1280), vl1=0.5 (line 1283). Initialization order, runtime changes and execution are not proven. ",
+      "line": 1793,
+      "evidence": "movel(pre_idle_p, v=vl1*v_scale, a=al1*a_scale, r=0.01)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Manual review",
+      "detail": "Configured a=2.44346 rad/s\u00b2. Within UR suggested starting value \u226413.9626 rad/s\u00b2. This is not a safety limit or measured acceleration. Source-definition estimate using ar3=2.44346095 (line 1297). Initialization order, runtime changes and execution are not proven. ",
+      "line": 1801,
+      "evidence": "movej(transition_T1_R_q, v=vr3*v_scale, a=ar3, r=0.1)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=9.77384 rad/s. Enter the applicable joint velocity specification to check this value. Source-definition estimate using v_scale=4 (line 1280), vr3=2.44346095 (line 1289). Initialization order, runtime changes and execution are not proven. ",
+      "line": 1801,
+      "evidence": "movej(transition_T1_R_q, v=vr3*v_scale, a=ar3, r=0.1)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Manual review",
+      "detail": "Configured a=2.44346 rad/s\u00b2. Within UR suggested starting value \u226413.9626 rad/s\u00b2. This is not a safety limit or measured acceleration. Source-definition estimate using ar3=2.44346095 (line 1297). Initialization order, runtime changes and execution are not proven. ",
+      "line": 1803,
+      "evidence": "movej(transition_T_R_q, v=vr3*v_scale, a=ar3, r=0.1)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=9.77384 rad/s. Enter the applicable joint velocity specification to check this value. Source-definition estimate using v_scale=4 (line 1280), vr3=2.44346095 (line 1289). Initialization order, runtime changes and execution are not proven. ",
+      "line": 1803,
+      "evidence": "movej(transition_T_R_q, v=vr3*v_scale, a=ar3, r=0.1)",
+      "reference": 0
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Manual review",
+      "detail": "Configured a=0.5 fraction. Within the documented OptiMove fraction range (0, 1]. Absolute velocity/acceleration varies with the trajectory; physical limits are not established.",
+      "line": 1806,
+      "evidence": "optimovej(pre_idle_q, v=0.5, a=0.5)",
+      "reference": 5
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=0.5 fraction. Within the documented OptiMove fraction range (0, 1]. Absolute velocity/acceleration varies with the trajectory; physical limits are not established.",
+      "line": 1806,
+      "evidence": "optimovej(pre_idle_q, v=0.5, a=0.5)",
+      "reference": 5
+    },
+    {
+      "category": "Acceleration recommendations",
+      "status": "Review recommended",
+      "detail": "Configured a=2.61799 m/s\u00b2. Exceeds UR suggested starting value \u22642.5 m/s\u00b2. This is not a safety limit or measured acceleration. Source-definition estimate using a_scale=2.5 (line 1278), ar1=1.04719755 (line 1295). Initialization order, runtime changes and execution are not proven. ",
+      "line": 1835,
+      "evidence": "movel(pre_idle_p, v=vr1*v_scale, a=ar1*a_scale, r=0.0)",
+      "reference": 0
+    },
+    {
+      "category": "Velocity specifications",
+      "status": "Manual review",
+      "detail": "Configured v=4.18879 m/s. Enter the applicable TCP velocity specification to check this value. Source-definition estimate using v_scale=4 (line 1280), vr1=1.04719755 (line 1287). Initialization order, runtime changes and execution are not proven. ",
+      "line": 1835,
+      "evidence": "movel(pre_idle_p, v=vr1*v_scale, a=ar1*a_scale, r=0.0)",
+      "reference": 0
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 138,
+      "evidence": "movej(get_inverse_kin(clear_pos_p, qnear=pick_post_q), v=vr3*v_scale, a=ar3*a_scale, r=0.02)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Manual review",
+      "detail": "Configured radius r=0.02 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 138,
+      "evidence": "movej(get_inverse_kin(clear_pos_p, qnear=pick_post_q), v=vr3*v_scale, a=ar3*a_scale, r=0.02)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 156,
+      "evidence": "optimovej(transition_T_R_q, v=0.85, a=0.8, r=0.1)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Manual review",
+      "detail": "Configured radius r=0.1 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 156,
+      "evidence": "optimovej(transition_T_R_q, v=0.85, a=0.8, r=0.1)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 158,
+      "evidence": "optimovej(transition_T1_R_q, v=0.85, a=0.8, r=0.15)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Manual review",
+      "detail": "Configured radius r=0.15 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 158,
+      "evidence": "optimovej(transition_T1_R_q, v=0.85, a=0.8, r=0.15)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 161,
+      "evidence": "optimovej(stack_pos_q, v=.7, a=.6)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Source observation",
+      "detail": "Configured radius r=0 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 161,
+      "evidence": "optimovej(stack_pos_q, v=.7, a=.6)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 167,
+      "evidence": "movel(pose_add(get_actual_tcp_pose(), p[0, 0, -1, 0, 0, 0]), v=1, a=1)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Source observation",
+      "detail": "Configured radius r=0 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 167,
+      "evidence": "movel(pose_add(get_actual_tcp_pose(), p[0, 0, -1, 0, 0, 0]), v=1, a=1)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 199,
+      "evidence": "movel(pose_add(get_actual_tcp_pose(), p[-0.5, 0, 0, 0, 0, 0]), v=0.05, a=0.05)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Source observation",
+      "detail": "Configured radius r=0 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 199,
+      "evidence": "movel(pose_add(get_actual_tcp_pose(), p[-0.5, 0, 0, 0, 0, 0]), v=0.05, a=0.05)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 294,
+      "evidence": "optimovej(transition_T_R_p, v=1, a=1, r=0.15)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Manual review",
+      "detail": "Configured radius r=0.15 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 294,
+      "evidence": "optimovej(transition_T_R_p, v=1, a=1, r=0.15)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 296,
+      "evidence": "optimovej(transition_T1_R_p, v=1, a=1, r=0.25)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Manual review",
+      "detail": "Configured radius r=0.25 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 296,
+      "evidence": "optimovej(transition_T1_R_p, v=1, a=1, r=0.25)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 303,
+      "evidence": "optimovej(return_pose, v=1, a=1, r=0.12)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Manual review",
+      "detail": "Configured radius r=0.12 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 303,
+      "evidence": "optimovej(return_pose, v=1, a=1, r=0.12)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 307,
+      "evidence": "optimovej(stack_pos_q, v=.5, a=.6)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Source observation",
+      "detail": "Configured radius r=0 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 307,
+      "evidence": "optimovej(stack_pos_q, v=.5, a=.6)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 327,
+      "evidence": "movel(pose_trans(get_actual_tcp_pose(), p[0, 0.4, 0, 0, 0, 0]), v=vl1*v_scale, a=al1*a_scale)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Source observation",
+      "detail": "Configured radius r=0 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 327,
+      "evidence": "movel(pose_trans(get_actual_tcp_pose(), p[0, 0.4, 0, 0, 0, 0]), v=vl1*v_scale, a=al1*a_scale)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 329,
+      "evidence": "movej(pre_idle_q, v=vr1*v_scale, a=ar1*a_scale, r=0.01)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Manual review",
+      "detail": "Configured radius r=0.01 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 329,
+      "evidence": "movej(pre_idle_q, v=vr1*v_scale, a=ar1*a_scale, r=0.01)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 360,
+      "evidence": "movel(pose_trans(pre_pick_pose, p[0.0, -0.0, PRE_PICK_GAP, 0, 0, 0]), v=vl2*v_scale, a=al2*a_scale)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Source observation",
+      "detail": "Configured radius r=0 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 360,
+      "evidence": "movel(pose_trans(pre_pick_pose, p[0.0, -0.0, PRE_PICK_GAP, 0, 0, 0]), v=vl2*v_scale, a=al2*a_scale)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 390,
+      "evidence": "movel(pose_trans(last_pick_pose, p[0, 0, -0.5, 0, 0, 0]), v=0.2, a=0.2)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Source observation",
+      "detail": "Configured radius r=0 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 390,
+      "evidence": "movel(pose_trans(last_pick_pose, p[0, 0, -0.5, 0, 0, 0]), v=0.2, a=0.2)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 414,
+      "evidence": "movel(pose_add(get_actual_tcp_pose(), p[0, 0, 0.015, 0, 0, 0]), v=vl3*v_scale, a=al3*a_scale)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Source observation",
+      "detail": "Configured radius r=0 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 414,
+      "evidence": "movel(pose_add(get_actual_tcp_pose(), p[0, 0, 0.015, 0, 0, 0]), v=vl3*v_scale, a=al3*a_scale)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 427,
+      "evidence": "movel(towardsPos, a=1.2, v=0.25)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Source observation",
+      "detail": "Configured radius r=0 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 427,
+      "evidence": "movel(towardsPos, a=1.2, v=0.25)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 448,
+      "evidence": "movel(retractTo, a=3.0, v=0.1)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Source observation",
+      "detail": "Configured radius r=0 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 448,
+      "evidence": "movel(retractTo, a=3.0, v=0.1)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 482,
+      "evidence": "movel(pose_trans(last_pick_pose, p[0, 0, -0.5, 0, 0, 0]), v=1.5, a=0.1)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Source observation",
+      "detail": "Configured radius r=0 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 482,
+      "evidence": "movel(pose_trans(last_pick_pose, p[0, 0, -0.5, 0, 0, 0]), v=1.5, a=0.1)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 577,
+      "evidence": "movel(pose_trans(get_actual_tcp_pose(),p[0, 0, 0.018, d2r(-4), 0, 0]), v=vl1*v_scale, a=al1*a_scale, r=0.00)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Source observation",
+      "detail": "Configured radius r=0 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 577,
+      "evidence": "movel(pose_trans(get_actual_tcp_pose(),p[0, 0, 0.018, d2r(-4), 0, 0]), v=vl1*v_scale, a=al1*a_scale, r=0.00)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 591,
+      "evidence": "movel(pose_add(get_actual_tcp_pose(),p[0, 0, 0.02, 0, 0, 0]), v=vl1*v_scale, a=al1*a_scale, r=0.00)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Source observation",
+      "detail": "Configured radius r=0 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 591,
+      "evidence": "movel(pose_add(get_actual_tcp_pose(),p[0, 0, 0.02, 0, 0, 0]), v=vl1*v_scale, a=al1*a_scale, r=0.00)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 599,
+      "evidence": "movel(pose_add(get_actual_tcp_pose(),p[0, 0, PAN_LIP, 0, 0, 0]), v=vl1*v_scale, a=al1*a_scale, r=0.003)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Manual review",
+      "detail": "Configured radius r=0.003 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 599,
+      "evidence": "movel(pose_add(get_actual_tcp_pose(),p[0, 0, PAN_LIP, 0, 0, 0]), v=vl1*v_scale, a=al1*a_scale, r=0.003)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 616,
+      "evidence": "movel(pose_add(lift_pose, p[-DOLLY_PULL_OUT - 0.0254*12, 0.0254*8, 0.05, 0, 0, 0]), v=vl2*v_scale, a=al2*a_scale, r=0.08)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Manual review",
+      "detail": "Configured radius r=0.08 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 616,
+      "evidence": "movel(pose_add(lift_pose, p[-DOLLY_PULL_OUT - 0.0254*12, 0.0254*8, 0.05, 0, 0, 0]), v=vl2*v_scale, a=al2*a_scale, r=0.08)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 618,
+      "evidence": "movej(transition_B_R_q, v=vr3*v_scale, a=ar3*a_scale, r=0.1)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Manual review",
+      "detail": "Configured radius r=0.1 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 618,
+      "evidence": "movej(transition_B_R_q, v=vr3*v_scale, a=ar3*a_scale, r=0.1)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 623,
+      "evidence": "movel(pose_add(lift_pose, p[-DOLLY_PULL_OUT, 0, 0, 0, 0, 0]), v=vl2*v_scale, a=al2*a_scale, r=0.05)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Manual review",
+      "detail": "Configured radius r=0.05 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 623,
+      "evidence": "movel(pose_add(lift_pose, p[-DOLLY_PULL_OUT, 0, 0, 0, 0, 0]), v=vl2*v_scale, a=al2*a_scale, r=0.05)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 637,
+      "evidence": "movel(pose_add(lift_pose, p[-DOLLY_PULL_OUT - 0.0254*12, 0.0254*8, 0.05, 0, 0, 0]), v=vl2*v_scale, a=al2*a_scale, r=0.08)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Manual review",
+      "detail": "Configured radius r=0.08 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 637,
+      "evidence": "movel(pose_add(lift_pose, p[-DOLLY_PULL_OUT - 0.0254*12, 0.0254*8, 0.05, 0, 0, 0]), v=vl2*v_scale, a=al2*a_scale, r=0.08)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 639,
+      "evidence": "optimovej(transition_B_R_q, v=1, a=1, r=0.15)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Manual review",
+      "detail": "Configured radius r=0.15 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 639,
+      "evidence": "optimovej(transition_B_R_q, v=1, a=1, r=0.15)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 644,
+      "evidence": "movel(pose_add(lift_pose, p[-DOLLY_PULL_OUT + 0.0254*3, 0, 0.0254*5, 0, 0, 0]), v=vl2*v_scale, a=al2*a_scale, r=0.05)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Manual review",
+      "detail": "Configured radius r=0.05 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 644,
+      "evidence": "movel(pose_add(lift_pose, p[-DOLLY_PULL_OUT + 0.0254*3, 0, 0.0254*5, 0, 0, 0]), v=vl2*v_scale, a=al2*a_scale, r=0.05)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 657,
+      "evidence": "movej(target_post_pick, v=vr3*v_scale, a=ar3*a_scale, r=0.05)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Manual review",
+      "detail": "Configured radius r=0.05 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 657,
+      "evidence": "movej(target_post_pick, v=vr3*v_scale, a=ar3*a_scale, r=0.05)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 664,
+      "evidence": "movej(target_post_pick, v=vr3*v_scale, a=ar3*a_scale, r=0.05)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Manual review",
+      "detail": "Configured radius r=0.05 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 664,
+      "evidence": "movej(target_post_pick, v=vr3*v_scale, a=ar3*a_scale, r=0.05)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 672,
+      "evidence": "movej(target_post_pick, v=vr3*v_scale, a=ar3*a_scale, r=0.05)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Manual review",
+      "detail": "Configured radius r=0.05 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 672,
+      "evidence": "movej(target_post_pick, v=vr3*v_scale, a=ar3*a_scale, r=0.05)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 679,
+      "evidence": "movej(target_post_pick, v=vr3*v_scale, a=ar3*a_scale, r=0.05)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Manual review",
+      "detail": "Configured radius r=0.05 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 679,
+      "evidence": "movej(target_post_pick, v=vr3*v_scale, a=ar3*a_scale, r=0.05)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 707,
+      "evidence": "movel(pre_idle_p, v=vl1*v_scale, a=al1*a_scale)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Source observation",
+      "detail": "Configured radius r=0 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 707,
+      "evidence": "movel(pre_idle_p, v=vl1*v_scale, a=al1*a_scale)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 711,
+      "evidence": "movej(target_post_pick, v=vr2*v_scale, a=ar2*a_scale)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Source observation",
+      "detail": "Configured radius r=0 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 711,
+      "evidence": "movej(target_post_pick, v=vr2*v_scale, a=ar2*a_scale)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 737,
+      "evidence": "movel(pose_add(place_above_p, p[0.0254*0.0, -0.0254*0.25, 0, 0, 0, 0]), v=vl2*v_scale, a=vl2*a_scale, r=0.05)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Manual review",
+      "detail": "Configured radius r=0.05 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 737,
+      "evidence": "movel(pose_add(place_above_p, p[0.0254*0.0, -0.0254*0.25, 0, 0, 0, 0]), v=vl2*v_scale, a=vl2*a_scale, r=0.05)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 741,
+      "evidence": "movel(pose_add(place_above_p, p[0.0254*0.0, -0.0254*2, 0, 0, 0, 0]), v=vl2*v_scale, a=vl2*a_scale, r=0.05)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Manual review",
+      "detail": "Configured radius r=0.05 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 741,
+      "evidence": "movel(pose_add(place_above_p, p[0.0254*0.0, -0.0254*2, 0, 0, 0, 0]), v=vl2*v_scale, a=vl2*a_scale, r=0.05)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 744,
+      "evidence": "movel(modified_place_q, v=vl2*v_scale, a=al2*a_scale, r=0)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Source observation",
+      "detail": "Configured radius r=0 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 744,
+      "evidence": "movel(modified_place_q, v=vl2*v_scale, a=al2*a_scale, r=0)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 761,
+      "evidence": "movel(pose_trans(get_actual_tcp_pose(), p[0, 0.5, 0, 0, 0, 0]), v=0.3, a=0.3)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Source observation",
+      "detail": "Configured radius r=0 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 761,
+      "evidence": "movel(pose_trans(get_actual_tcp_pose(), p[0, 0.5, 0, 0, 0, 0]), v=0.3, a=0.3)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 797,
+      "evidence": "movel(pose_add(current_pose, p[0, place_y, -0.0, 0, 0, 0]), v=vr2*v_scale, a=ar2*a_scale, r=0.00)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Source observation",
+      "detail": "Configured radius r=0 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 797,
+      "evidence": "movel(pose_add(current_pose, p[0, place_y, -0.0, 0, 0, 0]), v=vr2*v_scale, a=ar2*a_scale, r=0.00)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 807,
+      "evidence": "movel(pose_add(current_pose, p[0, place_y, -0.005, 0, 0, 0]), v=vr2*v_scale, a=ar2*a_scale, r=0.0025)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Manual review",
+      "detail": "Configured radius r=0.0025 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 807,
+      "evidence": "movel(pose_add(current_pose, p[0, place_y, -0.005, 0, 0, 0]), v=vr2*v_scale, a=ar2*a_scale, r=0.0025)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 826,
+      "evidence": "movel(transition_pose, v=vr2*v_scale, a=ar2*a_scale, r=0.0025)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Manual review",
+      "detail": "Configured radius r=0.0025 m. Outgoing move distance=0.0469574 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 826,
+      "evidence": "movel(transition_pose, v=vr2*v_scale, a=ar2*a_scale, r=0.0025)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Source observation",
+      "detail": "Unblended move distance=0.0469574 m from preceding source waypoint (translation only). Derived from a rigid offset of the same named pose; runtime pose stability and execution require verification. Source-definition substitution is conditional on initialization and unchanged values.",
+      "line": 828,
+      "evidence": "movel(pose_trans(transition_pose, p[0,-0.021,0.042,0,0,0]), v=vr2*v_scale, a=ar2*a_scale, r=0.0025)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Manual review",
+      "detail": "Configured radius r=0.0025 m. Incoming move distance=0.0469574 m. Adjacent radii total=0.005 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 828,
+      "evidence": "movel(pose_trans(transition_pose, p[0,-0.021,0.042,0,0,0]), v=vr2*v_scale, a=ar2*a_scale, r=0.0025)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 831,
+      "evidence": "movej(place_above_q, v=vr2*v_scale, a=vr2*a_scale, r=0.02)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Manual review",
+      "detail": "Configured radius r=0.02 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 831,
+      "evidence": "movej(place_above_q, v=vr2*v_scale, a=vr2*a_scale, r=0.02)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 843,
+      "evidence": "movel(pre_idle_p, v=vr1*v_scale, a=ar1*a_scale, r=0.01)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Manual review",
+      "detail": "Configured radius r=0.01 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 843,
+      "evidence": "movel(pre_idle_p, v=vr1*v_scale, a=ar1*a_scale, r=0.01)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 858,
+      "evidence": "optimovel(target_post_pick, v=0.4, a=0.5, r=0.05)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Manual review",
+      "detail": "Configured radius r=0.05 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 858,
+      "evidence": "optimovel(target_post_pick, v=0.4, a=0.5, r=0.05)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 865,
+      "evidence": "movej(pose_add(get_target_tcp_pose(), pose_sub(false_move_to_p, false_move_from_p)), a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Source observation",
+      "detail": "Configured radius r=0 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 865,
+      "evidence": "movej(pose_add(get_target_tcp_pose(), pose_sub(false_move_to_p, false_move_from_p)), a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 1471,
+      "evidence": "movej(pre_idle_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Source observation",
+      "detail": "Configured radius r=0 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 1471,
+      "evidence": "movej(pre_idle_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 1473,
+      "evidence": "movej(idle_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Source observation",
+      "detail": "Configured radius r=0 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 1473,
+      "evidence": "movej(idle_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 1476,
+      "evidence": "movej(place_above_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Source observation",
+      "detail": "Configured radius r=0 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 1476,
+      "evidence": "movej(place_above_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 1478,
+      "evidence": "movej(place_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Source observation",
+      "detail": "Configured radius r=0 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 1478,
+      "evidence": "movej(place_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 1481,
+      "evidence": "movej(left_pick_post_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Source observation",
+      "detail": "Configured radius r=0 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 1481,
+      "evidence": "movej(left_pick_post_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 1483,
+      "evidence": "movej(left_pick_top_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Source observation",
+      "detail": "Configured radius r=0 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 1483,
+      "evidence": "movej(left_pick_top_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 1485,
+      "evidence": "movej(left_pick_btm_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Source observation",
+      "detail": "Configured radius r=0 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 1485,
+      "evidence": "movej(left_pick_btm_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 1487,
+      "evidence": "movej(left_btm_trays_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Source observation",
+      "detail": "Configured radius r=0 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 1487,
+      "evidence": "movej(left_btm_trays_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 1490,
+      "evidence": "movej(right_pick_pst_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Source observation",
+      "detail": "Configured radius r=0 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 1490,
+      "evidence": "movej(right_pick_pst_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 1492,
+      "evidence": "movej(right_pick_top_q, a=1.3962634015954636, v=1.0471975511965976, r=0.05)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Manual review",
+      "detail": "Configured radius r=0.05 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 1492,
+      "evidence": "movej(right_pick_top_q, a=1.3962634015954636, v=1.0471975511965976, r=0.05)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 1494,
+      "evidence": "movej(right_pick_btm_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Source observation",
+      "detail": "Configured radius r=0 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 1494,
+      "evidence": "movej(right_pick_btm_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 1496,
+      "evidence": "movej(right_btm_trays_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Source observation",
+      "detail": "Configured radius r=0 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 1496,
+      "evidence": "movej(right_btm_trays_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 1498,
+      "evidence": "movej(transition_T1_R_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Source observation",
+      "detail": "Configured radius r=0 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 1498,
+      "evidence": "movej(transition_T1_R_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 1500,
+      "evidence": "movej(transition_T_R_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Source observation",
+      "detail": "Configured radius r=0 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 1500,
+      "evidence": "movej(transition_T_R_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 1502,
+      "evidence": "movej(transition_B_R_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Source observation",
+      "detail": "Configured radius r=0 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 1502,
+      "evidence": "movej(transition_B_R_q, a=1.3962634015954636, v=1.0471975511965976)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 1747,
+      "evidence": "movel(pose_add(pull_out_pose, p[0.02, 0, 0, 0, 0, 0]), v=v_scale*vl2, a=a_scale*al2)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Source observation",
+      "detail": "Configured radius r=0 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 1747,
+      "evidence": "movel(pose_add(pull_out_pose, p[0.02, 0, 0, 0, 0, 0]), v=v_scale*vl2, a=a_scale*al2)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 1758,
+      "evidence": "movel(pull_out_pose, v=vl1*v_scale, a=al1*a_scale, r=0.05)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Manual review",
+      "detail": "Configured radius r=0.05 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 1758,
+      "evidence": "movel(pull_out_pose, v=vl1*v_scale, a=al1*a_scale, r=0.05)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 1765,
+      "evidence": "movel(pull_out_pose, v=vl1*v_scale, a=al1*a_scale, r=0.05)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Manual review",
+      "detail": "Configured radius r=0.05 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 1765,
+      "evidence": "movel(pull_out_pose, v=vl1*v_scale, a=al1*a_scale, r=0.05)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 1782,
+      "evidence": "movel(current_pose, v=vl1*v_scale, a=al1*a_scale, r=0.02)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Manual review",
+      "detail": "Configured radius r=0.02 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 1782,
+      "evidence": "movel(current_pose, v=vl1*v_scale, a=al1*a_scale, r=0.02)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 1787,
+      "evidence": "movel(current_pose, v=vl1*v_scale, a=al1*a_scale, r=0.02)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Manual review",
+      "detail": "Configured radius r=0.02 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 1787,
+      "evidence": "movel(current_pose, v=vl1*v_scale, a=al1*a_scale, r=0.02)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 1791,
+      "evidence": "movel(current_pose, v=vl1*v_scale, a=al1*a_scale, r=0.02)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Manual review",
+      "detail": "Configured radius r=0.02 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 1791,
+      "evidence": "movel(current_pose, v=vl1*v_scale, a=al1*a_scale, r=0.02)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 1793,
+      "evidence": "movel(pre_idle_p, v=vl1*v_scale, a=al1*a_scale, r=0.01)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Manual review",
+      "detail": "Configured radius r=0.01 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 1793,
+      "evidence": "movel(pre_idle_p, v=vl1*v_scale, a=al1*a_scale, r=0.01)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 1801,
+      "evidence": "movej(transition_T1_R_q, v=vr3*v_scale, a=ar3, r=0.1)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Manual review",
+      "detail": "Configured radius r=0.1 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 1801,
+      "evidence": "movej(transition_T1_R_q, v=vr3*v_scale, a=ar3, r=0.1)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 1803,
+      "evidence": "movej(transition_T_R_q, v=vr3*v_scale, a=ar3, r=0.1)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Manual review",
+      "detail": "Configured radius r=0.1 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 1803,
+      "evidence": "movej(transition_T_R_q, v=vr3*v_scale, a=ar3, r=0.1)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 1806,
+      "evidence": "optimovej(pre_idle_q, v=0.5, a=0.5)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Source observation",
+      "detail": "Configured radius r=0 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 1806,
+      "evidence": "optimovej(pre_idle_q, v=0.5, a=0.5)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Manual review",
+      "detail": "Move distance unresolved: initial pose, joint-space trajectory, target/frame expression or intervening control flow is unknown.",
+      "line": 1835,
+      "evidence": "movel(pre_idle_p, v=vr1*v_scale, a=ar1*a_scale, r=0.0)",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Source observation",
+      "detail": "Configured radius r=0 m. Source geometry does not prove a skipped waypoint; controller planning and execution require verification.",
+      "line": 1835,
+      "evidence": "movel(pre_idle_p, v=vr1*v_scale, a=ar1*a_scale, r=0.0)",
+      "reference": 3
+    },
+    {
+      "category": "Move distances",
+      "status": "Source observation",
+      "detail": "Known source path distance=0.0469574 m across 1 of 71 move(s). This sums resolvable unblended translational segments only; unknown segments, first approach, rotations, branches and repetitions are excluded. It is not total executed travel.",
+      "line": 0,
+      "evidence": "",
+      "reference": 3
+    },
+    {
+      "category": "Blend radius overlap",
+      "status": "Manual review",
+      "detail": "line 22: motion_version_set(2) Version 2 can reduce blend radii during planning. A static geometric overlap must not be presented as a proven skipped waypoint.",
+      "line": 0,
+      "evidence": "",
+      "reference": 2
+    },
+    {
+      "category": "Blended motion continuation",
+      "status": "Manual review",
+      "detail": "35 motion calls have nonzero or unresolved radii. Verify continuation through branches, waits, stops and helper functions on the applicable controller. Static source inspection does not establish the executed path.",
+      "line": 0,
+      "evidence": "",
+      "reference": 3
+    }
+  ]
+}

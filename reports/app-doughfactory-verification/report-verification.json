@@ -1,0 +1,38 @@
+{
+  "status": "passed",
+  "method": "Static source analysis only; no URScript executed and no robot contacted",
+  "python_tests": {
+    "run": 35,
+    "failures": 0,
+    "skips": 0,
+    "log": "/tmp/motionsim-program-suite-final.log"
+  },
+  "native_ui_tests": {
+    "run": 3,
+    "failures": 0,
+    "log": "/tmp/motionsim-report-ui.log"
+  },
+  "independent_oracle": {
+    "motions": 71,
+    "parameter_comparisons": 213,
+    "positive_blends": 35,
+    "acceleration_warning_count": 17,
+    "velocity_limit_override_comparisons": 61
+  },
+  "pdf": {
+    "file": "App_DoughFactory_verified_program_check.pdf",
+    "sha256": "d5bada59c4e7c48adc3afe521878876a9418481df2aef0d669a9845691bbc629",
+    "findings_match_final_code": true,
+    "layout": {
+      "pages": 20,
+      "outside_page": [],
+      "text_line_collisions": [],
+      "body_footer_overlap": []
+    }
+  },
+  "limitations": [
+    "Only one of 71 source move distances is derivable; unknown geometry is not zero.",
+    "Initializer-based values are qualified source estimates, not runtime measurements.",
+    "No velocity compliance verdict is possible without applicable supplied specifications."
+  ]
+}

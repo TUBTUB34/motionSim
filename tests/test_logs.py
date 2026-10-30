@@ -163,7 +163,7 @@ class LogTests(unittest.TestCase):
         updates = [value for kind, value in self.results(job) if kind == 'status' and 'KiB/s' in value]
         self.assertTrue(any('log_history.bak' in text for text in updates))
         self.assertTrue(any('log_history.txt' in text for text in updates))
-        self.assertIn('2.1 KiB/s', updates[0])
+        self.assertIn('1.1 KiB/s', updates[0])
         self.assertIn(' / ', updates[0])
         sftp.get_channel.return_value.settimeout.assert_called_once_with(DOWNLOAD_IDLE_TIMEOUT)
 
@@ -201,6 +201,33 @@ class LogTests(unittest.TestCase):
         self.assertEqual(sftp.open.call_args_list, [call('/root/log_history.bak', 'rb'), call('/root/log_history.txt', 'rb')])
         self.assertEqual(loaded[0].metadata['files'], ['log_history.bak', 'log_history.txt'])
         self.assertIsNone(job.connection)
+
+    def test_logs_use_pipeline_and_include_appended_rows(self):
+        from tests.test_transfer_stream import PipelinedFile
+        first, appended = line().encode(), line(day='2026-04-02', uptime='2s').encode()
+        content = first + b'\n' * 1100000 + appended
+        job, _, sftp = self.make_job(content)
+        sftp.stat.return_value.st_size = len(content) - len(appended)
+        streams = []
+        def open_file(*_):
+            remote = PipelinedFile(content)
+            streams.append(remote)
+            return remote
+        sftp.open.side_effect = open_file
+        job.run()
+        kind, result = self.results(job)[-1]
+        self.assertEqual(kind, 'loaded')
+        self.assertEqual(len(result.events), 2)
+        self.assertTrue(all(len(stream.windows) >= 2 for stream in streams))
+        self.assertEqual([len(stream.windows[0][0]) for stream in streams], [32, 32])
+
+    def test_growing_log_cannot_exceed_size_limit(self):
+        job, _, sftp = self.make_job(line().encode())
+        sftp.stat.return_value.st_size = 10
+        with patch('log_transfer.MAX_LOG_BYTES', 20):
+            job.run()
+        self.assertEqual(self.results(job)[-1][0], 'error')
+        self.assertIn('size limit', self.results(job)[-1][1])
 
     def test_pair_merge_rotation_overlap_and_reboots(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -242,7 +269,7 @@ class LogTests(unittest.TestCase):
             def stat(path):
                 if path.endswith('.bak'):
                     raise OSError(number, 'unavailable')
-                return MagicMock(st_size=100)
+                return MagicMock(st_size=len(line().encode()))
             sftp.stat.side_effect = stat
             job.run()
             kind, value = self.results(job)[-1]

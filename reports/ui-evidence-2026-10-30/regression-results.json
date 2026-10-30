@@ -1,0 +1,143 @@
+{
+  "tests": 265,
+  "skipped": 0,
+  "failed_modules": [],
+  "modules": [
+    {
+      "module": "tests.test_backup",
+      "tests": 15,
+      "exit_code": 0
+    },
+    {
+      "module": "tests.test_core",
+      "tests": 29,
+      "exit_code": 0
+    },
+    {
+      "module": "tests.test_design_ui",
+      "tests": 5,
+      "exit_code": 0
+    },
+    {
+      "module": "tests.test_flight_data",
+      "tests": 11,
+      "exit_code": 0
+    },
+    {
+      "module": "tests.test_flight_motion",
+      "tests": 10,
+      "exit_code": 0
+    },
+    {
+      "module": "tests.test_flight_pdf",
+      "tests": 5,
+      "exit_code": 0
+    },
+    {
+      "module": "tests.test_flight_retrieval_integration",
+      "tests": 1,
+      "exit_code": 0
+    },
+    {
+      "module": "tests.test_flight_retrieval_ui",
+      "tests": 12,
+      "exit_code": 0
+    },
+    {
+      "module": "tests.test_flight_transfer",
+      "tests": 27,
+      "exit_code": 0
+    },
+    {
+      "module": "tests.test_flight_ui",
+      "tests": 18,
+      "exit_code": 0
+    },
+    {
+      "module": "tests.test_joint_comparison",
+      "tests": 11,
+      "exit_code": 0
+    },
+    {
+      "module": "tests.test_log_parser",
+      "tests": 4,
+      "exit_code": 0
+    },
+    {
+      "module": "tests.test_log_ui",
+      "tests": 8,
+      "exit_code": 0
+    },
+    {
+      "module": "tests.test_logs",
+      "tests": 21,
+      "exit_code": 0
+    },
+    {
+      "module": "tests.test_model_catalog",
+      "tests": 3,
+      "exit_code": 0
+    },
+    {
+      "module": "tests.test_program_check",
+      "tests": 14,
+      "exit_code": 0
+    },
+    {
+      "module": "tests.test_program_motion",
+      "tests": 9,
+      "exit_code": 0
+    },
+    {
+      "module": "tests.test_program_playback_ui",
+      "tests": 7,
+      "exit_code": 0
+    },
+    {
+      "module": "tests.test_rasterizer",
+      "tests": 3,
+      "exit_code": 0
+    },
+    {
+      "module": "tests.test_robot_assets",
+      "tests": 3,
+      "exit_code": 0
+    },
+    {
+      "module": "tests.test_ssh_trust",
+      "tests": 4,
+      "exit_code": 0
+    },
+    {
+      "module": "tests.test_telemetry",
+      "tests": 7,
+      "exit_code": 0
+    },
+    {
+      "module": "tests.test_theme",
+      "tests": 9,
+      "exit_code": 0
+    },
+    {
+      "module": "tests.test_tooling",
+      "tests": 8,
+      "exit_code": 0
+    },
+    {
+      "module": "tests.test_transfer",
+      "tests": 6,
+      "exit_code": 0
+    },
+    {
+      "module": "tests.test_transfer_stream",
+      "tests": 12,
+      "exit_code": 0
+    },
+    {
+      "module": "tests.test_ui",
+      "tests": 3,
+      "exit_code": 0
+    }
+  ],
+  "method": "Native UI enabled; each module in a separate process; synthetic and mocked providers only."
+}

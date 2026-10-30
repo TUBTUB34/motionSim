@@ -1,47 +1,91 @@
 """Create a robot archive and remove it only after an atomic local save."""
 from dataclasses import dataclass, field
+import errno
 import os
-from pathlib import Path
+import posixpath
+from pathlib import Path, PurePosixPath
 import shlex
+import stat
 import tempfile
 import threading
 import time
 from uuid import uuid4
 
 from log_transfer import DOWNLOAD_IDLE_TIMEOUT, LogJob
+from transfer_stream import copy_remote
 
 
 @dataclass
 class BackupDestination:
     path: str | None = None
     answered: threading.Event = field(default_factory=threading.Event)
+    filename: str = 'backup.tar'
 
 
 class BackupJob(LogJob):
-    def __init__(self, **kwargs):
+    def __init__(self, *, full=False, flight_directory='/root/flightreports', **kwargs):
         super().__init__(**kwargs)
+        self.full = full
+        self.sources = [('/programs', 'directory'), ('/data/apps', 'directory')]
+        if full:
+            if not flight_directory.startswith('/') or any(c in flight_directory for c in '\x00\r\n'):
+                raise ValueError('Enter an absolute robot flight-report folder.')
+            flight_directory = posixpath.normpath(flight_directory)
+            if not PurePosixPath(flight_directory).name:
+                raise ValueError('Choose the flight-report folder, not the robot filesystem root.')
+            logs = PurePosixPath(self.connection.path)
+            if logs.suffix == '.bak':
+                logs = logs.with_suffix('.txt')
+            self.sources = [('/programs', 'directory'), ('/apps', 'directory'),
+                            ('/data/apps', 'directory'), (str(logs), 'file'),
+                            (str(logs.with_suffix('.bak')), 'file'),
+                            (str(PurePosixPath(flight_directory)), 'directory')]
         self.remote_dir = f'/tmp/ur-backup-{uuid4().hex}'
         self.remote_path = self.remote_dir + '/backup.tar'
+        self.skipped_sources = []
 
     def check_cancel(self):
         if self.stopped.is_set():
             raise InterruptedError('Backup cancelled.')
 
     def choose_destination(self):
-        question = BackupDestination()
+        question = BackupDestination(filename='full-backup.tar' if self.full else 'backup.tar')
         self.events.put(('backup_destination', question))
         while not question.answered.wait(.1):
             self.check_cancel()
         self.check_cancel()
         return Path(question.path) if question.path else None
 
-    def create_archive(self, client):
-        self.events.put(('status', 'Creating backup of /programs and /data/apps on robot…'))
+    def available_sources(self, sftp):
+        """Skip absent sources, but never hide access, type or I/O errors."""
+        sources = []
+        for path, kind in self.sources:
+            self.check_cancel()
+            try:
+                attributes = sftp.stat(path)
+            except OSError as error:
+                if error.errno != errno.ENOENT:
+                    raise
+                self.skipped_sources.append(path)
+                continue
+            expected = stat.S_ISDIR if kind == 'directory' else stat.S_ISREG
+            if not expected(attributes.st_mode):
+                raise OSError(f'Backup source is not a {kind}: {path}')
+            if path not in sources:
+                sources.append(path)
+        if not sources:
+            raise OSError('No backup sources found; all requested paths are missing.' if self.full else
+                          'No backup folders found: /programs and /data/apps are missing.')
+        return sources
+
+    def create_archive(self, client, sources):
+        self.events.put(('status', f'Creating backup of {" and ".join(sources)} on robot…'))
         channel = client.get_transport().open_session(timeout=5)
         output = bytearray()
         try:
             channel.set_combine_stderr(True)
-            channel.exec_command(f'tar -P -cf {shlex.quote(self.remote_path)} /programs /data/apps')
+            arguments = ' '.join(shlex.quote(path) for path in sources)
+            channel.exec_command(f'tar -P -cf {shlex.quote(self.remote_path)} {arguments}')
             while True:
                 self.check_cancel()
                 if channel.recv_ready():
@@ -62,31 +106,26 @@ class BackupJob(LogJob):
     def save_archive(self, sftp, destination, size):
         """Stage beside the destination so replacement stays on one filesystem."""
         temporary = None
-        total = 0
         started = last_report = time.monotonic()
+
+        def progress(total):
+            nonlocal last_report
+            now = time.monotonic()
+            if now - last_report >= .2 or total == size:
+                rate = total / max(now - started, .001) / 1048576
+                eta = (size - total) / max(rate * 1048576, 1)
+                self.events.put(('status', f'Downloading backup · {total / 1048576:.2f} / '
+                                 f'{size / 1048576:.2f} MiB · {rate:.2f} MiB/s · {eta:.0f}s remaining'))
+                last_report = now
+
         try:
             with tempfile.NamedTemporaryFile(prefix='.ur-backup-', suffix='.part',
                                              dir=destination.parent, delete=False) as local:
                 temporary = Path(local.name)
                 with sftp.open(self.remote_path, 'rb') as remote:
-                    while True:
-                        self.check_cancel()
-                        chunk = remote.read(1024 * 1024)
-                        self.check_cancel()
-                        if not chunk:
-                            break
-                        local.write(chunk)
-                        total += len(chunk)
-                        if total > size:
-                            raise OSError('Robot archive changed during download. Please retry.')
-                        now = time.monotonic()
-                        if now - last_report >= .2 or total == size:
-                            rate = total / max(now - started, .001) / 1048576
-                            self.events.put(('status', f'Downloading backup · {total / 1048576:.2f} / '
-                                             f'{size / 1048576:.2f} MiB · {rate:.2f} MiB/s'))
-                            last_report = now
-                if total != size:
-                    raise OSError('Incomplete backup download; robot archive retained.')
+                    copy_remote(remote, local, size, check_cancel=self.check_cancel, progress=progress)
+                if sftp.stat(self.remote_path).st_size != size:
+                    raise OSError('Robot archive changed during download. Please retry.')
                 local.flush()
                 os.fsync(local.fileno())
             self.check_cancel()
@@ -105,9 +144,10 @@ class BackupJob(LogJob):
             with client.open_sftp() as sftp:
                 sftp.get_channel().settimeout(DOWNLOAD_IDLE_TIMEOUT)
                 self.check_cancel()
+                sources = self.available_sources(sftp)
                 sftp.mkdir(self.remote_dir, mode=0o700)
                 created = True
-                self.create_archive(client)
+                self.create_archive(client, sources)
                 self.check_cancel()
                 size = sftp.stat(self.remote_path).st_size
                 if size <= 0:
@@ -128,6 +168,8 @@ class BackupJob(LogJob):
             if created:
                 message += f' · Check robot archive at {self.remote_path} (may be incomplete if creation was interrupted).'
         finally:
+            if self.skipped_sources:
+                message += (' · Skipped missing sources: ' if self.full else ' · Skipped missing folders: ') + ', '.join(self.skipped_sources)
             if self.connection:
                 message = message.replace(self.connection.password, '[redacted]')
             if self.client:

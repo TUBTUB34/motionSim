@@ -61,19 +61,25 @@ def model_summary(model):
 def show_catalog(parent, selected_model):
     import tkinter as tk
     from tkinter import ttk
+    from ui_theme import BACKGROUND, MUTED, style_tree
     window = tk.Toplevel(parent)
     window.title('Robot sizes · UR Motion Studio')
     window.geometry('960x700')
     window.minsize(820, 580)
     window.transient(parent)
+    window.configure(background=BACKGROUND)
     panel = ttk.Frame(window, padding=24)
     panel.pack(fill='both', expand=True)
-    ttk.Label(panel, text='Find your robot', style='Title.TLabel').pack(anchor='w')
+    panel.columnconfigure(0, weight=1)
+    panel.rowconfigure(2, weight=1)
+    ttk.Label(panel, text='Find your robot', style='Title.TLabel').grid(row=0, column=0, sticky='w')
     ttk.Label(panel, text='Published reach and payload · 14 models with verified 3D geometry · Checked 9 Oct 2026',
-              style='Muted.TLabel').pack(anchor='w', pady=(6, 18))
+              style='Muted.TLabel', wraplength=740).grid(row=1, column=0, sticky='w', pady=(6, 18))
     frame = ttk.Frame(panel)
-    frame.pack(fill='both', expand=True)
+    frame.grid(row=2, column=0, sticky='nsew')
     tree = ttk.Treeview(frame, columns=('model', 'family', 'reach', 'payload', 'geometry'), show='headings', selectmode='browse')
+    style_tree(tree)
+    tree.tag_configure('reference', foreground=MUTED)
     for name, label, width in [('model', 'Model', 140), ('family', 'Family', 110), ('reach', 'Reach', 100),
                                ('payload', 'Rated payload', 190), ('geometry', 'Simulator', 160)]:
         tree.heading(name, text=label)
@@ -84,15 +90,18 @@ def show_catalog(parent, selected_model):
     tree.configure(yscrollcommand=scrollbar.set)
     for model, spec in ROBOT_SIZES.items():
         tree.insert('', 'end', iid=model, values=(model, spec.family, f'{spec.reach_mm:,} mm', spec.payload,
-                                                 'Available' if model in MODELS else 'Reference only'))
+                                                 'Available' if model in MODELS else 'Reference only'),
+                    tags=() if model in MODELS else ('reference',))
     details = tk.StringVar()
-    ttk.Label(panel, textvariable=details, wraplength=860, style='Muted.TLabel').pack(fill='x', pady=(16, 8))
+    detail_label = ttk.Label(panel, textvariable=details, wraplength=860, style='Muted.TLabel')
+    detail_label.grid(row=3, column=0, sticky='ew', pady=(12, 8))
+    panel.bind('<Configure>', lambda event: detail_label.configure(wraplength=max(300, event.width-48)))
     source = ttk.Entry(panel, state='readonly')
     source_text = tk.StringVar()
     source.configure(textvariable=source_text)
-    source.pack(fill='x')
+    source.grid(row=4, column=0, sticky='ew')
     actions = ttk.Frame(panel)
-    actions.pack(fill='x', pady=(16, 0))
+    actions.grid(row=5, column=0, sticky='ew', pady=(12, 0))
 
     def use(_event=None):
         names = tree.selection()
@@ -116,6 +125,8 @@ def show_catalog(parent, selected_model):
 
     tree.bind('<<TreeviewSelect>>', changed)
     tree.bind('<Double-1>', use)
+    tree.bind('<Return>', use)
+    window.bind('<Escape>', lambda _: window.destroy())
     tree.selection_set(selected_model.get())
     tree.see(selected_model.get())
     changed()

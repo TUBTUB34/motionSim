@@ -8,6 +8,7 @@ from connection import make_settings
 from transfer import InstallationTransfer, ConfirmHostKey
 from tests.test_core import XML
 from installation import MAX_FILE_SIZE
+from transfer_stream import DOWNLOAD_IDLE_TIMEOUT, STREAM_BUFFER_SIZE
 
 class TransferTests(unittest.TestCase):
     def setUp(self):
@@ -30,6 +31,8 @@ class TransferTests(unittest.TestCase):
             "127.0.0.1", username="user", password="secret", timeout=5, banner_timeout=5,
             auth_timeout=5, look_for_keys=False, allow_agent=False)
         ssh_class.return_value.close.assert_called_once()
+        self.assertEqual(scp_class.call_args.kwargs['socket_timeout'], DOWNLOAD_IDLE_TIMEOUT)
+        self.assertEqual(scp_class.call_args.kwargs['buff_size'], STREAM_BUFFER_SIZE)
 
     @patch("transfer.paramiko.SSHClient")
     def test_bad_credentials_close_connection(self, ssh_class):

@@ -1,0 +1,21 @@
+{
+  "focused_tests": 29,
+  "failed": 0,
+  "modules": [
+    "tests.test_camera",
+    "tests.test_ui",
+    "tests.test_program_playback_ui",
+    "tests.test_design_ui",
+    "tests.test_tooling",
+    "tests.test_rasterizer"
+  ],
+  "checks": [
+    "initial TCP-frame mesh within viewport",
+    "stable target and pan during sample updates",
+    "left-drag orbit",
+    "right-drag pan scales with zoom",
+    "Reset camera fits current pose and preserves locked TCP reference",
+    "native screenshots reviewed"
+  ],
+  "live_robot_used": false
+}

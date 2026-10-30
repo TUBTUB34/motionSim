@@ -1,0 +1,161 @@
+{
+  "agents": {
+    "motionsim-backup": {
+      "agentId": "motionsim-backup",
+      "agentType": "coder",
+      "status": "idle",
+      "health": 1,
+      "taskCount": 1,
+      "config": {
+        "model": "inherit"
+      },
+      "createdAt": "2026-10-30T14:30:55.268Z",
+      "model": "inherit",
+      "modelRoutedBy": "explicit"
+    },
+    "motionsim-flight": {
+      "agentId": "motionsim-flight",
+      "agentType": "coder",
+      "status": "idle",
+      "health": 1,
+      "taskCount": 2,
+      "config": {
+        "model": "inherit"
+      },
+      "createdAt": "2026-10-30T14:30:58.659Z",
+      "model": "inherit",
+      "modelRoutedBy": "explicit"
+    },
+    "motionsim-motion": {
+      "agentId": "motionsim-motion",
+      "agentType": "coder",
+      "status": "idle",
+      "health": 1,
+      "taskCount": 1,
+      "config": {
+        "model": "inherit"
+      },
+      "createdAt": "2026-10-30T14:31:02.073Z",
+      "model": "inherit",
+      "modelRoutedBy": "explicit"
+    },
+    "motionsim-ui": {
+      "agentId": "motionsim-ui",
+      "agentType": "coordinator",
+      "status": "idle",
+      "health": 1,
+      "taskCount": 1,
+      "config": {
+        "model": "inherit"
+      },
+      "createdAt": "2026-10-30T14:31:04.776Z",
+      "model": "inherit",
+      "modelRoutedBy": "explicit"
+    },
+    "motionsim-downloads-2": {
+      "agentId": "motionsim-downloads-2",
+      "agentType": "coder",
+      "status": "idle",
+      "health": 1,
+      "taskCount": 1,
+      "config": {
+        "model": "inherit"
+      },
+      "createdAt": "2026-10-30T14:58:09.933Z",
+      "model": "inherit",
+      "modelRoutedBy": "explicit"
+    },
+    "motionsim-reports-2": {
+      "agentId": "motionsim-reports-2",
+      "agentType": "coder",
+      "status": "idle",
+      "health": 1,
+      "taskCount": 1,
+      "config": {
+        "model": "inherit"
+      },
+      "createdAt": "2026-10-30T14:58:14.529Z",
+      "model": "inherit",
+      "modelRoutedBy": "explicit"
+    },
+    "motionsim-charts-2": {
+      "agentId": "motionsim-charts-2",
+      "agentType": "coder",
+      "status": "idle",
+      "health": 1,
+      "taskCount": 1,
+      "config": {
+        "model": "inherit"
+      },
+      "createdAt": "2026-10-30T14:58:17.662Z",
+      "model": "inherit",
+      "modelRoutedBy": "explicit"
+    },
+    "motionsim-simulator-2": {
+      "agentId": "motionsim-simulator-2",
+      "agentType": "coordinator",
+      "status": "idle",
+      "health": 1,
+      "taskCount": 1,
+      "config": {
+        "model": "inherit"
+      },
+      "createdAt": "2026-10-30T14:58:21.600Z",
+      "model": "inherit",
+      "modelRoutedBy": "explicit"
+    },
+    "motionsim-windows": {
+      "agentId": "motionsim-windows",
+      "agentType": "coder",
+      "status": "idle",
+      "health": 1,
+      "taskCount": 0,
+      "config": {
+        "model": "inherit"
+      },
+      "createdAt": "2026-10-30T16:44:40.439Z",
+      "model": "inherit",
+      "modelRoutedBy": "explicit"
+    },
+    "motionsim-motionaudit": {
+      "agentId": "motionsim-motionaudit",
+      "agentType": "coder",
+      "status": "idle",
+      "health": 1,
+      "taskCount": 0,
+      "config": {
+        "model": "inherit"
+      },
+      "createdAt": "2026-10-30T16:44:46.037Z",
+      "model": "inherit",
+      "modelRoutedBy": "explicit"
+    },
+    "motionsim-oracle": {
+      "agentId": "motionsim-oracle",
+      "agentType": "coder",
+      "status": "idle",
+      "health": 1,
+      "taskCount": 0,
+      "config": {
+        "model": "inherit"
+      },
+      "createdAt": "2026-10-30T16:44:50.264Z",
+      "model": "inherit",
+      "modelRoutedBy": "explicit"
+    },
+    "motionsim-reportoutput": {
+      "agentId": "motionsim-reportoutput",
+      "agentType": "coordinator",
+      "status": "idle",
+      "health": 1,
+      "taskCount": 0,
+      "config": {
+        "model": "inherit"
+      },
+      "createdAt": "2026-10-30T16:44:54.742Z",
+      "model": "inherit",
+      "modelRoutedBy": "explicit"
+    }
+  },
+  "version": "3.0.0"
+}

@@ -1,5 +1,6 @@
 """Grouped, scrollable read-only controller telemetry for the desktop UI."""
 from tkinter import ttk
+from ui_theme import INK, MUTED, PANEL, SELECTED, SUCCESS, WARNING, style_tree
 
 from telemetry import (BASE_FIELDS, STATUS_FIELDS, ROBOT_FLAGS, SAFETY_FLAGS,
                        ROBOT_MODES, SAFETY_MODES, RUNTIME_STATES, enum_text, format_value)
@@ -16,20 +17,24 @@ class StatusView(ttk.Frame):
         self.summary_labels = {}
         for column, (key, title) in enumerate((("robot_mode", "ROBOT"),
                                                ("safety_status", "SAFETY"), ("runtime_state", "PROGRAM"))):
-            panel = ttk.Frame(summaries, padding=(0, 4, 24, 4))
-            panel.grid(row=0, column=column, sticky="ew")
+            panel = ttk.Frame(summaries, padding=12, style='Card.TFrame')
+            panel.grid(row=0, column=column, sticky="nsew", padx=(0, 8))
             summaries.columnconfigure(column, weight=1)
-            ttk.Label(panel, text=title, style="Muted.TLabel").pack(anchor="w")
-            label = ttk.Label(panel, text="Waiting for data", style="Title.TLabel", wraplength=270)
+            ttk.Label(panel, text=title, style="Section.Panel.TLabel").pack(anchor="w")
+            label = ttk.Label(panel, text="Waiting for data", style="Title.Panel.TLabel", wraplength=250)
             label.pack(anchor="w", pady=(4, 0))
             self.summary_labels[key] = label
+            panel.bind('<Configure>', lambda event, widget=label: widget.configure(wraplength=max(120, event.width-24)))
+        ttk.Label(self, text="Values are the last received snapshot. Check connection freshness above before interpreting them.",
+                  style="Muted.TLabel", wraplength=850).pack(side='bottom', anchor="w", pady=(10, 0))
         body = ttk.Frame(self)
         body.pack(fill="both", expand=True)
         self.tree = ttk.Treeview(body, columns=("value",), show="tree headings", selectmode="browse")
         self.tree.heading("#0", text="Signal")
         self.tree.heading("value", text="Controller value")
         self.tree.column("#0", width=310, minwidth=240, stretch=False)
-        self.tree.column("value", width=720, minwidth=620)
+        self.tree.column("value", width=720, minwidth=380)
+        style_tree(self.tree)
         vertical = ttk.Scrollbar(body, orient="vertical", command=self.tree.yview)
         horizontal = ttk.Scrollbar(body, orient="horizontal", command=self.tree.xview)
         self.tree.configure(yscrollcommand=vertical.set, xscrollcommand=horizontal.set)
@@ -38,8 +43,8 @@ class StatusView(ttk.Frame):
         horizontal.grid(row=1, column=0, sticky="ew")
         body.rowconfigure(0, weight=1)
         body.columnconfigure(0, weight=1)
-        self.tree.tag_configure("group", background="#dce6ee", foreground="#17334a", font=("TkDefaultFont", 10, "bold"))
-        self.tree.tag_configure("unavailable", foreground="#667787")
+        self.tree.tag_configure("group", background=SELECTED, foreground=INK, font=("TkDefaultFont", 10, "bold"))
+        self.tree.tag_configure("unavailable", foreground=MUTED)
         self.fields = BASE_FIELDS + STATUS_FIELDS
         self.previous = {}
         for group in ("Controller", "Safety", "Motion", "Joints", "TCP", "Electrical", "I/O", "Tool", "Payload"):
@@ -49,8 +54,6 @@ class StatusView(ttk.Frame):
             labels = ROBOT_FLAGS if field.name == "robot_status_bits" else SAFETY_FLAGS if field.name == "safety_status_bits" else ()
             for bit, label in enumerate(labels):
                 self.tree.insert(field.name, "end", iid=f"{field.name}.{bit}", text=label, values=("Waiting for data",))
-        ttk.Label(self, text="Values are the last received snapshot. Check connection freshness above before interpreting them.",
-                  style="Muted.TLabel").pack(anchor="w", pady=(10, 0))
 
     def update_sample(self, sample, fresh=True):
         values = dict(sample.telemetry)
@@ -69,10 +72,10 @@ class StatusView(ttk.Frame):
             if key == "safety_status" and value is None:
                 value = values.get("safety_mode")
             text = enum_text(value, mapping)
-            color = "#17334a"
+            color = INK
             if key == "safety_status" and value is not None:
-                color = "#16704c" if value == 1 else "#a94813"
+                color = SUCCESS if value == 1 else WARNING
             if not fresh:
                 text = "Last: " + text
-                color = "#667787"
+                color = MUTED
             self.summary_labels[key].configure(text=text, foreground=color)

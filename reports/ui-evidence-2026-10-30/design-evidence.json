@@ -1,0 +1,109 @@
+{
+  "contract": "UR Motion Studio desktop: folder-first program review with Advanced closed by default; one Simulator tab switches live/flight while preserving separate sources; scrolling retains dark chart pixels and pins recorded script-line context. Native ttk theme, labeled keyboard controls, synthetic fixtures only.",
+  "targetViewports": [
+    "900x650",
+    "1280x850",
+    "1000x720",
+    "1420x920",
+    "980x620",
+    "1180x800",
+    "1000x650",
+    "1060x740"
+  ],
+  "accessibility": {
+    "status": "pass",
+    "evidence": "Native labeled ttk buttons and selectors retain Tab/arrow-key behavior. Focused UI tests cover input validation, compact controls, source switching and modal guards. Playback is explicitly user-controlled; no decorative animation added."
+  },
+  "responsive": {
+    "status": "pass",
+    "evidence": "Inspected nine native-window captures at compact and wide sizes. Folder action/results/export remain available; Advanced opens only on request. Simulator source selector and bottom script line fit at 980x620. Flight script axis and line footer stay visible after scrolling at 1000x720."
+  },
+  "contentStates": {
+    "loading": {
+      "status": "pass",
+      "evidence": "Program batch worker exposes progress, disables source/override controls and allows cancellation between programs; mocked transfer tests retain byte progress, cancel and idle timeout."
+    },
+    "empty": {
+      "status": "pass",
+      "evidence": "UI tests verify no-report/cleared-folder states; offline Live robot provides connection setup. Missing chart channels render explicit unavailable messages, visible in wide flight capture."
+    },
+    "error": {
+      "status": "pass",
+      "evidence": "Source tests cover invalid installation, ambiguous files and malformed program. Graphical batch test keeps failed programs listed; invalid advanced specification focuses and marks the field."
+    },
+    "partial": {
+      "status": "pass",
+      "evidence": "Graphical batch regression verifies one valid plus one malformed program preserves successful review/export. Unresolved script lines and telemetry gaps remain unavailable rather than fabricated."
+    },
+    "success": {
+      "status": "pass",
+      "evidence": "Native report screenshots show matched installation, computed findings and result count. Program UI tests export PDFs; simulator tests switch sources without overwriting live samples or losing recorded position."
+    },
+    "permission": {
+      "status": "not-applicable",
+      "reason": "No new application permission flow introduced. Existing SSH host verification remains unchanged and covered by mocked trust tests. Capture uses the application window only."
+    }
+  },
+  "renderedEvidence": [
+    {
+      "viewport": "900x650",
+      "artifact": "report-compact.png",
+      "observation": "Primary folder review and results remain clear; Advanced is hidden; status and export visible."
+    },
+    {
+      "viewport": "900x650",
+      "artifact": "report-advanced-compact.png",
+      "observation": "Optional SI limits and alternate sources are revealed on request; controls fit compact window; findings remain scrollable."
+    },
+    {
+      "viewport": "1280x850",
+      "artifact": "report-wide.png",
+      "observation": "Completed source review, matched installation and acceleration/blend evidence visible."
+    },
+    {
+      "viewport": "1000x720",
+      "artifact": "flight-compact-scrolled.png",
+      "observation": "Dark plotting canvas after scrolling; no white strips; pinned script-line axis and current line 80 below viewport."
+    },
+    {
+      "viewport": "1420x920",
+      "artifact": "flight-wide-scrolled.png",
+      "observation": "Larger scrolled graphs retain labels and show absent torque explicitly; bottom script context remains fixed."
+    },
+    {
+      "viewport": "980x620",
+      "artifact": "simulator-recorded-compact.png",
+      "observation": "Simulator source selector, recorded robot, playback controls and bottom script line all visible."
+    },
+    {
+      "viewport": "980x620",
+      "artifact": "simulator-live-compact.png",
+      "observation": "Live mode occupies the same Simulator tab; live program-line context remains below robot viewport."
+    },
+    {
+      "viewport": "1180x800",
+      "artifact": "simulator-recorded-wide.png",
+      "observation": "Flight report displayed within Simulator tab beside retained live Status/View options; independent source clearly labeled."
+    },
+    {
+      "viewport": "1000x650",
+      "artifact": "camera-centered-playback.png",
+      "observation": "TCP-aligned recorded robot is centered in the visible viewport; all link geometry fits at initial zoom."
+    },
+    {
+      "viewport": "1000x650",
+      "artifact": "camera-right-drag-pan.png",
+      "observation": "Right-drag moves the entire scene right/down without rotating or changing the recorded pose; controls and footer stay fixed."
+    },
+    {
+      "viewport": "980x620",
+      "artifact": "full-backup-simulator.png",
+      "observation": "Full backup button remains visible beside the motion-source controls at the minimum simulator size."
+    },
+    {
+      "viewport": "1060x740",
+      "artifact": "full-backup-transfer.png",
+      "observation": "Standard and Full backup actions, SSH fields, progress, cancellation and status details fit the transfer workspace."
+    }
+  ]
+}

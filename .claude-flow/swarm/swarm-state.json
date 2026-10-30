@@ -1,0 +1,74 @@
+{
+  "swarms": {
+    "swarm-1793370581383-4z0xhg": {
+      "swarmId": "swarm-1793370581383-4z0xhg",
+      "topology": "hierarchical",
+      "maxAgents": 4,
+      "status": "terminated",
+      "agents": [
+        "motionsim-backup",
+        "motionsim-flight",
+        "motionsim-motion",
+        "motionsim-ui"
+      ],
+      "tasks": [],
+      "config": {
+        "topology": "hierarchical",
+        "maxAgents": 4,
+        "strategy": "specialized",
+        "communicationProtocol": "message-bus",
+        "autoScaling": true,
+        "consensusMechanism": "majority"
+      },
+      "createdAt": "2026-10-30T14:29:41.383Z",
+      "updatedAt": "2026-10-30T14:44:52.683Z"
+    },
+    "swarm-1793372274718-pwwf8t": {
+      "swarmId": "swarm-1793372274718-pwwf8t",
+      "topology": "hierarchical",
+      "maxAgents": 4,
+      "status": "terminated",
+      "agents": [
+        "motionsim-downloads-2",
+        "motionsim-reports-2",
+        "motionsim-charts-2",
+        "motionsim-simulator-2"
+      ],
+      "tasks": [],
+      "config": {
+        "topology": "hierarchical",
+        "maxAgents": 4,
+        "strategy": "specialized",
+        "communicationProtocol": "message-bus",
+        "autoScaling": true,
+        "consensusMechanism": "majority"
+      },
+      "createdAt": "2026-10-30T14:57:54.718Z",
+      "updatedAt": "2026-10-30T15:14:45.214Z"
+    },
+    "swarm-1793378632574-mo2xky": {
+      "swarmId": "swarm-1793378632574-mo2xky",
+      "topology": "hierarchical",
+      "maxAgents": 4,
+      "status": "running",
+      "agents": [
+        "motionsim-windows",
+        "motionsim-motionaudit",
+        "motionsim-oracle",
+        "motionsim-reportoutput"
+      ],
+      "tasks": [],
+      "config": {
+        "topology": "hierarchical",
+        "maxAgents": 4,
+        "strategy": "specialized",
+        "communicationProtocol": "message-bus",
+        "autoScaling": true,
+        "consensusMechanism": "majority"
+      },
+      "createdAt": "2026-10-30T16:43:52.574Z",
+      "updatedAt": "2026-10-30T16:43:52.574Z"
+    }
+  },
+  "version": "3.0.0"
+}

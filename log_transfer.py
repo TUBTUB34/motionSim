@@ -16,9 +16,9 @@ from log_data import MAX_LOG_BYTES, load_log, load_logs
 from session import HostKeyQuestion
 from transfer import ConfirmHostKey, host_fingerprint
 from ssh_trust import known_hosts_path, replace_host_key
+from transfer_stream import copy_remote, DOWNLOAD_IDLE_TIMEOUT
 
 DEFAULT_LOG_PATH = "/root/log_history.txt"
-DOWNLOAD_IDLE_TIMEOUT = 60
 
 
 @dataclass(frozen=True)
@@ -144,24 +144,20 @@ class LogJob:
                         last_progress, last_bytes = now, total
 
                     report_progress(last_progress)
+                    def transferred(count):
+                        nonlocal total
+                        total = count
+                        now = time.monotonic()
+                        if now - last_progress >= .2:
+                            report_progress(now)
+
                     with sftp.open(remote_path, 'rb') as remote, local_path.open('wb') as local:
-                        while True:
-                            self.check_cancel()
-                            try:
-                                chunk = remote.read(65536)
-                            except TimeoutError:
-                                raise TimeoutError(f'Download stalled: no data received for '
-                                                   f'{DOWNLOAD_IDLE_TIMEOUT} seconds. Try again.') from None
-                            self.check_cancel()
-                            if not chunk:
-                                break
-                            total += len(chunk)
-                            if total > MAX_LOG_BYTES:
-                                raise ValueError("Robot log exceeds 64 MiB per file.")
-                            local.write(chunk)
-                            now = time.monotonic()
-                            if now - last_progress >= .2:
-                                report_progress(now)
+                        try:
+                            copy_remote(remote, local, size, check_cancel=self.check_cancel,
+                                        progress=transferred, allow_growth=True, max_bytes=MAX_LOG_BYTES)
+                        except TimeoutError:
+                            raise TimeoutError(f'Download stalled: no data received for '
+                                               f'{DOWNLOAD_IDLE_TIMEOUT} seconds. Try again.') from None
                     report_progress(time.monotonic())
                     paths.append(local_path)
                 except OSError as error:

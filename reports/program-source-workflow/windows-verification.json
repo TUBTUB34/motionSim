@@ -1,0 +1,225 @@
+{
+  "started": "2026-10-30T10:09:07.7237952-07:00",
+  "build_command": "build_windows.bat",
+  "source_manifest": [
+    {
+      "sha256": "9cd391d07887e931d71a45271d435edef4d0c0e6e1c9d4ade4a7c36d60a89e3a",
+      "name": "backup_transfer.py"
+    },
+    {
+      "sha256": "d0c5610d05956c239bde041516a5eb4641010e423b18b03486127267c497c41b",
+      "name": "build_windows.bat"
+    },
+    {
+      "sha256": "1f66a6c9d3ad8678fee1cd4c96ff73d90513c81dd451e66a554464b24288d9c9",
+      "name": "connection.py"
+    },
+    {
+      "sha256": "331c23e0dfac3e147622df770cab6b57a0fba854b63267f57dd0435360563ea3",
+      "name": "desktop_smoke.py"
+    },
+    {
+      "sha256": "3f4760b9580a625bcf9434a9fa716b56ebe370a2e794b6a52457e75ec9928e27",
+      "name": "flight_charts.py"
+    },
+    {
+      "sha256": "f2e7a6200ade6d72288bbaa3d61b3f7eb0a44cc30d24520874cc02e474486c0f",
+      "name": "flight_data.py"
+    },
+    {
+      "sha256": "3c498306d79eb177501af3d4fc35acb45f13858914de29d8581d8cc822e8131b",
+      "name": "flight_motion.py"
+    },
+    {
+      "sha256": "186d7153c4d986e97d3f3b1f277c44e151b92f35684b5fd07861ce827ea4509a",
+      "name": "flight_pdf.py"
+    },
+    {
+      "sha256": "bb77d567e05e8e596e850178e9a2a64c3cd6c6f6256afbafc0d81d33db2e58ab",
+      "name": "flight_retrieval_view.py"
+    },
+    {
+      "sha256": "f8aab97508511a97973c99cc4ed74375c477422aaf8ae71fd060909139a05827",
+      "name": "flight_transfer.py"
+    },
+    {
+      "sha256": "2098b5df85b5ce4478292ffbe97c7b621e5d96568b8959f897a89098722b39ac",
+      "name": "flight_view.py"
+    },
+    {
+      "sha256": "bff9390dc6c3809da3db099c6f300508968efce356ac7e95139af6e100002903",
+      "name": "help_content.py"
+    },
+    {
+      "sha256": "4fee091def97c668a5428faee9b7f55f4d1d37f9239a00d496a95cd2abed9bac",
+      "name": "help_view.py"
+    },
+    {
+      "sha256": "48348ba962f204ffa3ef0a958a826b06dbc68dd3f8491e413763992f8bda7a46",
+      "name": "installation.py"
+    },
+    {
+      "sha256": "296c990abe7776bba166e51fa6336b2da0840292d0aad8302317995982788ceb",
+      "name": "kinematics.py"
+    },
+    {
+      "sha256": "df3886bd63eacb2b0c6e74e5864cb7e6fc72efa2c693688e7e43fc284432d0b9",
+      "name": "log_data.py"
+    },
+    {
+      "sha256": "55f86d9738f0095bdd27256bb375f67539ee7a65fe47c4bdadf4ceb97456d4e7",
+      "name": "log_parser.py"
+    },
+    {
+      "sha256": "dfb096cef430f642dc5ab2d806ef2f53b9f7a1ac6bd2a8ef0cfca0e47acc55c8",
+      "name": "log_transfer.py"
+    },
+    {
+      "sha256": "c124fccdf886e8f7df1251543b130d1f619f5446e1b7735f33cf36b8b87e23c4",
+      "name": "log_view.py"
+    },
+    {
+      "sha256": "646ef75e6c295cdd47a7d56c92b7ef8b831832e6029bc4dcc34f29052d771892",
+      "name": "main.py"
+    },
+    {
+      "sha256": "53cbad86c0ec2c72460b371976fe7d3e2ba66a9586e38b4b5afcafcf411013da",
+      "name": "model_catalog.py"
+    },
+    {
+      "sha256": "2fc21c450a087b4a88e2afa7dad84e887c123ff54a35f3c499f7c8ac4c8f3aa8",
+      "name": "MotionStudio.spec"
+    },
+    {
+      "sha256": "6ad6edeac1782d6a7741a7833dc6af76b86d2b0c711a275fe1193db47a789b22",
+      "name": "playback_view.py"
+    },
+    {
+      "sha256": "15992aeab31f4c6d3c02c68e915f9744b25c2592a074c7f1d458f67b42a3cf91",
+      "name": "program_check.py"
+    },
+    {
+      "sha256": "81b9d764e09da73b5c376d63cfd4455e81ca541cca1ce33d2819c8934063023f",
+      "name": "program_check_pdf.py"
+    },
+    {
+      "sha256": "6253dcd903f41402d282dfd62bbb6189c7365f16cda46dc183febca74a14e5d4",
+      "name": "program_check_view.py"
+    },
+    {
+      "sha256": "183700636af29aa2ead1e3963842b4935fdf0e8c78e408ec6c59a644b49180c9",
+      "name": "program_motion.py"
+    },
+    {
+      "sha256": "09bbc8b0141e7f31f9a689106062b82b44ef2f24022f35e73e732ff95956e6ac",
+      "name": "program_transfer.py"
+    },
+    {
+      "sha256": "832c3297ae6c3abd050292aadf159f1a0bebbb5cb9e3e908743417c739d9ad8d",
+      "name": "rasterizer.py"
+    },
+    {
+      "sha256": "aaba059ec420c5bc343f8bbe92f835e653c5474a079b55b2767c270eee82167f",
+      "name": "requirements-build.txt"
+    },
+    {
+      "sha256": "8b0f38f44aa658b5cc1eea33a2eaf11fef0c5c518e73edeee05d9fd85238fe8b",
+      "name": "requirements.txt"
+    },
+    {
+      "sha256": "915a573dc11d6c0f95b5bd9a8d456f062e00384db4bf9adc762bb5470f1fb73b",
+      "name": "robot_assets.py"
+    },
+    {
+      "sha256": "96ea0e971dc536808ab84b8383cb44ef737740278c5057b841149276169a2709",
+      "name": "rtde_client.py"
+    },
+    {
+      "sha256": "6aba63aa07615b1b6329dafedab86dd5899fe1fe83710371768bb2a3e7c9f355",
+      "name": "session.py"
+    },
+    {
+      "sha256": "f2224600cb167faf34ffd77dda0e89ead9b46c78d90d27cbd58e23198f6a5253",
+      "name": "ssh_trust.py"
+    },
+    {
+      "sha256": "4e0e44d13164e5e90035e967589f28a764269dbf286efde10f96f0022b2c15a3",
+      "name": "status_view.py"
+    },
+    {
+      "sha256": "3e08109ba669b47ee5f0c9b3bfe919c4839927a08bcf80907d6a6d44f54c40f5",
+      "name": "telemetry.py"
+    },
+    {
+      "sha256": "c704f2692437cac4576d45e2beacb576d3a950c894c6a3837d9c2046b9b842ac",
+      "name": "tooling.py"
+    },
+    {
+      "sha256": "c4fed9aadeb4112a697274f3910716edbed44999d5835b7c341ddcc342bdece7",
+      "name": "transfer.py"
+    },
+    {
+      "sha256": "e28621c94752023fe09cd6521b6d060816af314ef0cba9d2d32f963e4094c05a",
+      "name": "transfer_stream.py"
+    },
+    {
+      "sha256": "79538c8f66eafcff78490406acdedfad50f83a2aeccde036a7b351e2f9e1adee",
+      "name": "ui_dialogs.py"
+    },
+    {
+      "sha256": "553428d4016423b98405351f72c230f39f2856626312882e952c359873d0face",
+      "name": "ui_theme.py"
+    },
+    {
+      "sha256": "941166516efd19a8c1d50d4d65299595a4582e865f792d1497baca9f1753d25c",
+      "name": "view.py"
+    }
+  ],
+  "finished": "2026-10-30T10:10:49.2533091-07:00",
+  "pyinstaller": "6.22.3",
+  "unit_test_exit_code": 0,
+  "build_exit_code": 0,
+  "architecture": "AMD64",
+  "smoke_test": "build_windows.bat runs dist\\URMotionStudio.exe --smoke-test and propagates its exit status",
+  "platform": "Microsoft Windows NT 10.0.26200.0",
+  "artifact": {
+    "path": "C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-audit-20261030-094744\\dist\\URMotionStudio.exe",
+    "sha256": "a24de3f3755a976d6b3d51e9e17df9b1cdf586f9398adc1f76cdbc2e0475391e",
+    "bytes": 108803847,
+    "workspace_path": "/home/apex/workspace/motionSim/dist/URMotionStudio.exe",
+    "previous_preserved": "/home/apex/workspace/motionSim/dist/URMotionStudio.previous-13f24a7b2321.exe"
+  },
+  "build_root": "C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-audit-20261030-094744",
+  "python": "Python 3.14.7",
+  "unit_test_modules": [
+    "tests.test_program_transfer",
+    "tests.test_program_motion",
+    "tests.test_program_check",
+    "tests.test_program_archive"
+  ],
+  "source_manifest_matches_workspace": true,
+  "unit_tests": {
+    "run": 45,
+    "skipped": 1,
+    "skip_reason": "Private configuration ZIP intentionally omitted from Windows build workspace."
+  },
+  "tcl_tk": "9.0.4",
+  "test_source_manifest": [
+    {
+      "name": "tests/test_program_transfer.py",
+      "sha256": "67f3a7ce30dcd22e7c5406ce6baa1f755564a182e8b12b25f79130e2f3a0613c"
+    },
+    {
+      "name": "tests/test_program_motion.py",
+      "sha256": "6ed43d388c9d7a1f325adf8b011341e18f75e7ee6863ed455f6bbd1be3beea3a"
+    },
+    {
+      "name": "tests/test_program_check.py",
+      "sha256": "478a6ed0e805f8298b844b8ef8f79b1cc15d644af7c21d63a89d4abaac294855"
+    },
+    {
+      "name": "tests/test_program_archive.py",
+      "sha256": "f73ba9b9df8e3d0bf62a4d9ae4b45e3a1ce0186b5e791ed9384fb45ae6577057"
+    }
+  ]
+}

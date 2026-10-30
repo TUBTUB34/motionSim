@@ -8,6 +8,7 @@ from rasterizer import rasterize
 from tooling import tool_parts, tool_placement
 from robot_assets import load_robot_mesh, model_family
 from kinematics import MODELS, VIEW_FRAMES, forward_kinematics, mounting_matrix, pose_matrix, view_base_transform
+from ui_theme import PANEL, BORDER, INK, MUTED
 
 DISPLAY_OPTIONS = {
     "grid": "Ground grid",
@@ -39,7 +40,7 @@ def cylinder_geometry(length, radius, end_radius, bevel, segments=40):
 
 class RobotView(tk.Canvas):
     def __init__(self, parent, model):
-        super().__init__(parent, background="#101923", highlightthickness=0, width=700, height=560)
+        super().__init__(parent, background=PANEL, highlightthickness=0, width=700, height=560)
         self.model = model
         self.robot_links = load_robot_mesh(model)
         self.tool = "None"
@@ -52,13 +53,21 @@ class RobotView(tk.Canvas):
         self.stream_state = "Live joint geometry"
         self.installation = None
         self.yaw, self.elevation, self.zoom = -.8, .45, 1.35
+        self.camera_anchor = None
+        self.camera_distance = None
+        self.pan_offset = np.zeros(3)
         self.drag = None
+        self.pan_drag = None
         self.mesh_image = None
         self.mesh_item = self.create_image(0, 0, anchor="nw", tags="mesh")
         self.rendered_triangles = 0
         self.bind("<Configure>", lambda _: self.redraw())
         self.bind("<ButtonPress-1>", self.start_drag)
         self.bind("<B1-Motion>", self.orbit)
+        self.bind("<ButtonRelease-1>", self.end_drag)
+        self.bind("<ButtonPress-3>", self.start_pan)
+        self.bind("<B3-Motion>", self.pan)
+        self.bind("<ButtonRelease-3>", self.end_drag)
         self.bind("<MouseWheel>", lambda e: self.zoom_by(1.1 if e.delta > 0 else 1/1.1))
         self.bind("<Button-4>", lambda _: self.zoom_by(1.1))
         self.bind("<Button-5>", lambda _: self.zoom_by(1/1.1))
@@ -69,6 +78,8 @@ class RobotView(tk.Canvas):
         self.view_frame = frame
         self.tcp_view_reference = (tuple(self.sample.tcp_pose)
                                    if frame == "Live TCP" and self.sample is not None else None)
+        self.camera_anchor = None
+        self.pan_offset[:] = 0
         self.redraw()
 
     def set_stream_state(self, state):
@@ -77,12 +88,33 @@ class RobotView(tk.Canvas):
             self.redraw()
 
     def start_drag(self, event):
+        self.pan_drag = None
         self.drag = (event.x, event.y)
 
+    def start_pan(self, event):
+        self.drag = None
+        self.pan_drag = (event.x, event.y)
+        self.configure(cursor='fleur')
+
+    def end_drag(self, _event=None):
+        self.drag = self.pan_drag = None
+        self.configure(cursor='')
+
+    def pan(self, event):
+        if self.pan_drag is None:
+            return
+        dx, dy = event.x - self.pan_drag[0], event.y - self.pan_drag[1]
+        # Translate the camera target in its screen plane, at target depth.
+        # Scaling by focal length keeps dragging natural at every zoom level.
+        self.pan_offset += (-dx*self.right + dy*self.up) * self.distance/self.focal
+        self.pan_drag = (event.x, event.y)
+        self.redraw()
+
     def orbit(self, event):
-        if self.drag:
-            self.yaw -= (event.x - self.drag[0]) * .008
-            self.elevation = float(np.clip(self.elevation + (event.y - self.drag[1]) * .008, -1.45, 1.45))
+        if self.drag is None:
+            return
+        self.yaw -= (event.x - self.drag[0]) * .008
+        self.elevation = float(np.clip(self.elevation + (event.y - self.drag[1]) * .008, -1.45, 1.45))
         self.drag = (event.x, event.y)
         self.redraw()
 
@@ -92,11 +124,19 @@ class RobotView(tk.Canvas):
 
     def reset_camera(self):
         self.yaw, self.elevation, self.zoom = -.8, .45, 1.35
+        self.camera_anchor = None
+        self.pan_offset[:] = 0
+        self.end_drag()
         self.redraw()
 
     def update_robot(self, sample, installation, render=True):
         changed = (self.sample is None or self.sample.joints != sample.joints
                    or self.sample.tcp_pose != sample.tcp_pose or self.installation is not installation)
+        old_mount = self.installation.mounting if self.installation else None
+        new_mount = installation.mounting if installation else None
+        if self.view_frame == 'World (mounting)' and old_mount != new_mount:
+            self.camera_anchor = None
+            self.pan_offset[:] = 0
         self.sample, self.installation = sample, installation
         if self.view_frame == "Live TCP" and self.tcp_view_reference is None:
             self.tcp_view_reference = tuple(sample.tcp_pose)
@@ -250,23 +290,41 @@ class RobotView(tk.Canvas):
                                        math.cos(self.elevation)*math.sin(self.yaw), math.sin(self.elevation)])
         self.right = np.array([-math.sin(self.yaw), math.cos(self.yaw), 0])
         self.up = np.cross(self.eye_direction, self.right)
+        frames = None
+        data = self.installation
+        if self.sample is not None:
+            mount = mounting_matrix(*data.mounting) if data and data.mounting is not None else np.eye(4)
+            reference = self.tcp_view_reference if self.view_frame == "Live TCP" else self.sample.tcp_pose
+            mount = view_base_transform(self.view_frame, mount, reference)
+            frames = forward_kinematics(self.model, self.sample.joints, mount)
+            if self.camera_anchor is None:
+                # Fit actual link geometry once, in the selected display frame.
+                # Keep that target stable as live samples/playback advance.
+                vertices = np.concatenate([link[0].reshape(-1, 3) @ frame[:3, :3].T + frame[:3, 3]
+                                           for frame, link in zip(frames, self.robot_links)])
+                basis = np.array([self.right, self.up, self.eye_direction])
+                camera_points = vertices @ basis.T
+                self.camera_anchor = ((camera_points.min(axis=0) + camera_points.max(axis=0))*.5) @ basis
+                radius = np.linalg.norm(vertices - self.camera_anchor, axis=1).max()
+                # A bounding sphere leaves 10% margin at the default zoom and
+                # remains fitted when the viewport is resized or orbited.
+                self.camera_distance = max(2.7*reach, radius*math.sqrt(1+(1.7*1.35/.4)**2))
+            self.center = self.camera_anchor + self.pan_offset
+            self.distance = self.camera_distance
+        else:
+            self.center += self.pan_offset
         self.light = self.eye_direction*.35 - self.right*.45 + self.up*.82
         self.light /= np.linalg.norm(self.light)
         if self.visibility["grid"]:
             for step in np.linspace(-reach, reach, 13):
-                self.line3([(step, -reach, 0), (step, reach, 0)], "#233342")
-                self.line3([(-reach, step, 0), (reach, step, 0)], "#233342")
+                self.line3([(step, -reach, 0), (step, reach, 0)], BORDER)
+                self.line3([(-reach, step, 0), (reach, step, 0)], BORDER)
         self.frame_axes(np.eye(4), .22*reach, labels=True)
         if self.sample is None:
             self.itemconfigure("mesh", state="hidden")
             self.create_text(self.w/2, self.h/2, text="Waiting for live joint positions…",
-                             fill="#dce7f0", font=("TkDefaultFont", 16), tags="scene")
+                             fill=INK, font=("TkDefaultFont", 13), tags="scene")
             return
-        data = self.installation
-        mount = mounting_matrix(*data.mounting) if data and data.mounting is not None else np.eye(4)
-        reference = self.tcp_view_reference if self.view_frame == "Live TCP" else self.sample.tcp_pose
-        mount = view_base_transform(self.view_frame, mount, reference)
-        frames = forward_kinematics(self.model, self.sample.joints, mount)
         points = np.array([f[:3, 3] for f in frames])
         self.faces = []
         size = min(.075, reach * .045)
@@ -304,6 +362,6 @@ class RobotView(tk.Canvas):
         if not self.visibility["info"]:
             return
         self.create_text(18, 18, text=f"{self.model} · {model_family(self.model)}   •   {self.stream_state}   •   {self.view_frame}",
-                         fill="#dce7f0", anchor="nw", font=("TkDefaultFont", 12, "bold"), tags="scene")
-        self.create_text(18, self.h-18, text="Drag to orbit  ·  Scroll to zoom  ·  Grid and distances in metres",
-                         fill="#9baec0", anchor="sw", tags="scene")
+                         fill=INK, anchor="nw", font=("TkDefaultFont", 11, "bold"), tags="scene")
+        self.create_text(18, self.h-18, text="Left-drag to rotate  ·  Right-drag to pan  ·  Scroll to zoom",
+                         fill=MUTED, anchor="sw", tags="scene")
