@@ -23,10 +23,13 @@ class BackupDestination:
 
 
 class BackupJob(LogJob):
-    def __init__(self, *, full=False, flight_directory='/root/flightreports', **kwargs):
+    def __init__(self, sources=('/programs', '/data/apps'), *, full=False, flight_directory='/root/flightreports', **kwargs):
         super().__init__(**kwargs)
         self.full = full
-        self.sources = [('/programs', 'directory'), ('/data/apps', 'directory')]
+        selected = tuple(sources)
+        if not full and (not selected or any(path not in ('/programs', '/data/apps') for path in selected)):
+            raise ValueError('Select programs, apps, or both for the backup.')
+        self.sources = [(path, 'directory') for path in dict.fromkeys(selected)]
         if full:
             if not flight_directory.startswith('/') or any(c in flight_directory for c in '\x00\r\n'):
                 raise ValueError('Enter an absolute robot flight-report folder.')

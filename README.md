@@ -78,9 +78,13 @@ suffix when that name already exists. Cancelling the folder chooser creates no
 robot archive. After the complete download is verified and flushed to disk, the
 app removes only its temporary TAR and directory from the robot.
 
-In **Logs & graphs**, enter the robot's SSH credentials and click **Make backup…**.
+In **Logs & graphs**, enter the robot's SSH credentials, select **Programs**
+(`/programs`), **Apps** (`/data/apps`), or both under **Backup contents**, and click
+**Make backup…**. Both are selected by default; at least one must be selected.
+**Full backup…** always includes all available full-backup sources, independently
+of these checkboxes.
 This works without loading logs or connecting the simulator. The app runs
-`tar -P -cf backup.tar` with the available `/programs` and `/data/apps` directories, using a unique private temporary
+`tar -P -cf backup.tar` with the selected available directories, using a unique private temporary
 directory on the robot so an existing backup is not overwritten. The uncompressed
 archive includes absolute paths, as requested by `-P`.
 Missing directories are skipped and listed in the completion message. If neither

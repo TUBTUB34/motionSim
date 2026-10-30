@@ -48,6 +48,8 @@ class LogWindow(tk.Toplevel):
         self.chart_kind = tk.StringVar(value='Bar')
         self.split_code = tk.BooleanVar()
         self.aggregate = tk.BooleanVar(value=False)
+        self.backup_programs = tk.BooleanVar(value=True)
+        self.backup_apps = tk.BooleanVar(value=True)
         self.start_date = tk.StringVar()
         self.end_date = tk.StringVar()
         self.columnconfigure(1, weight=1)
@@ -76,10 +78,13 @@ class LogWindow(tk.Toplevel):
         backups = ttk.Frame(sidebar, style='Panel.TFrame')
         backups.pack(fill='x', pady=(8, 0))
         backups.columnconfigure((0, 1), weight=1)
+        ttk.Label(backups, text='BACKUP CONTENTS', style='Section.TLabel').grid(row=0, column=0, columnspan=2, sticky='w')
+        ttk.Checkbutton(backups, text='Programs', variable=self.backup_programs).grid(row=1, column=0, sticky='w')
+        ttk.Checkbutton(backups, text='Apps', variable=self.backup_apps).grid(row=1, column=1, sticky='w')
         self.backup_button = ttk.Button(backups, text='Make backup…', command=self.make_backup)
-        self.backup_button.grid(row=0, column=0, sticky='ew', padx=(0, 6))
+        self.backup_button.grid(row=2, column=0, sticky='ew', padx=(0, 6))
         self.full_backup_button = ttk.Button(backups, text='Full backup…', command=lambda: self.make_backup(full=True))
-        self.full_backup_button.grid(row=0, column=1, sticky='ew')
+        self.full_backup_button.grid(row=2, column=1, sticky='ew')
         activity = ttk.Frame(sidebar, style='Panel.TFrame')
         activity.pack(fill='x', pady=6)
         self.cancel_button = ttk.Button(activity, text='Cancel', command=self.cancel, state='disabled')
@@ -224,6 +229,7 @@ class LogWindow(tk.Toplevel):
                                      self.password.get(), self.remote_path.get().strip())
         except ValueError as error:
             self.status.set('Connection error: ' + str(error))
+            messagebox.showerror('Cannot fetch robot logs', str(error), parent=self)
             return
         save_path = None
         if messagebox.askyesno('Save robot logs?', 'Would you also like to save the downloaded log files on this PC?', parent=self):
@@ -254,9 +260,13 @@ class LogWindow(tk.Toplevel):
             retrieval = getattr(self.app, 'flight_retrieval_window', None)
             if full and retrieval is not None and retrieval.winfo_exists():
                 flight_directory = retrieval.directory.get().strip()
-            job = BackupJob(connection=settings, full=full, flight_directory=flight_directory)
+            sources = ('/programs', '/data/apps') if full else tuple(
+                path for path, selected in (('/programs', self.backup_programs),
+                                           ('/data/apps', self.backup_apps)) if selected.get())
+            job = BackupJob(connection=settings, sources=sources, full=full, flight_directory=flight_directory)
         except ValueError as error:
             self.status.set('Connection error: ' + str(error) + (' Then choose Full backup….' if full else ''))
+            messagebox.showerror('Cannot make robot backup', str(error), parent=self)
             return
         if full:
             folder = filedialog.askdirectory(parent=self, title='Save full robot backup in folder',
