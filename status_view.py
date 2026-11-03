@@ -1,6 +1,7 @@
 """Grouped, scrollable read-only controller telemetry for the desktop UI."""
 from tkinter import ttk
-from ui_theme import INK, MUTED, PANEL, SELECTED, SUCCESS, WARNING, style_tree
+import ui_theme as theme
+from ui_theme import style_tree
 
 from telemetry import (BASE_FIELDS, STATUS_FIELDS, ROBOT_FLAGS, SAFETY_FLAGS,
                        ROBOT_MODES, SAFETY_MODES, RUNTIME_STATES, enum_text, format_value)
@@ -43,8 +44,8 @@ class StatusView(ttk.Frame):
         horizontal.grid(row=1, column=0, sticky="ew")
         body.rowconfigure(0, weight=1)
         body.columnconfigure(0, weight=1)
-        self.tree.tag_configure("group", background=SELECTED, foreground=INK, font=("TkDefaultFont", 10, "bold"))
-        self.tree.tag_configure("unavailable", foreground=MUTED)
+        self.tree.tag_configure("group", background=theme.SELECTED, foreground=theme.INK, font=("TkDefaultFont", 10, "bold"))
+        self.tree.tag_configure("unavailable", foreground=theme.MUTED)
         self.fields = BASE_FIELDS + STATUS_FIELDS
         self.previous = {}
         for group in ("Controller", "Safety", "Motion", "Joints", "TCP", "Electrical", "I/O", "Tool", "Payload"):
@@ -72,10 +73,10 @@ class StatusView(ttk.Frame):
             if key == "safety_status" and value is None:
                 value = values.get("safety_mode")
             text = enum_text(value, mapping)
-            color = INK
+            color = theme.INK
             if key == "safety_status" and value is not None:
-                color = SUCCESS if value == 1 else WARNING
+                color = theme.SUCCESS if value == 1 else theme.WARNING
             if not fresh:
                 text = "Last: " + text
-                color = MUTED
+                color = theme.MUTED
             self.summary_labels[key].configure(text=text, foreground=color)

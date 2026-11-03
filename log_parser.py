@@ -19,6 +19,24 @@ CODES = {
     "C157": ("Collision", "Collision detected by joint"),
     "C158": ("Payload warning", "Payload set to 0 kg; check mass and center of gravity"),
 }
+# These UR Application Deployment workshop signals describe the application,
+# not a particular joint. Their A subcodes must never become joint indices.
+# Exact code meanings: official CODE_150/151/152/171.html error-code pages.
+CONTROLLER_CODES = {
+    "C150": ("Safety limit proximity", "Position near configured joint limits"),
+    "C151": ("Safety limit proximity", "Tool orientation near configured limits"),
+    "C152": ("Safety limit proximity", "Position near a configured safety plane"),
+    "C171": ("Blend warning", "Blend issue; review the exact controller subtype"),
+}
+BLEND_DESCRIPTIONS = {
+    0: "Waypoint skipped during MoveC blending",
+    1: "MoveC blend radius is too small",
+    3: "Waypoint skipped during ServoC blending",
+    9: "Waypoint skipped during MoveP blending",
+    10: "MoveP blend radius is too small",
+    **{value: "MoveJ waypoint skipped because blends overlap" for value in (4, 5, 6, 7)},
+    **{value: "MoveL waypoint skipped because blends overlap" for value in (11, 12, 13, 14)},
+}
 # Joint-health codes selected from the supplied ErrorCodes.pdf. These are
 # indicators to investigate, not a prediction that a joint will fail.
 # CB3-style A values identify a joint; e-Series messages use source 110-115.
@@ -62,7 +80,7 @@ HEALTH_CODES.update({
 CODE_RE = re.compile(r"^(C\d+A(\d+)):\d+$")
 
 
-def read_events(paths, metadata: dict | None = None, check_cancel=None) -> tuple[list[dict], int]:
+def read_events(paths, metadata: dict | None = None, check_cancel=None, *, include_unmapped=False) -> tuple[list[dict], int]:
     metadata = metadata if metadata is not None else {}
     metadata.update(first_date="", last_date="", context=[], unmapped=0)
     events = []
@@ -76,7 +94,7 @@ def read_events(paths, metadata: dict | None = None, check_cancel=None) -> tuple
     for file_index, path in enumerate(paths):
         occurrences = Counter()
         with Path(path).open("r", encoding="utf-8", errors="replace") as stream:
-            for line in stream:
+            for source_line, line in enumerate(stream, 1):
                 if check_cancel:
                     check_cancel()
                 if line.startswith("******** Log start"):
@@ -112,47 +130,69 @@ def read_events(paths, metadata: dict | None = None, check_cancel=None) -> tuple
                     continue
                 code = match.group(1)
                 family = re.match(r"C\d+", code).group()
+                if family == "C0":
+                    continue  # Controller status messages are not diagnostic faults.
+                if include_unmapped and family in ("C100", "C101", "C102"):
+                    metadata["context"].append({"date": date, "time": timestamp.isoformat(sep=" "), "code": code,
+                                                "message": " :: ".join(fields[5:])})
+                    continue  # Mode changes and real/simulated robot selection.
                 joint_index = int(match.group(2))
                 if code == "C162A0":
                     key = (session, fields[1], code)
                     if key not in seen:
                         seen.add(key)
                         metadata["context"].append({"date": date, "time": timestamp.isoformat(sep=" "), "code": code})
-                    continue
-                if family in CODES and joint_index < len(JOINTS):
+                    if not include_unmapped:
+                        continue
+                if family in CONTROLLER_CODES:
+                    category, description = CONTROLLER_CODES[family]
+                    if family == 'C171':
+                        description = BLEND_DESCRIPTIONS.get(joint_index, description)
+                    joint_index = -1
+                elif family in CODES and joint_index < len(JOINTS):
                     category, description = CODES[family]
                 else:
                     rule = HEALTH_CODES.get(code)
                     if rule is None:
                         rule = HEALTH_CODES.get(family)
-                    if rule is None:
+                    if rule is None and not include_unmapped:
                         continue
-                    description, mode = rule
+                    description, mode = rule or ("Uninterpreted controller code", "unknown")
+                    if mode == "unknown":
+                        joint_index = -1
                     if mode == "source":
                         try:
                             joint_index = int(fields[3]) - 110
                         except ValueError:
                             metadata["unmapped"] += 1
-                            continue
+                            if not include_unmapped:
+                                continue
+                            joint_index = -1
                     elif mode == "a_joint_variants":
                         joint_index = joint_index if joint_index < 6 else joint_index - 6
                     if not 0 <= joint_index < len(JOINTS):
                         metadata["unmapped"] += 1
-                        continue
-                    category = "Joint health signal"
+                        if not include_unmapped:
+                            continue
+                        joint_index = -1
+                    category = "Uninterpreted controller code" if rule is None else "Joint health signal"
                 # One incident may appear as :5 and :6 within milliseconds. The
                 # controller uptime is identical for that pair, while session keeps
                 # reboots from accidentally merging independent incidents.
                 key = (session, fields[1], code, joint_index)
+                if include_unmapped:
+                    key += (" :: ".join(fields[5:]),)
                 if key in seen:
                     continue
                 seen.add(key)
                 events.append({"date": timestamp.date().isoformat(),
                                "time": timestamp.isoformat(sep=" "),
-                               "joint": JOINTS[joint_index], "code": code,
+                               "joint": ("Controller" if family in CONTROLLER_CODES else
+                                         JOINTS[joint_index] if joint_index >= 0 else "Unknown"), "code": code,
                                "family": family, "category": category,
                                "description": description, "session": session,
-                               "message": " :: ".join(fields[5:])})
+                               "message": " :: ".join(fields[5:]),
+                               "uptime": fields[1], "source_path": str(path), "source_line": source_line})
     return events, skipped
 
 

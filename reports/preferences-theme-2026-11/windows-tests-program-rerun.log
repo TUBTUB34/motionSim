@@ -1,0 +1,64 @@
+tests.test_program_check
+test_acceleration_units_time_priority_dynamic_and_optimove (tests.test_program_check.ProgramCheckTests.test_acceleration_units_time_priority_dynamic_and_optimove) ... ok
+test_archive_installation_reference_uses_archive_members_without_extraction (tests.test_program_check.ProgramCheckTests.test_archive_installation_reference_uses_archive_members_without_extraction) ... ok
+test_archive_pairs_exact_folder_and_stem_without_extracting (tests.test_program_check.ProgramCheckTests.test_archive_pairs_exact_folder_and_stem_without_extracting) ... ok
+test_folder_matches_referenced_installation_and_records_saved_context (tests.test_program_check.ProgramCheckTests.test_folder_matches_referenced_installation_and_records_saved_context) ... ok
+test_installation_missing_ambiguous_and_invalid_do_not_discard_script_review (tests.test_program_check.ProgramCheckTests.test_installation_missing_ambiguous_and_invalid_do_not_discard_script_review) ... ok
+test_lexer_diagnostic_commands_ignore_strings_comments_and_declarations (tests.test_program_check.ProgramCheckTests.test_lexer_diagnostic_commands_ignore_strings_comments_and_declarations) ... ok
+test_lexer_ignores_comments_strings_labels_and_definitions (tests.test_program_check.ProgramCheckTests.test_lexer_ignores_comments_strings_labels_and_definitions) ... ok
+test_local_parent_installation_and_untrusted_derived_metadata (tests.test_program_check.ProgramCheckTests.test_local_parent_installation_and_untrusted_derived_metadata) ... ok
+test_local_program_names_exclude_parent_paths_and_pair_within_each_folder (tests.test_program_check.ProgramCheckTests.test_local_program_names_exclude_parent_paths_and_pair_within_each_folder) ... ok
+test_no_proven_blend_fault_or_execution_claim_for_version_two (tests.test_program_check.ProgramCheckTests.test_no_proven_blend_fault_or_execution_claim_for_version_two) ... ok
+test_payload_transition_units_invalid_value_and_inertia_guidance (tests.test_program_check.ProgramCheckTests.test_payload_transition_units_invalid_value_and_inertia_guidance) ... ok
+test_payload_units_and_invalid_literal_configuration (tests.test_program_check.ProgramCheckTests.test_payload_units_and_invalid_literal_configuration) ... ok
+test_pdf_contains_source_evidence_and_urp_only_limitation (tests.test_program_check.ProgramCheckTests.test_pdf_contains_source_evidence_and_urp_only_limitation) ... ok
+test_process_waits_and_diagnostics_preserve_source_execution_uncertainty (tests.test_program_check.ProgramCheckTests.test_process_waits_and_diagnostics_preserve_source_execution_uncertainty) ... ok
+test_source_read_and_xml_limits (tests.test_program_check.ProgramCheckTests.test_source_read_and_xml_limits) ... ok
+test_supplied_configuration_counts_real_calls_not_embedded_text (tests.test_program_check.ProgramCheckTests.test_supplied_configuration_counts_real_calls_not_embedded_text) ... ok
+test_unconfirmed_family_never_receives_numeric_pass (tests.test_program_check.ProgramCheckTests.test_unconfirmed_family_never_receives_numeric_pass) ... ok
+test_urp_only_is_explicitly_limited (tests.test_program_check.ProgramCheckTests.test_urp_only_is_explicitly_limited) ... ok
+test_workshop_small_blends_remain_contextual_review_not_fault (tests.test_program_check.ProgramCheckTests.test_workshop_small_blends_remain_contextual_review_not_fault) ... ok
+
+----------------------------------------------------------------------
+Ran 19 tests in 6.551s
+
+OK
+
+tests.test_program_playback_ui
+test_backup_archive_picker_reviews_program_and_matches_installation (tests.test_program_playback_ui.ProgramPlaybackUITests.test_backup_archive_picker_reviews_program_and_matches_installation) ... ok
+test_folder_lists_urps_and_reviews_only_selected_with_missing_installation_warning (tests.test_program_playback_ui.ProgramPlaybackUITests.test_folder_lists_urps_and_reviews_only_selected_with_missing_installation_warning) ... ok
+test_live_samples_cannot_overwrite_recorded_robot (tests.test_program_playback_ui.ProgramPlaybackUITests.test_live_samples_cannot_overwrite_recorded_robot) ... ok
+test_main_playback_seek_switch_pause_and_missing_model (tests.test_program_playback_ui.ProgramPlaybackUITests.test_main_playback_seek_switch_pause_and_missing_model) ... ok
+test_offline_source_selector_explains_missing_live_connection (tests.test_program_playback_ui.ProgramPlaybackUITests.test_offline_source_selector_explains_missing_live_connection) ... ok
+test_program_selection_review_export_and_invalidation (tests.test_program_playback_ui.ProgramPlaybackUITests.test_program_selection_review_export_and_invalidation) ... ok
+test_robot_snapshot_flows_to_urp_selection_and_report_without_live_telemetry (tests.test_program_playback_ui.ProgramPlaybackUITests.test_robot_snapshot_flows_to_urp_selection_and_report_without_live_telemetry) ... ok
+test_robot_source_cancelled_destination_and_host_trust_do_not_start_unapproved_work (tests.test_program_playback_ui.ProgramPlaybackUITests.test_robot_source_cancelled_destination_and_host_trust_do_not_start_unapproved_work) ... ok
+test_simulator_source_switch_preserves_both_views_and_pauses_flight (tests.test_program_playback_ui.ProgramPlaybackUITests.test_simulator_source_switch_preserves_both_views_and_pauses_flight) ... ok
+test_tcp_mounting_default_switch_and_reference_persistence (tests.test_program_playback_ui.ProgramPlaybackUITests.test_tcp_mounting_default_switch_and_reference_persistence) ... ok
+
+----------------------------------------------------------------------
+Ran 10 tests in 20.776s
+
+OK
+
+tests.test_commissioning_ui
+test_csv_export_does_not_mark_draft_saved (tests.test_commissioning_ui.CommissioningUITests.test_csv_export_does_not_mark_draft_saved) ... ok
+test_filters_empty_state_and_footer_available_at_compact_size (tests.test_commissioning_ui.CommissioningUITests.test_filters_empty_state_and_footer_available_at_compact_size) ... ok
+test_invalid_open_and_cancelled_save_keep_current_draft (tests.test_commissioning_ui.CommissioningUITests.test_invalid_open_and_cancelled_save_keep_current_draft) ... ok
+test_notes_survive_switch_and_save_open_roundtrip (tests.test_commissioning_ui.CommissioningUITests.test_notes_survive_switch_and_save_open_roundtrip) ... ok
+test_review_rows_are_visible_pointer_targets_beside_evidence (tests.test_commissioning_ui.CommissioningUITests.test_review_rows_are_visible_pointer_targets_beside_evidence) ... FAIL
+
+======================================================================
+FAIL: test_review_rows_are_visible_pointer_targets_beside_evidence (tests.test_commissioning_ui.CommissioningUITests.test_review_rows_are_visible_pointer_targets_beside_evidence)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\apex\AppData\Local\Temp\motionsim-settings-20261102-40b1cgef\tests\test_commissioning_ui.py", line 105, in test_review_rows_are_visible_pointer_targets_beside_evidence
+    self.assertIs(target, self.page.table)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: None is not <tkinter.ttk.Treeview object .!commissioningpage.!scrollableframe.!canvas.!frame.!frame3.!frame.!treeview>
+
+----------------------------------------------------------------------
+Ran 5 tests in 5.013s
+
+FAILED (failures=1)
+

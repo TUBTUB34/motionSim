@@ -172,6 +172,7 @@ class FlightWindowTests(unittest.TestCase):
             window.events.put(('discovered', previous_discovery, [Path('/tmp/old.csv')]))
             window.events.put(('loaded', previous_generation, (), flight('stale.csv')))
             with patch.object(window, 'load_path') as load:
+                window.after_cancel(window.after_id)
                 window.poll()
             self.assertIsNone(window.report)
             self.assertIsNone(window.timeline)

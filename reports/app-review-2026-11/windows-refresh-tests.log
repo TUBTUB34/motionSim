@@ -1,0 +1,13 @@
+test_backup_page_uses_active_robot_and_selected_folder (tests.test_design_ui.CompactDesignTests.test_backup_page_uses_active_robot_and_selected_folder) ... ok
+test_camera_reset_remains_reachable_with_populated_telemetry (tests.test_design_ui.CompactDesignTests.test_camera_reset_remains_reachable_with_populated_telemetry) ... ok
+test_cancel_full_backup_folder_does_not_start_robot_work (tests.test_design_ui.CompactDesignTests.test_cancel_full_backup_folder_does_not_start_robot_work) ... ok
+test_catalog_keeps_actions_below_long_reference_details (tests.test_design_ui.CompactDesignTests.test_catalog_keeps_actions_below_long_reference_details) ... ok
+test_embedded_flight_toolbar_actions_fit_at_minimum_size (tests.test_design_ui.CompactDesignTests.test_embedded_flight_toolbar_actions_fit_at_minimum_size) ... ok
+test_last_tool_control_is_revealed_by_keyboard_focus (tests.test_design_ui.CompactDesignTests.test_last_tool_control_is_revealed_by_keyboard_focus) ... ok
+test_setup_validation_keeps_connect_and_offline_actions_visible (tests.test_design_ui.CompactDesignTests.test_setup_validation_keeps_connect_and_offline_actions_visible) ... ok
+test_workspace_shortcut_respects_modal_confirmation (tests.test_design_ui.CompactDesignTests.test_workspace_shortcut_respects_modal_confirmation) ... ok
+
+----------------------------------------------------------------------
+Ran 8 tests in 10.899s
+
+OK

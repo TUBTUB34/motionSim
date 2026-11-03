@@ -93,6 +93,7 @@ class CompactDesignTests(unittest.TestCase):
 
     def test_setup_validation_keeps_connect_and_offline_actions_visible(self):
         from tkinter import ttk
+        self.app.show_workspace()
         self.root.geometry('760x720')
         self.app.ip.set('999.2.3.4')
         self.app.submit()
@@ -122,7 +123,24 @@ class CompactDesignTests(unittest.TestCase):
         self.app.workspace_shortcut(action)
         action.assert_called_once()
 
-    def test_simulator_full_backup_uses_active_robot_and_selected_folder(self):
+    def test_embedded_flight_toolbar_actions_fit_at_minimum_size(self):
+        from tkinter import ttk
+        from unittest.mock import patch
+        self.root.geometry('1120x740')
+        with patch('flight_view.FlightWindow._discover'):
+            self.app.open_flights()
+        self.settle()
+        names = {'How to', 'Export measurements…', 'Separate simulator', 'Open simulator'}
+        buttons = [w for w in self.descendants(self.app.flight_window)
+                   if isinstance(w, ttk.Button) and w.cget('text') in names]
+        self.assertEqual(len(buttons), len(names))
+        for button in buttons:
+            self.assert_fully_visible(button, self.app.flight_window)
+            self.assertGreaterEqual(button.winfo_width(), button.winfo_reqwidth())
+        self.app.open_flight_retrieval()
+        self.assertEqual(self.app.flight_tabs.select(), str(self.app.retrieval_host))
+
+    def test_backup_page_uses_active_robot_and_selected_folder(self):
         from pathlib import Path
         import tempfile
         from unittest.mock import patch
@@ -133,42 +151,49 @@ class CompactDesignTests(unittest.TestCase):
         self.app.show_view()
         self.root.geometry('980x620')
         self.settle()
-        button = next(w for w in self.descendants(self.app.simulator_tab)
-                      if isinstance(w, ttk.Button) and w.cget('text') == 'Full backup…')
-        self.assert_fully_visible(button, self.root)
         with tempfile.TemporaryDirectory() as folder, patch('backup_transfer.BackupJob.start') as start, patch(
-                'log_view.filedialog.askdirectory', return_value=folder):
-            previous = Path(folder) / 'full-backup.tar'
+                'backup_view.filedialog.askdirectory', return_value=folder):
+            from backup_view import backup_filename
+            previous = Path(folder) / backup_filename('Fixture project')
             previous.write_bytes(b'existing archive')
-            button.invoke()
-            window = self.app.log_window
+            self.app.make_full_backup()
+            window = self.app.backup_page
+            window.project_name.set('Fixture project')
+            self.settle()
+            start.assert_not_called()
+            self.assert_fully_visible(window.start_button, self.root)
+            window.start_button.invoke()
             start.assert_called_once()
             self.assertTrue(window.job.full)
             self.assertEqual(window.job.connection.ip, '127.0.0.2')
             self.assertEqual(window.job.connection.password, 'password')
-            self.assertEqual(window.save_directory, Path(folder))
-            self.assertTrue(window.full_backup_button.instate(['disabled']))
+            self.assertEqual(window._destination, Path(folder))
+            self.assertTrue(window.start_button.instate(['disabled']))
             question = BackupDestination(filename='full-backup.tar')
             window.job.events.put(('backup_destination', question))
-            window.after_cancel(window.poll_id)
+            window.after_cancel(window.after_id)
             window.poll()
             self.assertTrue(question.answered.is_set())
             self.assertEqual(Path(question.path).parent, Path(folder))
             self.assertNotEqual(Path(question.path), previous)
             self.assertEqual(previous.read_bytes(), b'existing archive')
-            window.finish()
-            self.assertFalse(window.full_backup_button.instate(['disabled']))
+            window.job.events.put(('backup_finished', 'Saved'))
+            window.after_cancel(window.after_id)
+            window.poll()
+            self.assertFalse(window.start_button.instate(['disabled']))
 
     def test_cancel_full_backup_folder_does_not_start_robot_work(self):
         from unittest.mock import patch
         from connection import make_settings
         self.app.settings = make_settings('127.0.0.2', 'root', 'password', '')
         with patch('backup_transfer.BackupJob.start') as start, patch(
-                'log_view.filedialog.askdirectory', return_value=''):
+                'backup_view.filedialog.askdirectory', return_value=''):
             self.app.make_full_backup()
+            self.app.backup_page.project_name.set('Fixture project')
+            self.app.backup_page.make_backup()
             start.assert_not_called()
-            self.assertIsNone(self.app.log_window.job)
-            self.assertIn('No robot archive created', self.app.log_window.status.get())
+            self.assertIsNone(self.app.backup_page.job)
+            self.assertIn('Choose a destination', self.app.backup_page.status.get())
 
 
 if __name__ == '__main__':

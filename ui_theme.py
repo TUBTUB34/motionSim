@@ -7,21 +7,38 @@ import tkinter as tk
 from tkinter import font, ttk
 from PIL import Image, ImageDraw, ImageTk
 
-BACKGROUND = '#090e14'
-PANEL = '#101922'
-FIELD = '#0b1219'
-BORDER = '#263744'
-INK = TEXT = '#dce6ee'
-MUTED = '#91a9bb'
-ACCENT = ACTUAL = '#39a9ed'
-TARGET = SUCCESS = '#99d74c'
-SELECTED = '#244156'
-DANGER = '#f16b75'
-WARNING = '#e8b45d'
-HOVER = '#1a2c3b'
-PRESSED = '#21435a'
-DISABLED = '#667b8c'
-CHART_SERIES = (ACCENT, TARGET, WARNING, '#c795d8', DANGER, '#73d4c5')
+PALETTES = {
+    'dark': {
+        'BACKGROUND': '#090e14', 'PANEL': '#101922', 'FIELD': '#0b1219',
+        'BORDER': '#263744', 'INK': '#dce6ee', 'MUTED': '#91a9bb',
+        'ACCENT': '#39a9ed', 'TARGET': '#99d74c', 'SELECTED': '#244156',
+        'DANGER': '#f16b75', 'WARNING': '#e8b45d', 'HOVER': '#1a2c3b',
+        'PRESSED': '#21435a', 'DISABLED': '#667b8c', 'ACCENT_HOVER': '#28516b',
+        'SERIES_PURPLE': '#c795d8', 'SERIES_TEAL': '#73d4c5',
+    },
+    'light': {
+        'BACKGROUND': '#f3f6f8', 'PANEL': '#e8eef3', 'FIELD': '#ffffff',
+        'BORDER': '#b4c2ce', 'INK': '#172d3d', 'MUTED': '#4a6375',
+        'ACCENT': '#006caa', 'TARGET': '#437617', 'SELECTED': '#cce4f5',
+        'DANGER': '#b52d3b', 'WARNING': '#8c5409', 'HOVER': '#dbe7ef',
+        'PRESSED': '#c6dfef', 'DISABLED': '#627787', 'ACCENT_HOVER': '#b8d8ee',
+        'SERIES_PURPLE': '#805096', 'SERIES_TEAL': '#147566',
+    },
+}
+MODE = 'dark'
+
+
+def _select_palette(mode):
+    global MODE, TEXT, ACTUAL, SUCCESS, CHART_SERIES
+    MODE = mode
+    # These are this module's public design tokens. Callers use ui_theme.TOKEN
+    # so newly created widgets follow the current application palette.
+    globals().update(PALETTES[mode])
+    TEXT, ACTUAL, SUCCESS = INK, ACCENT, TARGET
+    CHART_SERIES = (ACCENT, TARGET, WARNING, SERIES_PURPLE, DANGER, SERIES_TEAL)
+
+
+_select_palette(MODE)
 SPACING = (4, 8, 12, 16, 24)
 RADIUS = 3
 BORDER_WIDTH = 1
@@ -31,12 +48,8 @@ TYPE_SIZE = {'small': 9, 'body': 10, 'section': 9, 'title': 17, 'hero': 23}
 SHADOW = None
 
 
-def apply_theme(root):
-    """Install the shared ttk/Tk palette once per interpreter, preserving focus."""
-    style = ttk.Style(root)
-    if getattr(root, '_studio_theme_applied', False):
-        return style
-    style.theme_use('clam')
+def _build_theme(root, style):
+    """Create one palette's native styles and image elements exactly once."""
     available = set(font.families(root))
     family = next((name for name in ('Segoe UI', 'Noto Sans', 'DejaVu Sans') if name in available), 'TkDefaultFont')
     font.nametofont('TkDefaultFont', root=root).configure(family=family, size=TYPE_SIZE['body'])
@@ -68,7 +81,7 @@ def apply_theme(root):
             ('active', surface(HOVER, ACCENT)))
     element('Studio.accent', surface(PRESSED, ACCENT), ('disabled', disabled),
             ('pressed', surface(SELECTED, INK)), ('focus', surface(PRESSED, INK)),
-            ('active', surface('#28516b', ACCENT)))
+            ('active', surface(ACCENT_HOVER, ACCENT)))
     for name, background in (('TButton', 'Studio.button'), ('Accent.TButton', 'Studio.accent')):
         style.layout(name, [(background, {'sticky': 'nsew', 'children': [
             ('Button.padding', {'sticky': 'nsew', 'children': [('Button.label', {'sticky': 'nsew'})]})]})])
@@ -152,7 +165,12 @@ def apply_theme(root):
     style.layout('Horizontal.TProgressbar', [('Studio.trough', {'sticky': 'nsew', 'children': [
         ('Studio.pbar', {'side': 'left', 'sticky': 'ns'})]})])
     style.configure('Horizontal.TProgressbar', borderwidth=0, thickness=8)
-    # Classic Tk widgets, Matplotlib tools/tooltips and Tk-native file selectors.
+    return images
+
+
+def _configure_defaults(root):
+    # Options affect widgets created after this switch, including native Tk
+    # file dialogs. Existing widgets are updated separately without rebuilding.
     options = {'background': PANEL, 'foreground': INK, 'activeBackground': HOVER,
                'activeForeground': INK, 'disabledForeground': DISABLED,
                'selectBackground': SELECTED, 'selectForeground': INK,
@@ -170,8 +188,103 @@ def apply_theme(root):
     root.option_add('*TCombobox*Listbox.selectForeground', INK)
     root.option_add('*Menu.tearOff', False)
     root.configure(background=BACKGROUND)
-    root._studio_theme_images = images
+
+
+def register_theme_callback(widget, callback):
+    """Register an in-place repaint for a widget that owns non-Tk rendering.
+
+    The callback receives no arguments and runs once after each actual palette
+    change. Destroyed widgets disappear with their normal Tk widget lifecycle.
+    """
+    widget._studio_theme_callback = callback
+
+
+def _retheme_widgets(root, old, new):
+    replacements = {old[key].lower(): new[key] for key in old if key in new}
+    colors = ('background', 'foreground', 'activebackground', 'activeforeground',
+              'disabledforeground', 'selectbackground', 'selectforeground',
+              'highlightbackground', 'highlightcolor', 'insertbackground',
+              'troughcolor', 'selectcolor', 'readonlybackground', 'disabledbackground')
+    callbacks = []
+
+    def walk(widget):
+        for option in colors:
+            try:
+                value = str(widget.cget(option)).lower()
+                if value in replacements:
+                    widget.configure(**{option: replacements[value]})
+            except tk.TclError:
+                pass  # ttk widgets intentionally do not expose all Tk options.
+        if isinstance(widget, tk.Text):
+            for tag in widget.tag_names():
+                for option in ('foreground', 'background'):
+                    value = str(widget.tag_cget(tag, option)).lower()
+                    if value in replacements:
+                        widget.tag_configure(tag, **{option: replacements[value]})
+        elif isinstance(widget, ttk.Treeview):
+            for tag in widget.tk.call(widget, 'tag', 'names'):
+                for option in ('foreground', 'background'):
+                    value = str(widget.tag_configure(tag, option)).lower()
+                    if value in replacements:
+                        widget.tag_configure(tag, **{option: replacements[value]})
+        elif isinstance(widget, tk.Canvas):
+            for item in widget.find_all():
+                for option in ('fill', 'outline'):
+                    try:
+                        value = str(widget.itemcget(item, option)).lower()
+                        if value in replacements:
+                            widget.itemconfigure(item, **{option: replacements[value]})
+                    except tk.TclError:
+                        pass
+        elif isinstance(widget, ttk.Combobox):
+            # A previously opened popdown is a Tcl-owned window, not a Python
+            # child. Preserve its selection and scroll position while recoloring.
+            popup = str(widget) + '.popdown.f.l'
+            if widget.tk.call('winfo', 'exists', popup):
+                widget.tk.call(popup, 'configure', '-background', FIELD, '-foreground', INK,
+                               '-selectbackground', SELECTED, '-selectforeground', INK)
+        callback = getattr(widget, '_studio_theme_callback', None)
+        if callback is not None:
+            callbacks.append(callback)
+        for child in widget.winfo_children():
+            walk(child)
+
+    walk(root)
+    for callback in callbacks:
+        callback()
+
+
+def apply_theme(root, mode=None):
+    """Apply dark/light colors in place, preserving documents and connections.
+
+    Omitting mode preserves an existing window's choice. Each interpreter caches
+    only two image-backed ttk themes, so repeated toggles do not leak images.
+    PDF palettes and Matplotlib global settings are intentionally untouched.
+    """
+    root = root._root()
+    previous = getattr(root, '_studio_theme_mode', None)
+    mode = mode or previous or 'dark'
+    if mode not in PALETTES:
+        raise ValueError('Choose dark or light appearance.')
+    style = ttk.Style(root)
+    _select_palette(mode)
+    if previous == mode:
+        return style
+    themes = getattr(root, '_studio_themes', {})
+    name = 'studio-' + mode
+    if mode not in themes:
+        style.theme_create(name, parent='clam')
+        style.theme_use(name)
+        themes[mode] = _build_theme(root, style)
+    else:
+        style.theme_use(name)
+    root._studio_themes = themes
+    root._studio_theme_images = themes[mode]
+    root._studio_theme_mode = mode
     root._studio_theme_applied = True
+    _configure_defaults(root)
+    if previous is not None:
+        _retheme_widgets(root, PALETTES[previous], PALETTES[mode])
     return style
 
 
@@ -228,6 +341,15 @@ def style_toolbar(toolbar):
         subplot_button = getattr(toolbar, '_buttons', {}).get('Subplots')
         if subplot_button is not None:
             subplot_button.configure(command=configure_subplots)
+    tool = getattr(toolbar, 'subplot_tool', None)
+    if tool is not None:
+        window = getattr(tool.figure.canvas.manager, 'window', None)
+        try:
+            if window is not None and window.winfo_exists():
+                _style_subplot_tool(tool)
+        except tk.TclError:
+            pass  # Matplotlib retains the tool object after its window closes.
+    register_theme_callback(toolbar, lambda: style_toolbar(toolbar))
     return toolbar
 
 
@@ -253,6 +375,7 @@ def _style_subplot_tool(tool):
     window = getattr(figure.canvas.manager, 'window', None)
     if window is not None:
         window.configure(background=BACKGROUND)
+        register_theme_callback(window, lambda: _style_subplot_tool(tool))
     figure.canvas.draw_idle()
 
 
@@ -286,7 +409,10 @@ class ScrollableFrame(ttk.Frame):
         self.columnconfigure(0, weight=1)
         self.rowconfigure(0, weight=1)
         self.content = ttk.Frame(self.canvas, style=style, padding=padding)
-        self._window = self.canvas.create_window(0, 0, anchor='nw', window=self.content)
+        # Pin the initial window size until the viewport receives its Configure
+        # event. Natural-size wrapping can otherwise oscillate before Tk maps
+        # the root, starving geometry negotiation and even timer callbacks.
+        self._window = self.canvas.create_window(0, 0, anchor='nw', window=self.content, width=1, height=1)
         self._bound = set()
         self._pending = None
         self._destroying = False

@@ -1,0 +1,14 @@
+{
+  "verified_at": "2026-11-02T18:22:40.145217+00:00",
+  "manifest_file_count": 128,
+  "source_mismatches": [],
+  "unmanifested_root_modules": [],
+  "artifact_sha256": "60e38698e7844e0ae5818276998a78572f74dc92b3c3c53853791f486034a234",
+  "artifact_hash_matches": true,
+  "artifact_bytes": 108967594,
+  "receipt_success": true,
+  "windows_tests": "146 run:145 passed;1 optional PyMuPDF skip",
+  "refreshed_layout_tests": "8 passed",
+  "source_smoke_exit_code": 0,
+  "exact_batch_and_bundled_smoke_exit_code": 0
+}

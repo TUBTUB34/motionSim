@@ -1,0 +1,15 @@
+test_review_rows_are_visible_pointer_targets_beside_evidence (tests.test_commissioning_ui.CommissioningUITests.test_review_rows_are_visible_pointer_targets_beside_evidence) ... FAIL
+
+======================================================================
+FAIL: test_review_rows_are_visible_pointer_targets_beside_evidence (tests.test_commissioning_ui.CommissioningUITests.test_review_rows_are_visible_pointer_targets_beside_evidence)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\apex\AppData\Local\Temp\motionsim-settings-20261102-40b1cgef\tests\test_commissioning_ui.py", line 105, in test_review_rows_are_visible_pointer_targets_beside_evidence
+    self.assertIs(target, self.page.table)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: None is not <tkinter.ttk.Treeview object .!commissioningpage.!scrollableframe.!canvas.!frame.!frame3.!frame.!treeview>
+
+----------------------------------------------------------------------
+Ran 1 test in 0.891s
+
+FAILED (failures=1)

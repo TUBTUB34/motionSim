@@ -8,7 +8,7 @@ from rasterizer import rasterize
 from tooling import tool_parts, tool_placement
 from robot_assets import load_robot_mesh, model_family
 from kinematics import MODELS, VIEW_FRAMES, forward_kinematics, mounting_matrix, pose_matrix, view_base_transform
-from ui_theme import PANEL, BORDER, INK, MUTED
+import ui_theme as theme
 
 DISPLAY_OPTIONS = {
     "grid": "Ground grid",
@@ -40,7 +40,7 @@ def cylinder_geometry(length, radius, end_radius, bevel, segments=40):
 
 class RobotView(tk.Canvas):
     def __init__(self, parent, model):
-        super().__init__(parent, background=PANEL, highlightthickness=0, width=700, height=560)
+        super().__init__(parent, background=theme.PANEL, highlightthickness=0, width=700, height=560)
         self.model = model
         self.robot_links = load_robot_mesh(model)
         self.tool = "None"
@@ -71,6 +71,11 @@ class RobotView(tk.Canvas):
         self.bind("<MouseWheel>", lambda e: self.zoom_by(1.1 if e.delta > 0 else 1/1.1))
         self.bind("<Button-4>", lambda _: self.zoom_by(1.1))
         self.bind("<Button-5>", lambda _: self.zoom_by(1/1.1))
+        theme.register_theme_callback(self, self.refresh_theme)
+
+    def refresh_theme(self):
+        self.configure(background=theme.PANEL)
+        self.redraw()
 
     def set_view_frame(self, frame):
         if frame not in VIEW_FRAMES:
@@ -273,7 +278,8 @@ class RobotView(tk.Canvas):
         if not self.visibility["axes"]:
             return
         origin = transform[:3, 3]
-        for i, color in enumerate(("#f07178", "#8cce8a", "#7eb8ff")):
+        colors = ("#b93543", "#32783c", "#2867ad") if theme.MODE == 'light' else ("#f07178", "#8cce8a", "#7eb8ff")
+        for i, color in enumerate(colors):
             end = origin + size*transform[:3, i]
             self.line3([origin, end], color, 2)
             if labels:
@@ -317,13 +323,13 @@ class RobotView(tk.Canvas):
         self.light /= np.linalg.norm(self.light)
         if self.visibility["grid"]:
             for step in np.linspace(-reach, reach, 13):
-                self.line3([(step, -reach, 0), (step, reach, 0)], BORDER)
-                self.line3([(-reach, step, 0), (reach, step, 0)], BORDER)
+                self.line3([(step, -reach, 0), (step, reach, 0)], theme.BORDER)
+                self.line3([(-reach, step, 0), (reach, step, 0)], theme.BORDER)
         self.frame_axes(np.eye(4), .22*reach, labels=True)
         if self.sample is None:
             self.itemconfigure("mesh", state="hidden")
             self.create_text(self.w/2, self.h/2, text="Waiting for live joint positions…",
-                             fill=INK, font=("TkDefaultFont", 13), tags="scene")
+                             fill=theme.INK, font=("TkDefaultFont", 13), tags="scene")
             return
         points = np.array([f[:3, 3] for f in frames])
         self.faces = []
@@ -339,29 +345,33 @@ class RobotView(tk.Canvas):
             self.tool_mesh(tool_mount)
         self.draw_mesh()
         if self.tool != "None" and self.visibility["tool_tcp"]:
+            color = '#8a5700' if theme.MODE == 'light' else '#ffcf80'
             self.frame_axes(preview_tcp, .055*reach)
             xy, _ = self.project([preview_tcp[:3, 3]])
             x, y = xy[0]
-            self.create_oval(x-4, y-4, x+4, y+4, outline="#ffcf80", width=2, tags="scene")
-            self.text3(preview_tcp[:3, 3], f"  Tool TCP · {tcp_source}", "#ffcf80")
+            self.create_oval(x-4, y-4, x+4, y+4, outline=color, width=2, tags="scene")
+            self.text3(preview_tcp[:3, 3], f"  Tool TCP · {tcp_source}", color)
         if self.visibility["live_tcp"]:
-            self.line3([points[-1], live_tcp[:3, 3]], "#63e2bb", 3)
+            color = '#16765d' if theme.MODE == 'light' else '#63e2bb'
+            self.line3([points[-1], live_tcp[:3, 3]], color, 3)
             self.frame_axes(live_tcp, .08*reach)
-            self.text3(live_tcp[:3, 3], "  Live TCP", "#63e2bb")
+            self.text3(live_tcp[:3, 3], "  Live TCP", color)
         if self.visibility["saved_tcp"] and data and data.tcp is not None:
+            color = '#7751b5' if theme.MODE == 'light' else '#c5a0ff'
             saved_tcp = frames[-1] @ pose_matrix(data.tcp)
-            self.line3([points[-1], saved_tcp[:3, 3]], "#c5a0ff", 2, (4, 3))
-            self.text3(saved_tcp[:3, 3], "  Installation TCP", "#c5a0ff")
+            self.line3([points[-1], saved_tcp[:3, 3]], color, 2, (4, 3))
+            self.text3(saved_tcp[:3, 3], "  Installation TCP", color)
         if self.visibility["payload"] and data and data.payload_mass is not None and data.payload_cog is not None and data.payload_mass > 0:
+            color = '#8a5700' if theme.MODE == 'light' else '#ffc574'
             cog = (frames[-1] @ np.array((*data.payload_cog, 1)))[:3]
-            self.line3([points[-1], cog], "#ffc574", 2, (2, 3))
+            self.line3([points[-1], cog], color, 2, (2, 3))
             xy, _ = self.project([cog])
             x, y = xy[0]
-            self.create_oval(x-5, y-5, x+5, y+5, fill="#ffc574", outline="", tags="scene")
-            self.text3(cog, f"  CoG · {data.payload_mass:g} kg", "#ffc574")
+            self.create_oval(x-5, y-5, x+5, y+5, fill=color, outline="", tags="scene")
+            self.text3(cog, f"  CoG · {data.payload_mass:g} kg", color)
         if not self.visibility["info"]:
             return
         self.create_text(18, 18, text=f"{self.model} · {model_family(self.model)}   •   {self.stream_state}   •   {self.view_frame}",
-                         fill=INK, anchor="nw", font=("TkDefaultFont", 11, "bold"), tags="scene")
+                         fill=theme.INK, anchor="nw", font=("TkDefaultFont", 11, "bold"), tags="scene")
         self.create_text(18, self.h-18, text="Left-drag to rotate  ·  Right-drag to pan  ·  Scroll to zoom",
-                         fill=MUTED, anchor="sw", tags="scene")
+                         fill=theme.MUTED, anchor="sw", tags="scene")

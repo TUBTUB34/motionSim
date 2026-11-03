@@ -8,13 +8,15 @@ import tkinter as tk
 from tkinter import ttk, filedialog
 from program_check import discover_programs, review_program, ProgramPair, ProgramSource, REFERENCES
 from ui_theme import style_text
-from log_transfer import LogConnection
+from connection import active_robot_settings, transfer_connection, simulator_connection_text
+from address_book import SavedAddressCombobox
+from workspace_panel import WorkspacePanel
 import ui_dialogs as messagebox
 
 
-class ProgramCheckWindow(tk.Toplevel):
-    def __init__(self, app):
-        super().__init__(app.root)
+class ProgramCheckWindow(WorkspacePanel):
+    def __init__(self, app, parent=None):
+        super().__init__(app.root, page_host=parent, on_show=lambda: app.navigate_panel(self), on_hide=getattr(app, 'show_workspace', None))
         self.app = app
         self.title('UR Motion Studio · Program Check')
         self.geometry('1180x820')
@@ -48,6 +50,8 @@ class ProgramCheckWindow(tk.Toplevel):
         bar.grid(row=0, column=0, sticky='ew')
         ttk.Label(bar, text='PROGRAM CHECK', style='Title.Panel.TLabel').pack(side='left')
         ttk.Button(bar, text='How to', command=lambda: app.open_help('Program Check')).pack(side='left', padx=14)
+        if not self.embedded:
+            ttk.Button(bar, text='Robot Status…', command=app.open_diagnostics).pack(side='left')
         self.export_button = ttk.Button(bar, text='Export report…', command=self.export, state='disabled')
         self.export_button.pack(side='right')
         selectors = ttk.Frame(self, padding=16)
@@ -71,11 +75,16 @@ class ProgramCheckWindow(tk.Toplevel):
         self.robot_entries = []
         for column, (label, variable, width) in enumerate((('Robot IP', self.robot_ip, 16), ('SSH user', self.robot_username, 10), ('Password', self.robot_password, 16))):
             ttk.Label(self.robot_controls, text=label).grid(row=0, column=column*2, padx=(0, 8))
-            entry = ttk.Entry(self.robot_controls, textvariable=variable, width=width, show='•' if variable is self.robot_password else '')
+            entry = (SavedAddressCombobox(self.robot_controls, app, textvariable=variable, width=width)
+                     if variable is self.robot_ip else
+                     ttk.Entry(self.robot_controls, textvariable=variable, width=width, show='•' if variable is self.robot_password else ''))
             entry.grid(row=0, column=column*2+1, sticky='ew', padx=(0, 12))
             self.robot_controls.columnconfigure(column*2+1, weight=1)
             self.robot_entries.append(entry)
         self.robot_controls.grid_remove()
+        self.shared_connection = ttk.Label(selectors, style='Muted.TLabel', wraplength=850)
+        self.shared_connection.grid(row=1, column=0, columnspan=3, sticky='w', pady=(0, 10))
+        self.shared_connection.grid_remove()
         ttk.Label(selectors, text='Program (URP)').grid(row=2, column=0, padx=(0, 10))
         self.combo = ttk.Combobox(selectors, textvariable=self.selected, state='readonly')
         self.combo.grid(row=2, column=1, sticky='ew')
@@ -130,7 +139,16 @@ class ProgramCheckWindow(tk.Toplevel):
         panes.grid(row=3, column=0, sticky='nsew', padx=18)
         top = ttk.Frame(panes)
         top.columnconfigure(0, weight=1)
-        top.rowconfigure(0, weight=1)
+        top.rowconfigure(1, weight=1)
+        filter_bar = ttk.Frame(top)
+        filter_bar.grid(row=0, column=0, columnspan=2, sticky='ew', pady=(0, 8))
+        ttk.Label(filter_bar, text='Show checks').pack(side='left', padx=(0, 8))
+        self.finding_filter = tk.StringVar(value='All checks')
+        finding_filter = ttk.Combobox(filter_bar, textvariable=self.finding_filter, state='readonly',
+                                     values=('All checks', 'Review recommended', 'Manual review'), width=22)
+        finding_filter.pack(side='left')
+        finding_filter.bind('<<ComboboxSelected>>', self.filter_findings)
+        ttk.Label(filter_bar, text='PDF includes every check', style='Muted.TLabel').pack(side='right')
         self.tree = ttk.Treeview(top, columns=('status', 'line', 'summary'), show='tree headings', height=10)
         self.tree.heading('#0', text='Check / source')
         self.tree.heading('status', text='Result')
@@ -140,9 +158,9 @@ class ProgramCheckWindow(tk.Toplevel):
         self.tree.column('status', width=180, minwidth=165, stretch=False)
         self.tree.column('line', width=50, minwidth=45, stretch=False)
         self.tree.column('summary', width=460, minwidth=200)
-        self.tree.grid(row=0, column=0, sticky='nsew')
+        self.tree.grid(row=1, column=0, sticky='nsew')
         scroll = ttk.Scrollbar(top, command=self.tree.yview)
-        scroll.grid(row=0, column=1, sticky='ns')
+        scroll.grid(row=1, column=1, sticky='ns')
         self.tree.configure(yscrollcommand=scroll.set)
         self.tree.bind('<<TreeviewSelect>>', self.show_finding)
         panes.add(top, weight=3)
@@ -199,6 +217,23 @@ class ProgramCheckWindow(tk.Toplevel):
             self.robot_controls.grid_remove()
             self.folder_button.configure(text='Choose folder…')
             self.status.set('Choose the folder containing your URP, script and installation files.')
+        self.sync_connection()
+
+    def sync_connection(self):
+        settings = active_robot_settings(self.app)
+        robot = self.source_mode.get() == 'Robot'
+        if settings is not None:
+            for variable, name in ((self.robot_ip, 'ip'), (self.robot_username, 'username'), (self.robot_password, 'password')):
+                value = getattr(settings, name) or ('root' if name == 'username' else '')
+                if variable.get() != value:
+                    variable.set(value)
+        if robot and settings is not None:
+            self.robot_controls.grid_remove()
+            self.shared_connection.configure(text=simulator_connection_text(settings))
+            self.shared_connection.grid()
+        else:
+            self.shared_connection.grid_remove()
+            (self.robot_controls.grid if robot else self.robot_controls.grid_remove)()
 
     def choose_source(self):
         if self.source_mode.get() == 'Robot':
@@ -210,7 +245,7 @@ class ProgramCheckWindow(tk.Toplevel):
         if self.busy:
             return
         try:
-            connection = LogConnection(self.robot_ip.get().strip(), self.robot_username.get().strip(), self.robot_password.get())
+            connection = transfer_connection(self.app, self.robot_ip.get(), self.robot_username.get(), self.robot_password.get())
         except ValueError as exc:
             self.status.set(str(exc))
             return
@@ -410,14 +445,10 @@ class ProgramCheckWindow(tk.Toplevel):
 
     def show_review(self, review):
         self.review = review
-        self.tree.delete(*self.tree.get_children())
-        for index, (category, status) in enumerate(review.checklist):
-            parent = self.tree.insert('', 'end', iid=f'category{index}', text=category, values=(status, '', ''), open=False)
-            for number, finding in enumerate(review.findings):
-                if finding.category == category:
-                    self.tree.insert(parent, 'end', iid=f'finding{number}', text='Source evidence', values=(finding.status, finding.line or '—', finding.detail))
+        self.filter_findings()
         flagged = [finding for finding in review.findings if finding.status == 'Review recommended']
-        self.status.set(f'{review.pair.name} · {len(flagged)} findings need attention · Export this report or choose another URP.')
+        manual = sum(status == 'Manual review' for _, status in review.checklist)
+        self.status.set(f'{review.pair.name} · {len(flagged)} recommendations · {manual} checks need manual review · Export this report or choose another URP.')
         warnings = []
         if not review.metadata.get('reviewInstallation'):
             warnings.append('Installation unavailable: ' + review.metadata.get('reviewInstallationNote', 'No matching installation in the selected files.') + ' Report generated without installation settings.')
@@ -427,6 +458,27 @@ class ProgramCheckWindow(tk.Toplevel):
         self.source.set(f'{(review.pair.urp or review.pair.script).identity} · Installation: {review.metadata.get("reviewInstallation", "not matched")}')
         highlights = '\n'.join(f'Line {finding.line or "—"}: {finding.detail}' for finding in flagged[:3])
         self.set_details(f'Review complete · {len(flagged)} findings need attention.\n\n' + (self.warning.get() + '\n\n' if warnings else '') + (highlights + '\n\n' if highlights else '') + 'Select a check or expand it to inspect the source evidence.\n\n' + review.profile + '\n\nManual review means the source cannot establish the result. Recommendations are not safety limits or certification.')
+
+    def filter_findings(self, _event=None):
+        self.tree.delete(*self.tree.get_children())
+        if self.review is None:
+            return
+        selected_status = self.finding_filter.get()
+        for index, (category, status) in enumerate(self.review.checklist):
+            findings = [(number, finding) for number, finding in enumerate(self.review.findings)
+                        if finding.category == category
+                        and (selected_status == 'All checks' or finding.status == selected_status)]
+            if selected_status != 'All checks' and status != selected_status and not findings:
+                continue
+            parent = self.tree.insert('', 'end', iid=f'category{index}', text=category,
+                                      values=(status, '', ''), open=selected_status != 'All checks')
+            for number, finding in findings:
+                self.tree.insert(parent, 'end', iid=f'finding{number}', text='Source evidence',
+                                 values=(finding.status, finding.line or '—', finding.detail))
+        if _event is not None:
+            count = len(self.tree.get_children())
+            self.set_details(f'{count} matching checks. Select a check or source finding to read its evidence.\n\n'
+                             'Export always includes the complete report, regardless of this filter.')
 
     def show_finding(self, _event=None):
         selected = self.tree.selection()
@@ -454,6 +506,7 @@ class ProgramCheckWindow(tk.Toplevel):
             self.submit('exported', lambda: export_program_pdf(review, destination))
 
     def poll(self):
+        self.sync_connection()
         if self.download_job is not None:
             job = self.download_job
             while not job.events.empty():

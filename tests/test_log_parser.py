@@ -40,6 +40,23 @@ class DiagnosticsTests(unittest.TestCase):
         self.assertEqual([e['joint'] for e in events],['Wrist 2','Wrist 3'])
         self.assertEqual((skipped,meta['unmapped']),(1,1))
 
+    def test_application_warnings_do_not_invent_joint_mapping(self):
+        events, skipped, meta = self.parse(''.join(line(code, source='110') for code in
+            ('C150A0:6', 'C151A1:6', 'C152A5:6', 'C171A1:5', 'C171A1:6',
+             'C171A10:6', 'C171A4:6', 'C171A14:6', 'C171A99:6')))
+        self.assertEqual(len(events), 8)
+        self.assertEqual({event['joint'] for event in events}, {'Controller'})
+        self.assertEqual((skipped, meta['unmapped']), (0, 0))
+        codes = {event['code']: event for event in events}
+        self.assertEqual(codes['C150A0']['category'], 'Safety limit proximity')
+        self.assertIn('too small', codes['C171A1']['description'])
+        self.assertIn('too small', codes['C171A10']['description'])
+        self.assertIn('overlap', codes['C171A4']['description'])
+        self.assertIn('MoveL', codes['C171A14']['description'])
+        self.assertIn('exact controller subtype', codes['C171A99']['description'])
+        cards = summarize(events, JOINTS, meta)['all']['cards']
+        self.assertTrue(all(card['total'] == 0 and card['health'] == 0 for card in cards))
+
     def test_rolling_window_boundary_and_session_isolation(self):
         events, _, meta=self.parse(line('C153A0:6','2026-04-01 00:00:00','1s')+
             line('C153A0:6','2026-04-01 07:59:59','2s')+

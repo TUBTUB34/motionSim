@@ -8,14 +8,14 @@ import tkinter as tk
 from tkinter import ttk
 import textwrap
 
-from ui_theme import (BACKGROUND, PANEL, INK, MUTED, ACCENT, WARNING, DANGER,
-                      apply_theme, style_text)
+import ui_theme as theme
+from ui_theme import apply_theme, style_text
 
 
 class MessageDialog(tk.Toplevel):
     def __init__(self, parent, title, message, *, question=False, kind='info', default='yes', detail=None):
         previous_focus = parent.focus_get()
-        super().__init__(parent, background=BACKGROUND)
+        super().__init__(parent, background=theme.BACKGROUND)
         self.previous_focus = previous_focus
         self.withdraw()
         self.parent = parent
@@ -30,7 +30,7 @@ class MessageDialog(tk.Toplevel):
         self.bind('<Return>', self._return)
         header = ttk.Frame(self, padding=(20, 14), style='Panel.TFrame')
         header.pack(fill='x')
-        color = DANGER if kind == 'error' else WARNING if kind in ('warning', 'question') else ACCENT
+        color = theme.DANGER if kind == 'error' else theme.WARNING if kind in ('warning', 'question') else theme.ACCENT
         ttk.Label(header, text=title, style='Panel.Title.TLabel', foreground=color,
                   wraplength=520).pack(anchor='w')
         body = ttk.Frame(self, padding=(20, 16))

@@ -1,0 +1,49 @@
+tests.test_commissioning_ui.CommissioningUITests.test_csv_export_does_not_mark_draft_saved
+test_csv_export_does_not_mark_draft_saved (tests.test_commissioning_ui.CommissioningUITests.test_csv_export_does_not_mark_draft_saved) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 0.970s
+
+OK
+
+tests.test_commissioning_ui.CommissioningUITests.test_filters_empty_state_and_footer_available_at_compact_size
+test_filters_empty_state_and_footer_available_at_compact_size (tests.test_commissioning_ui.CommissioningUITests.test_filters_empty_state_and_footer_available_at_compact_size) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 1.238s
+
+OK
+
+tests.test_commissioning_ui.CommissioningUITests.test_invalid_open_and_cancelled_save_keep_current_draft
+test_invalid_open_and_cancelled_save_keep_current_draft (tests.test_commissioning_ui.CommissioningUITests.test_invalid_open_and_cancelled_save_keep_current_draft) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 0.855s
+
+OK
+
+tests.test_commissioning_ui.CommissioningUITests.test_notes_survive_switch_and_save_open_roundtrip
+test_notes_survive_switch_and_save_open_roundtrip (tests.test_commissioning_ui.CommissioningUITests.test_notes_survive_switch_and_save_open_roundtrip) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 1.129s
+
+OK
+
+tests.test_commissioning_ui.CommissioningUITests.test_review_rows_are_visible_pointer_targets_beside_evidence
+test_review_rows_are_visible_pointer_targets_beside_evidence (tests.test_commissioning_ui.CommissioningUITests.test_review_rows_are_visible_pointer_targets_beside_evidence) ... FAIL
+
+======================================================================
+FAIL: test_review_rows_are_visible_pointer_targets_beside_evidence (tests.test_commissioning_ui.CommissioningUITests.test_review_rows_are_visible_pointer_targets_beside_evidence)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\apex\AppData\Local\Temp\motionsim-settings-20261102-40b1cgef\tests\test_commissioning_ui.py", line 105, in test_review_rows_are_visible_pointer_targets_beside_evidence
+    self.assertIs(target, self.page.table)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: None is not <tkinter.ttk.Treeview object .!commissioningpage.!scrollableframe.!canvas.!frame.!frame3.!frame.!treeview>
+
+----------------------------------------------------------------------
+Ran 1 test in 0.891s
+
+FAILED (failures=1)
+

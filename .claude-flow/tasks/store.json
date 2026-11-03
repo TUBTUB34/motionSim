@@ -360,6 +360,197 @@
       "createdAt": "2026-10-30T17:01:18.246Z",
       "startedAt": "2026-10-30T17:09:33.229Z",
       "completedAt": null
+    },
+    "task-1793404028683-m59v2h": {
+      "taskId": "task-1793404028683-m59v2h",
+      "type": "feature",
+      "description": "Research authoritative UR and original external diagnostic guidance for collision/protective-stop analysis, telemetry correlation and meaningful incident reports; keep private robot data local.",
+      "priority": "normal",
+      "status": "completed",
+      "progress": 100,
+      "assignedTo": [],
+      "tags": [
+        "motionSim",
+        "diagnostics",
+        "research"
+      ],
+      "createdAt": "2026-10-30T23:47:08.683Z",
+      "startedAt": null,
+      "completedAt": null,
+      "result": {
+        "summary": "Verified public UR documentation and original collision-detection research. Added local source-backed guidance and research contract with conservative temporal correlation and model/version applicability. Four deterministic guidance tests pass; no new dependencies."
+      }
+    },
+    "task-1793404030789-o0u53n": {
+      "taskId": "task-1793404030789-o0u53n",
+      "type": "feature",
+      "description": "Implement deterministic incident correlation and evidence-based robot diagnostic narratives from existing logs and flights, with confidence and missing-data handling.",
+      "priority": "normal",
+      "status": "completed",
+      "progress": 100,
+      "assignedTo": [],
+      "tags": [
+        "motionSim",
+        "diagnostics",
+        "analysis"
+      ],
+      "createdAt": "2026-10-30T23:47:10.789Z",
+      "startedAt": null,
+      "completedAt": null,
+      "result": {
+        "summary": "Implemented bounded local diagnostic engine, conservative log/flight association, explicit fault localization, evidence-dependent troubleshooting narratives, timezone controls, source hashes, and regression coverage.",
+        "validation": "46 synthetic engine and existing log/parser tests passed; no live robot used."
+      }
+    },
+    "task-1793404032347-u20mlb": {
+      "taskId": "task-1793404032347-u20mlb",
+      "type": "feature",
+      "description": "Implement verified, cancellable collection of logs and flight recordings into local diagnostic datasets using existing transfer helpers.",
+      "priority": "normal",
+      "status": "completed",
+      "progress": 100,
+      "assignedTo": [],
+      "tags": [
+        "motionSim",
+        "diagnostics",
+        "collection"
+      ],
+      "createdAt": "2026-10-30T23:47:12.347Z",
+      "startedAt": null,
+      "completedAt": null,
+      "result": {
+        "summary": "Implemented local diagnostic snapshot collector using verified SSH and bounded shared transfer helpers. Explicit partial/cancelled coverage manifests; completed files preserved; synthetic provider tests only.",
+        "validation": "16 new diagnostic transfer tests and 27 existing flight transfer tests passed (43 total)."
+      }
+    },
+    "task-1793404034070-96s2rb": {
+      "taskId": "task-1793404034070-96s2rb",
+      "type": "feature",
+      "description": "Integrate a separate robot diagnostic report workflow and readable incident-centered PDF into the report generator; verify synthetic end-to-end behavior.",
+      "priority": "normal",
+      "status": "completed",
+      "progress": 100,
+      "assignedTo": [],
+      "tags": [
+        "motionSim",
+        "diagnostics",
+        "reportui"
+      ],
+      "createdAt": "2026-10-30T23:47:14.070Z",
+      "startedAt": null,
+      "completedAt": null
+    },
+    "task-1793632498143-uyxut5": {
+      "taskId": "task-1793632498143-uyxut5",
+      "type": "refactor",
+      "description": "Integrated persistent application pages for Simulator, Flight Reports, Logs, Backups and Reports; retain context and optional separate simulator window.",
+      "priority": "normal",
+      "status": "completed",
+      "progress": 100,
+      "assignedTo": [],
+      "tags": [
+        "motionSim",
+        "production-pages",
+        "shell"
+      ],
+      "createdAt": "2026-11-02T15:14:58.143Z",
+      "startedAt": null,
+      "completedAt": null,
+      "result": {
+        "summary": "Persistent five-page shell, nested report/flight tabs, preserved workspace context and explicit separate simulator. 8 new native workspace tests plus 10 existing playback/Program Check tests pass."
+      }
+    },
+    "task-1793632499653-krya7j": {
+      "taskId": "task-1793632499653-krya7j",
+      "type": "feature",
+      "description": "Client-facing Robot Status evidence model: overall assessment, six joint statuses, targeted program areas, no invented health certification.",
+      "priority": "normal",
+      "status": "completed",
+      "progress": 100,
+      "assignedTo": [],
+      "tags": [
+        "motionSim",
+        "production-pages",
+        "health"
+      ],
+      "createdAt": "2026-11-02T15:14:59.653Z",
+      "startedAt": null,
+      "completedAt": null,
+      "result": {
+        "summary": "Implemented structured Robot Status synthesis with six joint assessments, program review areas, identity/coverage safeguards, and 16 new regressions. 63 focused status/diagnostic/log tests passed. No live robot accessed."
+      }
+    },
+    "task-1793632503265-w1pw5p": {
+      "taskId": "task-1793632503265-w1pw5p",
+      "type": "feature",
+      "description": "Readable client Robot Status PDF/preview using evidence model; shared conclusions without duplicated issues, readable joint summaries.",
+      "priority": "normal",
+      "status": "completed",
+      "progress": 100,
+      "assignedTo": [],
+      "tags": [
+        "motionSim",
+        "production-pages",
+        "presentation"
+      ],
+      "createdAt": "2026-11-02T15:15:03.265Z",
+      "startedAt": null,
+      "completedAt": null,
+      "result": {
+        "modules": [
+          "diagnostic_view.py",
+          "diagnostic_pdf.py"
+        ],
+        "validation": "11 native Robot Status UI tests and 9 PDF tests passed; synthetic client PDF visually inspected",
+        "behavior": "Client summary, six joints, program areas, action plan; technical appendix opt-in; embedded report page and optional client metadata"
+      }
+    },
+    "task-1793632504732-8yzse3": {
+      "taskId": "task-1793632504732-8yzse3",
+      "type": "refactor",
+      "description": "Embed existing workflows in pages, dedicated Backup workspace, integration tests, native UI and production packaging verification.",
+      "priority": "normal",
+      "status": "completed",
+      "progress": 100,
+      "assignedTo": [],
+      "tags": [
+        "motionSim",
+        "production-pages",
+        "integration"
+      ],
+      "createdAt": "2026-11-02T15:15:04.733Z",
+      "startedAt": null,
+      "completedAt": null,
+      "result": {
+        "windows_build": 0,
+        "windows_tests": 70,
+        "desktop_smoke": 0,
+        "source_hashes_match": true,
+        "readiness": "reports/production-readiness/README.md"
+      }
+    },
+    "task-1793634591151-bwe33s": {
+      "taskId": "task-1793634591151-bwe33s",
+      "type": "bugfix",
+      "description": "Reuse active simulator SSH identity across backups, logs, flights and robot report downloads; hide duplicate credential inputs while active, handle reconnect/disconnect without stale credentials.",
+      "priority": "normal",
+      "status": "completed",
+      "progress": 100,
+      "assignedTo": [],
+      "tags": [
+        "motionSim",
+        "shared-credentials"
+      ],
+      "createdAt": "2026-11-02T15:49:51.152Z",
+      "startedAt": null,
+      "completedAt": null,
+      "result": {
+        "shared_credentials": true,
+        "project_date_backups": true,
+        "windows_tests": 78,
+        "windows_build_exit": 0,
+        "source_hashes_match": true
+      }
     }
   },
   "version": "3.0.0"

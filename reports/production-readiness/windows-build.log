@@ -1,0 +1,160 @@
+Requirement already satisfied: numpy<3,>=2.2 in .\.venv-build\Lib\site-packages (from -r C:\Users\apex\AppData\Local\Temp\motionsim-production-20261102-085929\requirements.txt (line 8)) (2.5.4)
+Requirement already satisfied: paramiko<5,>=3.5 in .\.venv-build\Lib\site-packages (from -r C:\Users\apex\AppData\Local\Temp\motionsim-production-20261102-085929\requirements.txt (line 9)) (4.0.0)
+Requirement already satisfied: scp<1,>=0.15 in .\.venv-build\Lib\site-packages (from -r C:\Users\apex\AppData\Local\Temp\motionsim-production-20261102-085929\requirements.txt (line 10)) (0.16.2)
+Requirement already satisfied: defusedxml<1,>=0.7.1 in .\.venv-build\Lib\site-packages (from -r C:\Users\apex\AppData\Local\Temp\motionsim-production-20261102-085929\requirements.txt (line 11)) (0.7.1)
+Requirement already satisfied: Pillow<13,>=10 in .\.venv-build\Lib\site-packages (from -r C:\Users\apex\AppData\Local\Temp\motionsim-production-20261102-085929\requirements.txt (line 14)) (12.3.0)
+Requirement already satisfied: numba<1,>=0.61 in .\.venv-build\Lib\site-packages (from -r C:\Users\apex\AppData\Local\Temp\motionsim-production-20261102-085929\requirements.txt (line 15)) (0.68.1)
+Requirement already satisfied: matplotlib<4,>=3.9 in .\.venv-build\Lib\site-packages (from -r C:\Users\apex\AppData\Local\Temp\motionsim-production-20261102-085929\requirements.txt (line 18)) (3.11.2)
+Requirement already satisfied: pyinstaller<7,>=6.22.3 in .\.venv-build\Lib\site-packages (from -r requirements-build.txt (line 3)) (6.22.3)
+Requirement already satisfied: bcrypt>=3.2 in .\.venv-build\Lib\site-packages (from paramiko<5,>=3.5->-r C:\Users\apex\AppData\Local\Temp\motionsim-production-20261102-085929\requirements.txt (line 9)) (5.0.0)
+Requirement already satisfied: cryptography>=3.3 in .\.venv-build\Lib\site-packages (from paramiko<5,>=3.5->-r C:\Users\apex\AppData\Local\Temp\motionsim-production-20261102-085929\requirements.txt (line 9)) (50.0.2)
+Requirement already satisfied: invoke>=2.0 in .\.venv-build\Lib\site-packages (from paramiko<5,>=3.5->-r C:\Users\apex\AppData\Local\Temp\motionsim-production-20261102-085929\requirements.txt (line 9)) (3.0.3)
+Requirement already satisfied: pynacl>=1.5 in .\.venv-build\Lib\site-packages (from paramiko<5,>=3.5->-r C:\Users\apex\AppData\Local\Temp\motionsim-production-20261102-085929\requirements.txt (line 9)) (1.6.2)
+Requirement already satisfied: llvmlite<0.51,>=0.50.0dev0 in .\.venv-build\Lib\site-packages (from numba<1,>=0.61->-r C:\Users\apex\AppData\Local\Temp\motionsim-production-20261102-085929\requirements.txt (line 15)) (0.50.0)
+Requirement already satisfied: contourpy>=1.0.1 in .\.venv-build\Lib\site-packages (from matplotlib<4,>=3.9->-r C:\Users\apex\AppData\Local\Temp\motionsim-production-20261102-085929\requirements.txt (line 18)) (1.4.0)
+Requirement already satisfied: cycler>=0.10 in .\.venv-build\Lib\site-packages (from matplotlib<4,>=3.9->-r C:\Users\apex\AppData\Local\Temp\motionsim-production-20261102-085929\requirements.txt (line 18)) (0.12.1)
+Requirement already satisfied: fonttools>=4.28.2 in .\.venv-build\Lib\site-packages (from matplotlib<4,>=3.9->-r C:\Users\apex\AppData\Local\Temp\motionsim-production-20261102-085929\requirements.txt (line 18)) (4.68.0)
+Requirement already satisfied: kiwisolver>=1.3.1 in .\.venv-build\Lib\site-packages (from matplotlib<4,>=3.9->-r C:\Users\apex\AppData\Local\Temp\motionsim-production-20261102-085929\requirements.txt (line 18)) (1.5.1)
+Requirement already satisfied: packaging>=20.0 in .\.venv-build\Lib\site-packages (from matplotlib<4,>=3.9->-r C:\Users\apex\AppData\Local\Temp\motionsim-production-20261102-085929\requirements.txt (line 18)) (26.3)
+Requirement already satisfied: pyparsing>=3 in .\.venv-build\Lib\site-packages (from matplotlib<4,>=3.9->-r C:\Users\apex\AppData\Local\Temp\motionsim-production-20261102-085929\requirements.txt (line 18)) (3.3.3)
+Requirement already satisfied: python-dateutil>=2.7 in .\.venv-build\Lib\site-packages (from matplotlib<4,>=3.9->-r C:\Users\apex\AppData\Local\Temp\motionsim-production-20261102-085929\requirements.txt (line 18)) (3.0.0)
+Requirement already satisfied: altgraph in .\.venv-build\Lib\site-packages (from pyinstaller<7,>=6.22.3->-r requirements-build.txt (line 3)) (0.17.5)
+Requirement already satisfied: pefile>=2022.5.30 in .\.venv-build\Lib\site-packages (from pyinstaller<7,>=6.22.3->-r requirements-build.txt (line 3)) (2024.8.26)
+Requirement already satisfied: pyinstaller-hooks-contrib>=2026.7 in .\.venv-build\Lib\site-packages (from pyinstaller<7,>=6.22.3->-r requirements-build.txt (line 3)) (2026.9)
+Requirement already satisfied: pywin32-ctypes>=0.2.1 in .\.venv-build\Lib\site-packages (from pyinstaller<7,>=6.22.3->-r requirements-build.txt (line 3)) (0.2.3)
+Requirement already satisfied: setuptools>=42.0.0 in .\.venv-build\Lib\site-packages (from pyinstaller<7,>=6.22.3->-r requirements-build.txt (line 3)) (84.2.1)
+Requirement already satisfied: cffi>=2.0.0 in .\.venv-build\Lib\site-packages (from cryptography>=3.3->paramiko<5,>=3.5->-r C:\Users\apex\AppData\Local\Temp\motionsim-production-20261102-085929\requirements.txt (line 9)) (2.1.1)
+Requirement already satisfied: pycparser in .\.venv-build\Lib\site-packages (from cffi>=2.0.0->cryptography>=3.3->paramiko<5,>=3.5->-r C:\Users\apex\AppData\Local\Temp\motionsim-production-20261102-085929\requirements.txt (line 9)) (3.12)
+Requirement already satisfied: six>=1.6 in .\.venv-build\Lib\site-packages (from python-dateutil>=2.7->matplotlib<4,>=3.9->-r C:\Users\apex\AppData\Local\Temp\motionsim-production-20261102-085929\requirements.txt (line 18)) (1.17.0)
+Requirement already satisfied: tzdata in .\.venv-build\Lib\site-packages (from python-dateutil>=2.7->matplotlib<4,>=3.9->-r C:\Users\apex\AppData\Local\Temp\motionsim-production-20261102-085929\requirements.txt (line 18)) (2026.6)
+364 INFO: PyInstaller: 6.22.3, contrib hooks: 2026.9
+364 INFO: Python: 3.14.7
+407 INFO: Platform: Windows-11-10.0.26200-SP0
+407 INFO: Python environment: C:\Users\apex\AppData\Local\Temp\motionsim-production-20261102-085929\.venv-build
+2922 INFO: Module search paths (PYTHONPATH):
+['C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929',
+ 'C:\\Program Files\\Python314\\python314.zip',
+ 'C:\\Program Files\\Python314\\DLLs',
+ 'C:\\Program Files\\Python314\\Lib',
+ 'C:\\Program Files\\Python314',
+ 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build',
+ 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages',
+ 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929']
+3795 INFO: Appending 'datas' from .spec
+3932 INFO: checking Analysis
+3933 INFO: Building Analysis because Analysis-00.toc is non existent
+3933 INFO: Looking for Python shared library...
+3933 INFO: Using Python shared library: C:\Program Files\Python314\python314.dll
+3933 INFO: Running Analysis Analysis-00.toc
+3933 INFO: Target bytecode optimization level: 0
+3933 INFO: Initializing module dependency graph...
+3935 INFO: Initializing module graph hook caches...
+3958 INFO: Analyzing modules for base_library.zip ...
+6577 INFO: Processing standard module hook 'hook-encodings.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\PyInstaller\\hooks'
+7329 INFO: Processing standard module hook 'hook-pickle.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\PyInstaller\\hooks'
+7791 INFO: Processing standard module hook 'hook-math.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\PyInstaller\\hooks'
+7938 INFO: Processing standard module hook 'hook-difflib.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\PyInstaller\\hooks'
+7950 INFO: Processing standard module hook 'hook-heapq.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\PyInstaller\\hooks'
+10659 INFO: Caching module dependency graph...
+10691 INFO: Analyzing C:\Users\apex\AppData\Local\Temp\motionsim-production-20261102-085929\main.py
+10758 INFO: Processing pre-find-module-path hook 'hook-tkinter.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\PyInstaller\\hooks\\pre_find_module_path'
+10762 INFO: TclTkInfo: initializing cached Tcl/Tk info...
+11351 INFO: Processing standard module hook 'hook-_tkinter.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\PyInstaller\\hooks'
+11460 INFO: Processing standard module hook 'hook-PIL.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\PyInstaller\\hooks'
+11584 INFO: Processing standard module hook 'hook-PIL.Image.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\PyInstaller\\hooks'
+12262 INFO: Processing standard module hook 'hook-numpy.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\PyInstaller\\hooks'
+12682 INFO: Processing pre-safe-import-module hook 'hook-typing_extensions.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+12686 INFO: SetuptoolsInfo: initializing cached setuptools info...
+14347 INFO: Processing standard module hook 'hook-platform.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\PyInstaller\\hooks'
+14399 INFO: Processing standard module hook 'hook-sysconfig.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\PyInstaller\\hooks'
+14407 INFO: Processing standard module hook 'hook-_ctypes.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\PyInstaller\\hooks'
+14727 INFO: Processing standard module hook 'hook-webbrowser.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\PyInstaller\\hooks'
+16078 INFO: Processing standard module hook 'hook-multiprocessing.util.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\PyInstaller\\hooks'
+16190 INFO: Processing standard module hook 'hook-xml.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\PyInstaller\\hooks'
+19439 INFO: Processing standard module hook 'hook-xml.etree.cElementTree.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\PyInstaller\\hooks'
+19588 INFO: Processing standard module hook 'hook-xml.dom.domreg.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\PyInstaller\\hooks'
+20353 INFO: Processing standard module hook 'hook-PIL.ImageFilter.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\PyInstaller\\hooks'
+21121 INFO: Processing standard module hook 'hook-matplotlib.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\PyInstaller\\hooks'
+22246 INFO: Processing pre-safe-import-module hook 'hook-packaging.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+23209 INFO: Processing standard module hook 'hook-matplotlib.backend_bases.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\PyInstaller\\hooks'
+26062 INFO: Processing standard module hook 'hook-matplotlib.backends.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\PyInstaller\\hooks'
+26336 INFO: Processing standard module hook 'hook-matplotlib.pyplot.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\PyInstaller\\hooks'
+26727 INFO: Processing standard module hook 'hook-matplotlib.figure.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\PyInstaller\\hooks'
+28403 INFO: Processing standard module hook 'hook-dateutil.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+28461 INFO: Processing standard module hook 'hook-zoneinfo.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+28619 INFO: Processing pre-safe-import-module hook 'hook-six.moves.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+31897 INFO: Processing pre-safe-import-module hook 'hook-gi.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+32070 INFO: Processing standard module hook 'hook-cryptography.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+35113 INFO: hook-cryptography: cryptography does not seem to be using dynamically linked OpenSSL.
+36129 INFO: Processing standard module hook 'hook-bcrypt.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+36514 INFO: Processing standard module hook 'hook-nacl.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+37417 INFO: Processing standard module hook 'hook-numba.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+37463 INFO: Processing standard module hook 'hook-llvmlite.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+39294 INFO: Processing standard module hook 'hook-pycparser.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+39780 INFO: Processing standard module hook 'hook-setuptools.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\PyInstaller\\hooks'
+39816 INFO: Processing pre-safe-import-module hook 'hook-distutils.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+39926 INFO: Processing pre-safe-import-module hook 'hook-jaraco.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+39936 INFO: Setuptools: 'jaraco' appears to be a full setuptools-vendored copy - creating alias to 'setuptools._vendor.jaraco'!
+39987 INFO: Processing pre-safe-import-module hook 'hook-more_itertools.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+39990 INFO: Setuptools: 'more_itertools' appears to be a setuptools-vendored copy - creating alias to 'setuptools._vendor.more_itertools'!
+40513 INFO: Processing standard module hook 'hook-_osx_support.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\PyInstaller\\hooks'
+41120 INFO: Processing standard module hook 'hook-setuptools._vendor.jaraco.text.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\PyInstaller\\hooks'
+41124 INFO: Processing pre-safe-import-module hook 'hook-importlib_resources.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+41140 INFO: Processing pre-safe-import-module hook 'hook-backports.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+41142 INFO: Setuptools: 'backports' appears to be a full setuptools-vendored copy - creating alias to 'setuptools._vendor.backports'!
+42781 INFO: Processing pre-safe-import-module hook 'hook-tomli.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+42784 INFO: Setuptools: 'tomli' appears to be a setuptools-vendored copy - creating alias to 'setuptools._vendor.tomli'!
+44212 INFO: Processing pre-safe-import-module hook 'hook-wheel.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+44214 INFO: Setuptools: 'wheel' appears to be a setuptools-vendored copy - creating alias to 'setuptools._vendor.wheel'!
+49946 INFO: Processing pre-safe-import-module hook 'hook-win32com.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\pre_safe_import_module'
+57283 INFO: Analyzing hidden import 'PIL._tkinter_finder'
+57287 INFO: Processing module hooks (post-graph stage)...
+57305 WARNING: Hidden import "pycparser.lextab" not found!
+57306 WARNING: Hidden import "pycparser.yacctab" not found!
+57320 INFO: Processing standard module hook 'hook-matplotlib.backends.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\PyInstaller\\hooks'
+57323 INFO: Matplotlib backend selection method: user-provided name(s)
+58374 INFO: Selected matplotlib backends: ['TkAgg']
+58374 INFO: Extra dists for selected matplotlib backends: []
+58882 INFO: Processing standard module hook 'hook-PIL.SpiderImagePlugin.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\PyInstaller\\hooks'
+59015 INFO: Processing standard module hook 'hook-_tkinter.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\PyInstaller\\hooks'
+59017 INFO: Processing standard module hook 'hook-tzdata.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+60588 INFO: Performing binary vs. data reclassification (1835 entries)
+68647 INFO: Looking for ctypes DLLs
+68997 INFO: Analyzing run-time hooks ...
+69012 INFO: Including run-time hook 'pyi_rth_inspect.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+69019 INFO: Including run-time hook 'pyi_rth_pkgutil.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+69024 INFO: Including run-time hook 'pyi_rth_multiprocessing.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+69030 INFO: Including run-time hook 'pyi_rth_mplconfig.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+69032 INFO: Processing pre-find-module-path hook 'hook-_pyi_rth_utils.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\PyInstaller\\hooks\\pre_find_module_path'
+69040 INFO: Processing standard module hook 'hook-_pyi_rth_utils.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\PyInstaller\\hooks'
+69068 INFO: Including run-time hook 'pyi_rth_cryptography_openssl.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\rthooks'
+69071 INFO: Including run-time hook 'pyi_rth_setuptools.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+69077 INFO: Including run-time hook 'pyi_rth__tkinter.py' from 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+69153 INFO: Creating base_library.zip...
+69191 INFO: Looking for dynamic libraries
+73637 INFO: Extra DLL search directories (AddDllDirectory): ['C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\numpy.libs', 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\llvmlite.libs']
+73637 INFO: Extra DLL search directories (PATH): []
+75984 WARNING: Library not found: could not resolve 'tbb12.dll', dependency of 'C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-production-20261102-085929\\.venv-build\\Lib\\site-packages\\numba\\np\\ufunc\\tbbpool.cp314-win_amd64.pyd'.
+76292 INFO: Warnings written to C:\Users\apex\AppData\Local\Temp\motionsim-production-20261102-085929\build\runs\0b43e45d6c40457da83f4cd77fde009f\MotionStudio\warn-MotionStudio.txt
+76490 INFO: Graph cross-reference written to C:\Users\apex\AppData\Local\Temp\motionsim-production-20261102-085929\build\runs\0b43e45d6c40457da83f4cd77fde009f\MotionStudio\xref-MotionStudio.html
+76621 INFO: checking PYZ
+76622 INFO: Building PYZ because PYZ-00.toc is non existent
+76623 INFO: Building PYZ (ZlibArchive) C:\Users\apex\AppData\Local\Temp\motionsim-production-20261102-085929\build\runs\0b43e45d6c40457da83f4cd77fde009f\MotionStudio\PYZ-00.pyz
+78180 INFO: Building PYZ (ZlibArchive) C:\Users\apex\AppData\Local\Temp\motionsim-production-20261102-085929\build\runs\0b43e45d6c40457da83f4cd77fde009f\MotionStudio\PYZ-00.pyz completed successfully.
+78261 INFO: checking PKG
+78261 INFO: Building PKG because PKG-00.toc is non existent
+78261 INFO: Building PKG (CArchive) URMotionStudio.pkg
+93458 INFO: Building PKG (CArchive) URMotionStudio.pkg completed successfully.
+93538 INFO: Bootloader C:\Users\apex\AppData\Local\Temp\motionsim-production-20261102-085929\.venv-build\Lib\site-packages\PyInstaller\bootloader\Windows-64bit-intel\runw.exe
+93538 INFO: checking EXE
+93539 INFO: Building EXE because EXE-00.toc is non existent
+93539 INFO: Building EXE from EXE-00.toc
+93540 INFO: Copying bootloader EXE to C:\Users\apex\AppData\Local\Temp\motionsim-production-20261102-085929\dist\URMotionStudio.exe
+93670 INFO: Copying icon to EXE
+93790 INFO: Copying 0 resources to EXE
+93791 INFO: Embedding manifest in EXE
+93899 INFO: Appending PKG archive to EXE
+94118 INFO: Fixing EXE headers
+95303 INFO: Building EXE from EXE-00.toc completed successfully.
+95353 INFO: Build complete! The results are available in: C:\Users\apex\AppData\Local\Temp\motionsim-production-20261102-085929\dist
+Ready: dist\URMotionStudio.exe

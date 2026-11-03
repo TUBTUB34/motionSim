@@ -1,0 +1,6 @@
+test_csv_export_does_not_mark_draft_saved (tests.test_commissioning_ui.CommissioningUITests.test_csv_export_does_not_mark_draft_saved) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 0.970s
+
+OK

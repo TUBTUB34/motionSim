@@ -1,0 +1,814 @@
+{
+  "tests.test_app_preferences.PreferencesTests.test_addresses_and_theme_survive_reopen_without_credentials": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_app_preferences.PreferencesTests.test_bad_files_use_defaults_without_overwriting_original_and_recover_explicitly": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_app_preferences.PreferencesTests.test_explicit_path_precedes_environment_override_and_override_precedes_platform": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_app_preferences.PreferencesTests.test_failed_new_directory_does_not_claim_saved_preference": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_app_preferences.PreferencesTests.test_failed_replace_preserves_disk_memory_and_removes_temporary_file": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_app_preferences.PreferencesTests.test_full_list_never_silently_forgets_a_robot": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_app_preferences.PreferencesTests.test_invalid_inputs_never_change_saved_state": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_app_preferences.PreferencesTests.test_load_deduplicates_and_only_rewrites_known_fields": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_app_preferences.PreferencesTests.test_new_settings_do_not_write_until_explicit_change": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_app_preferences.PreferencesTests.test_platform_paths_are_user_local_and_ignore_relative_xdg_directory": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_app_preferences.PreferencesTests.test_removing_one_address_preserves_others_and_theme": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_preferences_ui.PreferencesUITests.test_existing_ip_selectors_share_saved_choices_without_overwriting_typed_values": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_preferences_ui.PreferencesUITests.test_failed_save_retains_saved_settings_and_connection_can_continue": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_preferences_ui.PreferencesUITests.test_failed_theme_save_restores_toggle_without_repainting_or_losing_saved_addresses": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_preferences_ui.PreferencesUITests.test_return_on_address_actions_and_theme_does_not_bubble_to_connect": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_preferences_ui.PreferencesUITests.test_save_invalid_duplicate_ipv6_and_forget_without_starting_robot": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_preferences_ui.PreferencesUITests.test_saved_choices_and_theme_survive_complete_application_restart": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_preferences_ui.PreferencesUITests.test_submit_remembers_valid_address_without_network_and_invalid_submit_does_not": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_preferences_ui.PreferencesUITests.test_theme_changes_keep_loaded_pages_flight_position_draft_and_active_job": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_preferences_ui.PreferencesUITests.test_validated_transfers_remember_addresses_but_never_credentials": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_theme.ThemeTests.test_confirmation_default_no_and_escape_preserve_safe_cancel": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_theme.ThemeTests.test_confirmation_yes_and_long_messages_support_scrolling": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_theme.ThemeTests.test_dialog_restores_keyboard_focus_and_copy_does_not_confirm": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_theme.ThemeTests.test_entries_keep_keyboard_traversal_and_readonly_selection": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_theme.ThemeTests.test_progress_indicator_reflects_fraction_instead_of_fixed_icon_width": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_theme.ThemeTests.test_reapply_keeps_images_alive_and_compact_controls_accessible": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_theme.ThemeTests.test_scrollable_form_keeps_tab_focus_visible_without_horizontal_scroll": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_theme.ThemeTests.test_subplot_tool_keeps_slider_and_reset_behavior_without_global_palette_changes": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_theme.ThemeTests.test_text_and_toolbar_remain_functional_on_dark_surfaces": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_theme_switch.PaletteTests.test_body_muted_and_status_text_have_readable_contrast_in_both_modes": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_theme_switch.ThemeSwitchTests.test_callbacks_run_once_per_switch_and_invalid_mode_does_not_mutate": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_theme_switch.ThemeSwitchTests.test_dialogs_and_new_windows_preserve_selected_light_mode": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_theme_switch.ThemeSwitchTests.test_repeated_switch_preserves_editing_selection_state_and_resources": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_surface_themes.ChartThemeTests.test_new_light_chart_uses_legible_semantic_series_colors": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_surface_themes.ChartThemeTests.test_palette_cycle_preserves_joint_traces_limits_and_playhead": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_surface_themes.SurfaceThemeUITests.test_live_palette_switch_preserves_recording_log_zoom_and_robot_camera": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_core.InstallationTests.test_compressed_size_limit": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_core.InstallationTests.test_explicit_payload_selection_overrides_default_flag": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_core.InstallationTests.test_java_class_tag": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_core.InstallationTests.test_missing_and_invalid_fields_are_explicit": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_core.InstallationTests.test_missing_cog_not_invented": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_core.InstallationTests.test_mounting_ignores_urcap_transforms": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_core.InstallationTests.test_multiple_or_no_default_payload_is_not_guessed": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_core.InstallationTests.test_named_payload_selection": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_core.InstallationTests.test_plain_and_gzip": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_core.InstallationTests.test_polyscope_522_payload_flag_and_features_mounting": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_core.InstallationTests.test_reject_nonfinite_wrong_root_and_entities": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_core.InstallationTests.test_unknown_active_tcp_is_not_first_tcp": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_core.KinematicsTests.test_display_frame_alignment": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_core.KinematicsTests.test_rotation_vector_and_mounting_composition": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_core.KinematicsTests.test_tcp_and_cog_follow_flange": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_core.KinematicsTests.test_ur15_zero_pose_against_dh_sum": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_core.KinematicsTests.test_view_frames_preserve_arm_and_marker_geometry": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_core.RTDETests.test_eof_and_invalid_header": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_core.RTDETests.test_fragmented_handshake_and_data": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_core.RTDETests.test_reject_bad_packet_and_nonfinite_values": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_core.RTDETests.test_rejected_protocol_and_recipe_close": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_core.RTDETests.test_text_message_does_not_break_stream": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_core.RTDETests.test_timeout_is_propagated": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_core.SessionTests.test_installation_failure_does_not_stop_joint_stream": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_core.SessionTests.test_no_credentials_skips_scp_and_stop_during_connect": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_core.SettingsTests.test_custom_path_extension_and_password": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_core.SettingsTests.test_defaults_and_path": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_core.SettingsTests.test_invalid_inputs": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_core.SettingsTests.test_missing_one_credential": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_connection_sharing.ConnectionSharingTests.test_active_identity_overrides_page_values_but_keeps_requested_path": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_connection_sharing.ConnectionSharingTests.test_active_robot_without_ssh_password_does_not_use_old_page_password": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_connection_sharing.ConnectionSharingTests.test_project_date_filename_is_portable_and_required": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_connection_sharing.SharedCredentialUITests.test_backup_and_logs_resolve_shared_credentials_at_action_time": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_connection_sharing.SharedCredentialUITests.test_connect_hides_all_duplicate_inputs_disconnect_restores_them": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_connection_sharing.SharedCredentialUITests.test_missing_shared_password_and_project_are_actionable_without_transfer": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_connection_sharing.SharedCredentialUITests.test_reconnection_invalidates_flight_transport_and_uses_new_identity": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_connection_sharing.SharedCredentialUITests.test_report_downloads_share_the_simulator_identity": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_workspace_ui.WorkspaceUITests.test_backup_shortcut_only_opens_backup_page": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_workspace_ui.WorkspaceUITests.test_connection_navigation_does_not_disconnect_and_stale_data_is_visible": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_workspace_ui.WorkspaceUITests.test_flight_retrieval_is_a_tab_in_same_page": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_workspace_ui.WorkspaceUITests.test_hidden_analysis_can_feed_visible_separate_simulator": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_workspace_ui.WorkspaceUITests.test_home_tasks_preserve_work_and_do_not_start_robot_operations": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_workspace_ui.WorkspaceUITests.test_primary_workflows_are_embedded_and_navigation_is_persistent": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_workspace_ui.WorkspaceUITests.test_reports_have_two_distinct_tabs_and_preserve_each_workflow": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_workspace_ui.WorkspaceUITests.test_return_does_not_connect_from_other_pages": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_workspace_ui.WorkspaceUITests.test_separate_simulator_is_explicit_and_shares_recording_controls": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_workspace_ui.WorkspaceUITests.test_setup_rebuild_does_not_destroy_analysis_pages": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_workspace_ui.WorkspaceUITests.test_unsaved_checklist_can_cancel_app_close_before_workers_stop": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_home.HomeSummaryTests.test_active_work_takes_priority_then_returns_to_retained_evidence": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_home.HomeSummaryTests.test_tk_busy_method_is_not_an_active_job": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_design_ui.CompactDesignTests.test_backup_page_uses_active_robot_and_selected_folder": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_design_ui.CompactDesignTests.test_camera_reset_remains_reachable_with_populated_telemetry": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_design_ui.CompactDesignTests.test_cancel_full_backup_folder_does_not_start_robot_work": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_design_ui.CompactDesignTests.test_catalog_keeps_actions_below_long_reference_details": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_design_ui.CompactDesignTests.test_embedded_flight_toolbar_actions_fit_at_minimum_size": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_design_ui.CompactDesignTests.test_last_tool_control_is_revealed_by_keyboard_focus": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_design_ui.CompactDesignTests.test_setup_validation_keeps_connect_and_offline_actions_visible": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_design_ui.CompactDesignTests.test_workspace_shortcut_respects_modal_confirmation": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_ui.UITests.test_connect_live_render_disconnect_reconnect": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_ui.UITests.test_stationary_and_hidden_poses_skip_mesh_work": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_ui.UITests.test_tcp_alignment_locks_until_reselected": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_flight_ui.FlightChartTests.test_discovery_is_scoped_and_excludes_unfinished_files": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_flight_ui.FlightChartTests.test_fine_wheel_deltas_accumulate_without_large_jumps": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_flight_ui.FlightChartTests.test_line_axis_preserves_chronology_and_repeated_lines": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_flight_ui.FlightChartTests.test_protective_stop_shading_does_not_bridge_missing_record": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_flight_ui.FlightChartTests.test_record_breaks_preserve_both_measured_endpoints": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_flight_ui.FlightChartTests.test_shared_axes_playhead_and_acceleration_provenance": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_flight_ui.FlightWindowTests.test_completed_download_invalidates_scan_without_clearing_active_report": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_flight_ui.FlightWindowTests.test_empty_scan_does_not_blank_an_open_external_recording": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_flight_ui.FlightWindowTests.test_export_uses_selected_report_and_complete_scope": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_flight_ui.FlightWindowTests.test_folder_switch_replaces_listing_and_ignores_stale_events": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_flight_ui.FlightWindowTests.test_graph_click_and_hide_keep_timeline_consistent": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_flight_ui.FlightWindowTests.test_minimum_window_keeps_controls_and_graph_inside": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_flight_ui.FlightWindowTests.test_programmatic_scrub_updates_do_not_pause_playback": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_flight_ui.FlightWindowTests.test_report_switch_resets_every_playback_context": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_flight_ui.FlightWindowTests.test_resize_keeps_rendered_timestamp_label_inside_canvas": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_flight_ui.FlightWindowTests.test_scrolling_preserves_image_and_fixed_script_line_context": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_flight_ui.FlightWindowTests.test_stale_and_failed_load_keep_current_report": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_flight_ui.FlightWindowTests.test_subplots_toolbar_adjustments_survive_draw_at_same_size": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_joint_comparison.HelpUITests.test_search_topics_empty_state_and_navigation_lifecycle": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_joint_comparison.JointComparisonTests.test_actual_and_target_overlays_share_joint_colors_and_have_distinct_styles": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_joint_comparison.JointComparisonTests.test_recorded_joint_specs_do_not_fabricate_targets": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_joint_comparison.JointComparisonTests.test_separate_joint_graphs_preserve_series_scales_and_gaps": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_joint_comparison.JointComparisonTests.test_supplied_recording_exposes_recorded_target_moment_exactly": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_joint_comparison.JointComparisonTests.test_torque_gaps_and_discrete_control_mode": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_joint_comparison.JointComparisonTests.test_torque_preserves_target_provenance_and_never_converts_current": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_joint_comparison.JointComparisonTests.test_unavailable_actual_torque_and_empty_selection_are_explicit": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_joint_comparison.JointComparisonUITests.test_all_readings_scroll_and_compact_controls_stay_accessible": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_joint_comparison.JointComparisonUITests.test_mode_switch_keeps_playback_and_torque_readout_matches_all_selected_joints": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_joint_comparison.JointComparisonUITests.test_separate_and_combined_layout_keep_selection_and_playhead": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_log_ui.HeadlessLogUITests.test_aggregate_checkbox_toggles_running_total_without_changing_dates": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_log_ui.HeadlessLogUITests.test_backup_dialog_answers_worker_and_completion_preserves_data": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_log_ui.HeadlessLogUITests.test_backup_reuses_folder_without_overwriting_existing_archive": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_log_ui.HeadlessLogUITests.test_backup_selection_is_passed_to_worker": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_log_ui.HeadlessLogUITests.test_fetch_optional_save_remembers_folder": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_log_ui.HeadlessLogUITests.test_missing_password_shows_validation_before_starting_worker": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_log_ui.LogUITests.test_backup_save_dialog_and_completion_keep_loaded_log": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_log_ui.LogUITests.test_changed_host_popup_explains_replacement": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_log_ui.LogUITests.test_controller_warnings_filter_without_inventing_joint_counts": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_log_ui.LogUITests.test_csv_formula_guard": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_log_ui.LogUITests.test_desktop_workflow_and_simulator_navigation": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_flight_retrieval_ui.FlightRetrievalUITests.test_cancelled_remainder_can_be_retried": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_flight_retrieval_ui.FlightRetrievalUITests.test_compact_window_keeps_transfer_actions_accessible": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_flight_retrieval_ui.FlightRetrievalUITests.test_disconnected_and_connecting_gate_network_actions": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_flight_retrieval_ui.FlightRetrievalUITests.test_edited_simulator_credentials_cannot_download_from_old_selection": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_flight_retrieval_ui.FlightRetrievalUITests.test_failure_survives_final_list_refresh": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_flight_retrieval_ui.FlightRetrievalUITests.test_folder_change_clears_old_status_and_rebuilds_scoped_controller": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_flight_retrieval_ui.FlightRetrievalUITests.test_graph_and_retrieval_share_folder_and_guard_active_download": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_flight_retrieval_ui.FlightRetrievalUITests.test_host_key_prompt_always_releases_worker": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_flight_retrieval_ui.FlightRetrievalUITests.test_multi_select_all_new_and_busy_controls": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_flight_retrieval_ui.FlightRetrievalUITests.test_progress_and_completed_report_reach_existing_viewer": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_flight_retrieval_ui.FlightRetrievalUITests.test_reconnect_invalidates_controller_and_old_robot_listing": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_flight_retrieval_ui.FlightRetrievalUITests.test_selected_download_updates_live_selector_without_interrupting_playback": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_program_playback_ui.ProgramPlaybackUITests.test_backup_archive_picker_reviews_program_and_matches_installation": {
+    "status": "ok",
+    "log": "test_program_playback_ui.log"
+  },
+  "tests.test_program_playback_ui.ProgramPlaybackUITests.test_folder_lists_urps_and_reviews_only_selected_with_missing_installation_warning": {
+    "status": "ok",
+    "log": "test_program_playback_ui.log"
+  },
+  "tests.test_program_playback_ui.ProgramPlaybackUITests.test_live_samples_cannot_overwrite_recorded_robot": {
+    "status": "ok",
+    "log": "test_program_playback_ui.log"
+  },
+  "tests.test_program_playback_ui.ProgramPlaybackUITests.test_main_playback_seek_switch_pause_and_missing_model": {
+    "status": "ok",
+    "log": "test_program_playback_ui.log"
+  },
+  "tests.test_program_playback_ui.ProgramPlaybackUITests.test_offline_source_selector_explains_missing_live_connection": {
+    "status": "ok",
+    "log": "test_program_playback_ui.log"
+  },
+  "tests.test_program_playback_ui.ProgramPlaybackUITests.test_program_selection_review_export_and_invalidation": {
+    "status": "ok",
+    "log": "test_program_playback_ui.log"
+  },
+  "tests.test_program_playback_ui.ProgramPlaybackUITests.test_robot_snapshot_flows_to_urp_selection_and_report_without_live_telemetry": {
+    "status": "ok",
+    "log": "test_program_playback_ui.log"
+  },
+  "tests.test_program_playback_ui.ProgramPlaybackUITests.test_robot_source_cancelled_destination_and_host_trust_do_not_start_unapproved_work": {
+    "status": "ok",
+    "log": "test_program_playback_ui.log"
+  },
+  "tests.test_program_playback_ui.ProgramPlaybackUITests.test_simulator_source_switch_preserves_both_views_and_pauses_flight": {
+    "status": "ok",
+    "log": "test_program_playback_ui.log"
+  },
+  "tests.test_program_playback_ui.ProgramPlaybackUITests.test_tcp_mounting_default_switch_and_reference_persistence": {
+    "status": "ok",
+    "log": "test_program_playback_ui.log"
+  },
+  "tests.test_backup_page.BackupPageTests.test_backup_destination_never_overwrites_existing_archive": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_backup_page.BackupPageTests.test_cancelled_backup_does_not_answer_destination_with_a_path": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_backup_page.BackupPageTests.test_custom_contents_and_validation_happen_before_transfer": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_backup_page.BackupPageTests.test_empty_password_and_missing_folder_do_not_start_robot_operation": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_backup_page.BackupPageTests.test_navigation_preserves_backup_job_and_destination": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_commissioning_ui.CommissioningUITests.test_csv_export_does_not_mark_draft_saved": {
+    "status": "ok",
+    "log": "test_csv_export_does_not_mark_draft_saved.log"
+  },
+  "tests.test_commissioning_ui.CommissioningUITests.test_filters_empty_state_and_footer_available_at_compact_size": {
+    "status": "ok",
+    "log": "test_filters_empty_state_and_footer_available_at_compact_size.log"
+  },
+  "tests.test_commissioning_ui.CommissioningUITests.test_invalid_open_and_cancelled_save_keep_current_draft": {
+    "status": "ok",
+    "log": "test_invalid_open_and_cancelled_save_keep_current_draft.log"
+  },
+  "tests.test_commissioning_ui.CommissioningUITests.test_notes_survive_switch_and_save_open_roundtrip": {
+    "status": "ok",
+    "log": "test_notes_survive_switch_and_save_open_roundtrip.log"
+  },
+  "tests.test_commissioning_ui.CommissioningUITests.test_review_rows_are_visible_pointer_targets_beside_evidence": {
+    "status": "ok",
+    "log": "windows-checklist-recheck.log"
+  },
+  "tests.test_diagnostic_ui.DiagnosticUITests.test_cancel_discards_report_already_queued_by_analysis": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_diagnostic_ui.DiagnosticUITests.test_cancel_racing_with_collected_event_does_not_start_analysis": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_diagnostic_ui.DiagnosticUITests.test_cancelled_collection_preserves_path_without_automatic_analysis": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_diagnostic_ui.DiagnosticUITests.test_cancelled_collection_still_rejects_pending_trust": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_diagnostic_ui.DiagnosticUITests.test_client_metadata_and_optional_evidence_are_forwarded_to_export": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_diagnostic_ui.DiagnosticUITests.test_failed_collection_displays_retained_dataset_and_recovers_controls": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_diagnostic_ui.DiagnosticUITests.test_hidden_page_prompts_for_trust_on_root_without_rejecting_transfer": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_diagnostic_ui.DiagnosticUITests.test_local_analysis_navigation_export_and_workspace_preservation": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_diagnostic_ui.DiagnosticUITests.test_optional_log_clock_offset_is_forwarded_to_local_analysis": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_diagnostic_ui.DiagnosticUITests.test_partial_collection_retains_coverage_warning_in_review": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_diagnostic_ui.DiagnosticUITests.test_robot_collected_event_runs_local_analysis": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_diagnostic_ui.DiagnosticUITests.test_source_controls_advanced_and_cancelled_picker_preserve_review": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_model_catalog.CatalogTests.test_all_simulation_models_have_published_dimensions": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_model_catalog.CatalogTests.test_catalog_selection_and_compact_controls": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_model_catalog.CatalogTests.test_unverified_variants_do_not_silently_use_legacy_geometry": {
+    "status": "ok",
+    "log": "windows-tests-initial.log"
+  },
+  "tests.test_program_check.ProgramCheckTests.test_acceleration_units_time_priority_dynamic_and_optimove": {
+    "status": "ok",
+    "log": "test_program_check.log"
+  },
+  "tests.test_program_check.ProgramCheckTests.test_archive_installation_reference_uses_archive_members_without_extraction": {
+    "status": "ok",
+    "log": "test_program_check.log"
+  },
+  "tests.test_program_check.ProgramCheckTests.test_archive_pairs_exact_folder_and_stem_without_extracting": {
+    "status": "ok",
+    "log": "test_program_check.log"
+  },
+  "tests.test_program_check.ProgramCheckTests.test_folder_matches_referenced_installation_and_records_saved_context": {
+    "status": "ok",
+    "log": "test_program_check.log"
+  },
+  "tests.test_program_check.ProgramCheckTests.test_installation_missing_ambiguous_and_invalid_do_not_discard_script_review": {
+    "status": "ok",
+    "log": "test_program_check.log"
+  },
+  "tests.test_program_check.ProgramCheckTests.test_lexer_diagnostic_commands_ignore_strings_comments_and_declarations": {
+    "status": "ok",
+    "log": "test_program_check.log"
+  },
+  "tests.test_program_check.ProgramCheckTests.test_lexer_ignores_comments_strings_labels_and_definitions": {
+    "status": "ok",
+    "log": "test_program_check.log"
+  },
+  "tests.test_program_check.ProgramCheckTests.test_local_parent_installation_and_untrusted_derived_metadata": {
+    "status": "ok",
+    "log": "test_program_check.log"
+  },
+  "tests.test_program_check.ProgramCheckTests.test_local_program_names_exclude_parent_paths_and_pair_within_each_folder": {
+    "status": "ok",
+    "log": "test_program_check.log"
+  },
+  "tests.test_program_check.ProgramCheckTests.test_no_proven_blend_fault_or_execution_claim_for_version_two": {
+    "status": "ok",
+    "log": "test_program_check.log"
+  },
+  "tests.test_program_check.ProgramCheckTests.test_payload_transition_units_invalid_value_and_inertia_guidance": {
+    "status": "ok",
+    "log": "test_program_check.log"
+  },
+  "tests.test_program_check.ProgramCheckTests.test_payload_units_and_invalid_literal_configuration": {
+    "status": "ok",
+    "log": "test_program_check.log"
+  },
+  "tests.test_program_check.ProgramCheckTests.test_pdf_contains_source_evidence_and_urp_only_limitation": {
+    "status": "ok",
+    "log": "test_program_check.log"
+  },
+  "tests.test_program_check.ProgramCheckTests.test_process_waits_and_diagnostics_preserve_source_execution_uncertainty": {
+    "status": "ok",
+    "log": "test_program_check.log"
+  },
+  "tests.test_program_check.ProgramCheckTests.test_source_read_and_xml_limits": {
+    "status": "ok",
+    "log": "test_program_check.log"
+  },
+  "tests.test_program_check.ProgramCheckTests.test_supplied_configuration_counts_real_calls_not_embedded_text": {
+    "status": "ok",
+    "log": "test_program_check.log"
+  },
+  "tests.test_program_check.ProgramCheckTests.test_unconfirmed_family_never_receives_numeric_pass": {
+    "status": "ok",
+    "log": "test_program_check.log"
+  },
+  "tests.test_program_check.ProgramCheckTests.test_urp_only_is_explicitly_limited": {
+    "status": "ok",
+    "log": "test_program_check.log"
+  },
+  "tests.test_program_check.ProgramCheckTests.test_workshop_small_blends_remain_contextual_review_not_fault": {
+    "status": "ok",
+    "log": "test_program_check.log"
+  }
+}

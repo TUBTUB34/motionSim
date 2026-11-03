@@ -57,6 +57,10 @@ class ProgramReportGroupingTests(unittest.TestCase):
                 self.assertEqual(text.count('Configured a=3 m/s².'), 1)
                 self.assertIn('1–120', text)
                 self.assertIn('1 issue group', text)
+                self.assertIn('Physical installation follow-up', text)
+                self.assertIn('Not assessed by this report', text)
+                self.assertIn('Mounting and orientation', ' '.join(text.split()))
+                self.assertIn('Guide p. 5', text)
                 for page in pdf:
                     boxes = []
                     for block in page.get_text('dict')['blocks']:

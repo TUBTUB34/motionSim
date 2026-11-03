@@ -165,6 +165,27 @@ def _source_label(group):
     return 'Lines ' + line_ranges(group.lines) if group.lines else 'Program context'
 
 
+def deployment_follow_up(document):
+    """Keep physical checks separate from every computed finding and rating."""
+    from commissioning import DEPLOYMENT_CHECKS
+    physical_keys = {'mounting', 'environment', 'electrical', 'risk_assessment',
+                     'safety_validation', 'inspection'}
+    document.new_page('Physical installation follow-up')
+    document.paragraph('Not assessed by this report. Source files and telemetry cannot verify these items. '
+                       'Record the inspection evidence and outstanding actions in the deployment checklist.', size=10)
+    document.y += 12
+    rows = []
+    for check in DEPLOYMENT_CHECKS:
+        if check.key not in physical_keys:
+            continue
+        sources = '; '.join(check.sources).replace('Installation Guide v1.3.3, PDF ', 'Guide ')
+        sources = sources.replace('Deployment Workshop 2024, PDF ', 'Workshop ')
+        rows.append((check.title, check.guidance + '\nSource: ' + sources))
+    document.rows('Manual checks · all unassessed', rows, label_width=125)
+    document.paragraph('Guide: UR Installation Guide v1.3.3. Workshop: UR Application Deployment Workshop, May 2024. '
+                       'Page numbers refer to the supplied PDFs. Apply the current model-specific manual; these prompts are not a complete safety assessment.', size=8, color=MUTED)
+
+
 def export_program_pdf(review, destination):
     groups = group_findings(review.findings)
     issues = [group for group in groups if group.status == 'Review recommended']
@@ -252,6 +273,7 @@ def export_program_pdf(review, destination):
                 rows = [(_source_label(group), STATUS.get(group.status, group.status) + '\n' + group.detail + '\n' + basis(group)) for group in selected]
                 page.rows(category.upper(), rows)
 
+            deployment_follow_up(page)
             page.new_page('Source notes')
             page.heading('How to interpret the review')
             page.paragraph('This is a static source review; no URScript is executed. Counts include definitions and branches, not execution frequency. Source values do not establish measured speeds or accelerations. Blends depend on controller planning; a geometric warning does not prove a skipped waypoint. Validate physical payload, centre of gravity, inertia and TCP, including each workpiece or tool change.')

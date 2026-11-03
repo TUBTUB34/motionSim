@@ -11,8 +11,30 @@ def check(app):
     from kinematics import MODELS
     from robot_assets import load_robot_mesh
 
+    assert app.active_page == 'home', 'Home must expose the offline workflows at launch'
+    assert app.session is None, 'Startup must not initiate a robot connection'
+    app.ip.set('192.0.2.42')
+    app.save_address()
+    assert app.preferences.addresses == ('192.0.2.42',), 'Saved IP list failed'
+    assert app.set_theme('light'), 'Light mode failed'
+    from app_preferences import Preferences
+    saved = Preferences(app.preferences.path)
+    assert saved.theme == 'light' and saved.addresses == ('192.0.2.42',), 'Preferences did not survive reload'
     app.open_logs()
     with tempfile.TemporaryDirectory(prefix='ur-smoke-') as folder:
+        app.open_checklist()
+        checklist = app.checklist_page
+        checklist.metadata['project'].set('Packaging smoke test')
+        checklist.path = Path(folder) / 'checklist.json'
+        assert checklist.save(), 'Bundled checklist save failed'
+        from commissioning import load_record, export_record_csv
+        record = load_record(checklist.path)
+        assert record['metadata']['project'] == 'Packaging smoke test'
+        export_record_csv(Path(folder) / 'checklist.csv', record)
+        assert len(record['items']) == 14, 'Bundled checklist source catalog is missing'
+        app.open_home()
+        app.home_page.task_buttons['Logs & incidents'].invoke()
+        assert app.active_page == 'logs', 'Home task navigation failed'
         path = Path(folder) / 'log.txt'
         path.write_text('3.5 :: 1s :: 2026-04-01 12:00:00 :: 110 :: C153A0:6 :: Smoke test\n', encoding='utf-8')
         window = app.log_window
@@ -81,6 +103,23 @@ def check(app):
         app.program_check_window.show_review(review)
         assert 'without installation' in app.program_check_window.warning.get()
         app.program_check_window.withdraw()
+        from diagnostic_transfer import DiagnosticSourceJob
+        from robot_diagnostics import analyze_directory
+        from diagnostic_pdf import export_diagnostic_pdf
+        assert DiagnosticSourceJob, 'Bundled diagnostic retrieval module is missing'
+        (Path(folder) / 'log_history.txt').write_bytes(path.read_bytes())
+        diagnostic = analyze_directory(folder)
+        app.open_diagnostics()
+        app.diagnostic_window.set_report(diagnostic)
+        assert len(app.diagnostic_window.robot_status.joints) == 6, 'Bundled Robot Status must assess all six joints'
+        app.open_backups()
+        assert app.backup_page.job is None, 'Opening Backups must not start a robot operation'
+        app.open_diagnostics()
+        assert app.diagnostic_window.report is diagnostic, 'Page navigation lost the generated status report'
+        app.root.update()
+        diagnostic_pdf = export_diagnostic_pdf(diagnostic, Path(folder) / 'diagnostic.pdf')
+        assert diagnostic_pdf.read_bytes().startswith(b'%PDF-'), 'Bundled diagnostic PDF export failed'
+        app.diagnostic_window.withdraw()
         flights.open_remote_reports()
         retrieval = app.flight_retrieval_window
         app.root.update()
@@ -102,3 +141,5 @@ def check(app):
         app.root.update()
         viewer.update_robot(RobotSample(1, (0, -1, 1, 0, 0, 0), (.3, -.2, .7, 0, 0, 0), time.monotonic()), None)
         assert viewer.rendered_triangles > 100, 'Bundled robot assets or renderer failed'
+        assert app.set_theme('dark'), 'Dark mode failed with loaded workspaces'
+        assert app.flight_window.report is report, 'Theme change lost recorded evidence'

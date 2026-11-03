@@ -20,6 +20,19 @@ class ProgramCheckTests(unittest.TestCase):
         (self.base/'demo.script').write_text(script, encoding='utf-8')
         return discover_programs(self.base)[0]
 
+    def test_local_program_names_exclude_parent_paths_and_pair_within_each_folder(self):
+        nested = self.base / 'another cell'
+        nested.mkdir()
+        (self.base / 'demo.urp').write_text('<URProgram/>')
+        (self.base / 'demo.script').write_text('movej(q)')
+        (nested / 'demo.urp').write_text('<URProgram/>')
+        pairs = discover_programs(self.base)
+        self.assertEqual([pair.name for pair in pairs], ['demo', 'demo'])
+        by_parent = {pair.urp.path.parent: pair for pair in pairs}
+        self.assertEqual(by_parent[self.base].script.path, self.base / 'demo.script')
+        self.assertIsNone(by_parent[nested].script)
+        self.assertEqual(discover_programs(self.base / 'demo.urp')[0].name, 'demo')
+
     def test_archive_pairs_exact_folder_and_stem_without_extracting(self):
         path = self.base/'backup.zip'
         with zipfile.ZipFile(path, 'w') as archive:
@@ -174,6 +187,52 @@ class ProgramCheckTests(unittest.TestCase):
         self.assertTrue(destination.read_bytes().startswith(b'%PDF'))
         self.assertGreater(destination.stat().st_size, 12000)
         self.assertEqual(list(self.base.glob('tmp*.pdf')), [])
+
+    def test_workshop_small_blends_remain_contextual_review_not_fault(self):
+        result = review_program(self.pair('\n'.join((
+            'movel(pose, r=0)', 'movel(pose, r=.01)', 'movej(q, r=.015)',
+            'movep(pose, r=.002)', 'movel(pose, r=process_radius)',
+            '# movel(pose, r=.001)', 'textmsg("movel(pose,r=.001)")'))))
+        small = [f for f in result.findings if 'workshop suggests about 15 mm' in f.detail]
+        self.assertEqual([f.line for f in small], [2])
+        self.assertEqual(small[0].status, 'Manual review')
+        self.assertIn('intentional for clearance', small[0].detail)
+        self.assertEqual(small[0].reference, 11)
+        unknown = review_program(result.pair, 'Unconfirmed')
+        self.assertFalse(any('workshop suggests about 15 mm' in f.detail for f in unknown.findings))
+
+    def test_payload_transition_units_invalid_value_and_inertia_guidance(self):
+        result = review_program(self.pair('\n'.join((
+            'set_target_payload(2, [0,0,.1])',
+            'set_target_payload(3, [0,0,.1], [.1,.1,.1,0,0,0], transition_time=1.5)',
+            'set_target_payload(2, [0,0,.1], transition_time=-1)',
+            'set_target_payload(2, [0,0,.1], transition_time=runtime_time)'))))
+        source = [f for f in result.findings if f.category in CATEGORIES[:2] and f.line]
+        self.assertIn('transition_time: 1.5 s', source[1].detail)
+        self.assertEqual(source[2].status, 'Review recommended')
+        self.assertIn('non-negative', source[2].detail)
+        self.assertIn('dynamic or unresolved', source[3].detail)
+        prompts = [f for f in result.findings if f.category == CATEGORIES[9]]
+        self.assertEqual(len(prompts), 4)
+        self.assertTrue(all(f.status == 'Manual review' for f in prompts))
+        self.assertIn('not automatically a fault', prompts[0].detail)
+        self.assertIn('program continues', prompts[1].detail)
+
+    def test_process_waits_and_diagnostics_preserve_source_execution_uncertainty(self):
+        result = review_program(self.pair('movep(pose, r=.002)\nsleep(.1)\nposition_deviation_warning(True, .4)\npause_on_error_code(171)\nsocket_open("192.0.2.1", 30002)\nsocket_close()'))
+        process = next(f for f in result.findings if f.category == CATEGORIES[10])
+        self.assertIn('controlled stopl', process.detail)
+        self.assertIn('does not prove', process.detail)
+        diagnostic = [f for f in result.findings if f.category == CATEGORIES[11] and f.status == 'Source observation']
+        self.assertEqual([f.line for f in diagnostic], [3, 4])
+        self.assertTrue(all('not proven' in f.detail for f in diagnostic))
+        self.assertTrue(any('counts do not establish how often' in f.detail for f in result.findings))
+
+    def test_lexer_diagnostic_commands_ignore_strings_comments_and_declarations(self):
+        script = ('# pause_on_error_code(171)\ntextmsg("socket_open()")\n'
+                  'def position_deviation_warning(enabled):\nend\nsync()\n'
+                  'position_deviation_warning(True, .4)')
+        self.assertEqual([(c.name, c.line) for c in calls_in(script)], [('sync', 5), ('position_deviation_warning', 6)])
 
 
 if __name__ == '__main__':

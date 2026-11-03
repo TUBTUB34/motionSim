@@ -12,18 +12,20 @@ from matplotlib.figure import Figure
 from matplotlib.ticker import MaxNLocator
 
 from log_data import JOINTS, chart_series, select_events
-from log_transfer import DEFAULT_LOG_PATH, LogConnection, LogJob
+from log_transfer import DEFAULT_LOG_PATH, LogJob
+from connection import active_robot_settings, transfer_connection, simulator_connection_text
 from backup_transfer import BackupJob
-from ui_theme import (BACKGROUND, PANEL, INK, MUTED, BORDER,
-                      CHART_SERIES, style_toolbar, style_tree, status_color)
+from address_book import SavedAddressCombobox
+from flight_charts import chart_palette, retheme_figure
+from workspace_panel import WorkspacePanel
+import ui_theme as theme
+from ui_theme import style_toolbar, style_tree, status_color
 
-COLORS = CHART_SERIES
 
 
-class LogWindow(tk.Toplevel):
-    def __init__(self, app):
-        super().__init__(app.root)
-        self.configure(background=BACKGROUND)
+class LogWindow(WorkspacePanel):
+    def __init__(self, app, parent=None):
+        super().__init__(app.root, page_host=parent, on_show=lambda: app.navigate_panel(self), on_hide=getattr(app, 'show_workspace', None))
         self.app = app
         self.title('UR Motion Studio · Logs & graphs')
         self.geometry('1240x850')
@@ -34,14 +36,14 @@ class LogWindow(tk.Toplevel):
         self.selected = []
         self.closed = False
         self.protocol('WM_DELETE_WINDOW', self.hide)
-        self.ip = tk.StringVar(value=app.ip.get() or '10.22.33.81')
+        self.ip = tk.StringVar(value=app.ip.get())
         self.username = tk.StringVar(value=app.username.get() or 'root')
         self.password = tk.StringVar(value=app.password.get())
         self.remote_path = tk.StringVar(value=DEFAULT_LOG_PATH)
         self.status = tk.StringVar(value='Ready · Fetch a robot log or open a local file')
         self.summary = tk.StringVar(value='No log loaded')
         self.coverage = tk.StringVar(value='Your charts will appear here after loading a log.')
-        self.joint = tk.StringVar(value='All joints')
+        self.joint = tk.StringVar(value='All sources')
         self.code = tk.StringVar(value='All codes')
         self.category = tk.StringVar(value='All incidents')
         self.period = tk.StringVar(value='Day')
@@ -57,18 +59,28 @@ class LogWindow(tk.Toplevel):
         heading = ttk.Frame(self, padding=(18, 14), style='Toolbar.TFrame')
         heading.grid(row=0, column=0, columnspan=2, sticky='ew')
         ttk.Label(heading, text='Logs & graphs', style='Panel.Title.TLabel').pack(side='left')
-        ttk.Button(heading, text='Back to simulator', command=self.hide).pack(side='right')
+        if not self.embedded:
+            ttk.Button(heading, text='Back to simulator', command=self.hide).pack(side='right')
         ttk.Button(heading, text='How to', command=lambda: self.app.open_help('Logs & graphs')).pack(side='right', padx=10)
 
         sidebar = ttk.Frame(self, padding=(16, 10), width=280, style='Panel.TFrame')
         sidebar.grid(row=1, column=0, sticky='ns', padx=(12, 14), pady=12)
         ttk.Label(sidebar, text='ROBOT CONNECTION', style='Panel.Section.TLabel').pack(anchor='w', pady=(0, 4))
+        self.connection_area = ttk.Frame(sidebar, style='Panel.TFrame')
+        self.connection_area.pack(fill='x')
+        self.credentials = ttk.Frame(self.connection_area, style='Panel.TFrame')
+        self.credentials.pack(fill='x')
+        self.shared_connection = ttk.Label(self.connection_area, style='Panel.Muted.TLabel', wraplength=250)
         for label, variable in [('Robot IP address', self.ip), ('SSH username', self.username),
-                                ('SSH password', self.password), ('Remote log file', self.remote_path)]:
-            ttk.Label(sidebar, text=label, style='Panel.TLabel').pack(anchor='w', pady=(3, 2))
-            entry = ttk.Entry(sidebar, textvariable=variable, width=29,
-                              show='•' if variable is self.password else '')
+                                ('SSH password', self.password)]:
+            ttk.Label(self.credentials, text=label, style='Panel.TLabel').pack(anchor='w', pady=(3, 2))
+            entry = (SavedAddressCombobox(self.credentials, app, textvariable=variable, width=29)
+                     if variable is self.ip else
+                     ttk.Entry(self.credentials, textvariable=variable, width=29,
+                               show='•' if variable is self.password else ''))
             entry.pack(fill='x')
+        ttk.Label(sidebar, text='Remote log file', style='Panel.TLabel').pack(anchor='w', pady=(3, 2))
+        ttk.Entry(sidebar, textvariable=self.remote_path, width=29).pack(fill='x')
         ttk.Label(sidebar, text='Includes matching .bak history.\nPassword stays in memory.',
                   style='Panel.Muted.TLabel').pack(anchor='w', pady=6)
         self.fetch_button = ttk.Button(sidebar, text='Fetch log & graph', style='Accent.TButton', command=self.fetch)
@@ -76,7 +88,8 @@ class LogWindow(tk.Toplevel):
         self.open_button = ttk.Button(sidebar, text='Open local log…', command=self.open_file)
         self.open_button.pack(fill='x')
         backups = ttk.Frame(sidebar, style='Panel.TFrame')
-        backups.pack(fill='x', pady=(8, 0))
+        if not self.embedded:
+            backups.pack(fill='x', pady=(8, 0))
         backups.columnconfigure((0, 1), weight=1)
         ttk.Label(backups, text='BACKUP CONTENTS', style='Section.TLabel').grid(row=0, column=0, columnspan=2, sticky='w')
         ttk.Checkbutton(backups, text='Programs', variable=self.backup_programs).grid(row=1, column=0, sticky='w')
@@ -106,8 +119,8 @@ class LogWindow(tk.Toplevel):
         filters.pack(fill='x')
         self.code_combo = None
         for col, (label, variable, values) in enumerate([
-            ('Joint', self.joint, ('All joints',) + JOINTS),
-            ('Incident type', self.category, ('All incidents', 'Collision', 'Position deviation', 'Payload warning', 'Joint health signal')),
+            ('Joint / controller', self.joint, ('All sources',) + JOINTS + ('Controller',)),
+            ('Incident type', self.category, ('All incidents', 'Collision', 'Position deviation', 'Payload warning', 'Joint health signal', 'Safety limit proximity', 'Blend warning')),
             ('Code', self.code, ('All codes',))]):
             filters.columnconfigure(col, weight=1)
             ttk.Label(filters, text=label).grid(row=0, column=col, sticky='w')
@@ -142,9 +155,11 @@ class LogWindow(tk.Toplevel):
             combo.bind('<<ComboboxSelected>>', self.refresh)
         ttk.Checkbutton(options, text='Separate codes', variable=self.split_code, command=self.refresh).pack(side='left')
         ttk.Checkbutton(options, text='Aggregate', variable=self.aggregate, command=self.refresh).pack(side='left', padx=(8, 0))
-        self.figure = Figure(figsize=(7, 4), dpi=100, facecolor=BACKGROUND, layout='constrained')
+        self.figure = Figure(figsize=(7, 4), dpi=100, facecolor=theme.BACKGROUND, layout='constrained')
+        self._chart_palette = chart_palette()
         self.axes = self.figure.add_subplot()
         self.canvas = FigureCanvasTkAgg(self.figure, master=chart)
+        theme.register_theme_callback(self, self.refresh_theme)
         self.toolbar = NavigationToolbar2Tk(self.canvas, chart, pack_toolbar=False)
         style_toolbar(self.toolbar)
         self.toolbar.pack(side='bottom', fill='x')
@@ -174,6 +189,7 @@ class LogWindow(tk.Toplevel):
             self.status_label.configure(foreground=status_color(self.status.get())))
         self.bind('<Configure>', self._resize)
         self.draw_chart([])
+        self.sync_connection()
         self.poll_id = self.after(100, self.poll)
 
     @staticmethod
@@ -225,8 +241,8 @@ class LogWindow(tk.Toplevel):
         if self.job:
             return
         try:
-            settings = LogConnection(self.ip.get().strip(), self.username.get().strip(),
-                                     self.password.get(), self.remote_path.get().strip())
+            settings = transfer_connection(self.app, self.ip.get(), self.username.get(),
+                                           self.password.get(), self.remote_path.get().strip())
         except ValueError as error:
             self.status.set('Connection error: ' + str(error))
             messagebox.showerror('Cannot fetch robot logs', str(error), parent=self)
@@ -254,8 +270,8 @@ class LogWindow(tk.Toplevel):
             self.status.set('A transfer is already running. Wait for it to finish or cancel it before starting a backup.')
             return
         try:
-            settings = LogConnection(self.ip.get().strip(), self.username.get().strip(), self.password.get(),
-                                     self.remote_path.get().strip() if full else DEFAULT_LOG_PATH)
+            settings = transfer_connection(self.app, self.ip.get(), self.username.get(), self.password.get(),
+                                           self.remote_path.get().strip() if full else DEFAULT_LOG_PATH)
             flight_directory = '/root/flightreports'
             retrieval = getattr(self.app, 'flight_retrieval_window', None)
             if full and retrieval is not None and retrieval.winfo_exists():
@@ -311,7 +327,23 @@ class LogWindow(tk.Toplevel):
         self.full_backup_button.configure(state='normal')
         self.cancel_button.configure(state='disabled')
 
+    def sync_connection(self):
+        settings = active_robot_settings(self.app)
+        if settings is not None:
+            for name in ('ip', 'username', 'password'):
+                variable = getattr(self, name)
+                value = getattr(settings, name) or ('root' if name == 'username' else '')
+                if variable.get() != value:
+                    variable.set(value)
+            self.credentials.pack_forget()
+            self.shared_connection.configure(text=simulator_connection_text(settings))
+            self.shared_connection.pack(fill='x', pady=6)
+        else:
+            self.shared_connection.pack_forget()
+            self.credentials.pack(fill='x')
+
     def poll(self):
+        self.sync_connection()
         job = self.job
         if job:
             while True:
@@ -378,7 +410,7 @@ class LogWindow(tk.Toplevel):
         self.reset()
 
     def reset(self):
-        self.joint.set('All joints')
+        self.joint.set('All sources')
         self.code.set('All codes')
         self.category.set('All incidents')
         self.start_date.set('')
@@ -395,7 +427,10 @@ class LogWindow(tk.Toplevel):
             self.status.set('Date filter error: ' + str(error))
             return
         self.selected = selected
-        self.summary.set(f'{len(selected):,} incidents  ·  {len({e["joint"] for e in selected})} joints  ·  {len({e["code"] for e in selected})} codes')
+        joint_count = len({e['joint'] for e in selected if e['joint'] in JOINTS})
+        controller_count = sum(e['joint'] == 'Controller' for e in selected)
+        self.summary.set(f'{len(selected):,} incidents  ·  {joint_count} joints  ·  {len({e["code"] for e in selected})} codes'
+                         + (f'  ·  {controller_count} controller signals' if controller_count else ''))
         meta = self.data.metadata
         warning = f'\n{meta["warning"]}' if meta.get('warning') else ''
         self.coverage.set(f'{self.data.source}\nLog coverage: {meta["first_date"] or "unavailable"} — {meta["last_date"] or "unavailable"}' + warning)
@@ -411,19 +446,20 @@ class LogWindow(tk.Toplevel):
         self.message.set(f'Showing {min(500, len(selected)):,} of {len(selected):,} matches. Select a row for its full message; CSV includes every match.')
         self.csv_button.configure(state='normal' if selected else 'disabled')
         self.draw_chart(selected)
-        self.status.set(f'Ready · {self.data.skipped:,} malformed records skipped · {meta["unmapped"]:,} signals without a joint mapping · Monitored joint codes only')
+        self.status.set(f'Ready · {self.data.skipped:,} malformed records skipped · {meta["unmapped"]:,} signals without a joint mapping · Monitored joint and controller codes only')
 
     def draw_chart(self, events):
+        self._chart_palette = chart_palette()
         axes = self.axes
         axes.clear()
-        axes.set_facecolor(BACKGROUND)
-        axes.figure.set_facecolor(BACKGROUND)
-        axes.tick_params(colors=MUTED)
+        axes.set_facecolor(theme.BACKGROUND)
+        axes.figure.set_facecolor(theme.BACKGROUND)
+        axes.tick_params(colors=theme.MUTED)
         for spine in axes.spines.values():
-            spine.set_edgecolor(BORDER)
+            spine.set_edgecolor(theme.BORDER)
         if not events:
             axes.text(.5, .5, 'No matching incidents' if self.data else 'Fetch or open a robot log to begin',
-                      ha='center', va='center', transform=axes.transAxes, color=MUTED, fontsize=13)
+                      ha='center', va='center', transform=axes.transAxes, color=theme.MUTED, fontsize=13)
             axes.set_axis_off()
         else:
             axes.set_axis_on()
@@ -434,7 +470,7 @@ class LogWindow(tk.Toplevel):
             bottom = [0] * len(labels)
             for index, (name, counts) in enumerate(series.items()):
                 joint = name.split(' · ')[0]
-                color = COLORS[JOINTS.index(joint)] if joint in JOINTS else MUTED
+                color = theme.CHART_SERIES[JOINTS.index(joint)] if joint in JOINTS else theme.MUTED
                 if self.chart_kind.get() == 'Bar':
                     nonzero = [i for i, count in enumerate(counts) if count]
                     axes.bar(nonzero, [counts[i] for i in nonzero], bottom=[bottom[i] for i in nonzero],
@@ -447,17 +483,22 @@ class LogWindow(tk.Toplevel):
                     axes.scatter(x, counts, color=color, label=name, s=18)
             ticks = list(range(0, len(labels), max(1, (len(labels) + 6) // 7)))
             axes.set_xticks(ticks, [str(labels[i]) for i in ticks], rotation=15, ha='right', fontsize=8)
-            axes.set_ylabel('Cumulative incidents' if self.aggregate.get() else 'Incidents', color=MUTED)
-            title = 'Cumulative joint incidents' if self.aggregate.get() else 'Joint incidents'
-            axes.set_title(f'{title} · {period}', loc='left', fontsize=11, color=INK)
+            axes.set_ylabel('Cumulative incidents' if self.aggregate.get() else 'Incidents', color=theme.MUTED)
+            title = 'Cumulative monitored incidents' if self.aggregate.get() else 'Monitored incidents'
+            axes.set_title(f'{title} · {period}', loc='left', fontsize=11, color=theme.INK)
             axes.yaxis.set_major_locator(MaxNLocator(integer=True))
             axes.set_ylim(bottom=0)
-            axes.grid(axis='y', color=BORDER, linewidth=.7)
+            axes.grid(axis='y', color=theme.BORDER, linewidth=.7)
             axes.set_axisbelow(True)
             axes.spines[['top', 'right']].set_visible(False)
             axes.legend(loc='upper left', fontsize=8, ncols=min(3, len(series)), framealpha=.9,
-                        facecolor=PANEL, edgecolor=BORDER, labelcolor=INK)
+                        facecolor=theme.PANEL, edgecolor=theme.BORDER, labelcolor=theme.INK)
         self.toolbar.update()
+        self.canvas.draw_idle()
+
+    def refresh_theme(self):
+        self._chart_palette = retheme_figure(self.figure, self._chart_palette)
+        style_toolbar(self.toolbar)
         self.canvas.draw_idle()
 
     def show_message(self, _event=None):
@@ -492,5 +533,11 @@ class LogWindow(tk.Toplevel):
         self.closed = True
         if self.job:
             self.job.cancel()
+        self.progress.stop()
         self.after_cancel(self.poll_id)
+        for name in ('_idle_draw_id', '_event_loop_id'):
+            callback = getattr(self.canvas, name, None)
+            if callback is not None:
+                self.canvas.get_tk_widget().after_cancel(callback)
+                setattr(self.canvas, name, None)
         self.destroy()

@@ -1,0 +1,77 @@
+[
+  {
+    "module": "tests.test_backup_page",
+    "exit_code": 0,
+    "tests": 5
+  },
+  {
+    "module": "tests.test_camera",
+    "exit_code": 0,
+    "tests": 3
+  },
+  {
+    "module": "tests.test_commissioning_ui",
+    "exit_code": 0,
+    "tests": 5
+  },
+  {
+    "module": "tests.test_connection_sharing",
+    "exit_code": 0,
+    "tests": 8
+  },
+  {
+    "module": "tests.test_design_ui",
+    "exit_code": 0,
+    "tests": 8
+  },
+  {
+    "module": "tests.test_diagnostic_ui",
+    "exit_code": 0,
+    "tests": 12
+  },
+  {
+    "module": "tests.test_flight_retrieval_ui",
+    "exit_code": 0,
+    "tests": 12
+  },
+  {
+    "module": "tests.test_flight_ui",
+    "exit_code": 0,
+    "tests": 18
+  },
+  {
+    "module": "tests.test_joint_comparison",
+    "exit_code": 0,
+    "tests": 11
+  },
+  {
+    "module": "tests.test_log_ui",
+    "exit_code": 0,
+    "tests": 11
+  },
+  {
+    "module": "tests.test_model_catalog",
+    "exit_code": 0,
+    "tests": 3
+  },
+  {
+    "module": "tests.test_program_playback_ui",
+    "exit_code": 0,
+    "tests": 10
+  },
+  {
+    "module": "tests.test_theme",
+    "exit_code": 0,
+    "tests": 9
+  },
+  {
+    "module": "tests.test_ui",
+    "exit_code": 0,
+    "tests": 3
+  },
+  {
+    "module": "tests.test_workspace_ui",
+    "exit_code": 0,
+    "tests": 11
+  }
+]

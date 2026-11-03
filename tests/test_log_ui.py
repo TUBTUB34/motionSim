@@ -142,6 +142,33 @@ class HeadlessLogUITests(unittest.TestCase):
 
 @unittest.skipUnless(os.environ.get('MOTIONSIM_UI_TESTS') == '1', 'requires a graphical Tk session')
 class LogUITests(unittest.TestCase):
+    def test_controller_warnings_filter_without_inventing_joint_counts(self):
+        import tkinter as tk
+        from main import SimulatorApp
+        from log_data import load_log
+        root = tk.Tk()
+        app = SimulatorApp(root)
+        try:
+            with tempfile.TemporaryDirectory() as folder:
+                path = Path(folder) / 'log.txt'
+                path.write_text('3.5 :: 1s :: 2026-04-01 12:00:00 :: 110 :: C171A10:6 :: Small blend\n'
+                                '3.5 :: 2s :: 2026-04-01 12:00:01 :: 110 :: C153A0:6 :: Stop\n')
+                app.open_logs()
+                window = app.log_window
+                window.set_data(load_log(path))
+                self.assertEqual(len(window.selected), 2)
+                self.assertIn('1 joints', window.summary.get())
+                self.assertIn('1 controller signals', window.summary.get())
+                window.joint.set('Controller')
+                window.category.set('Blend warning')
+                window.refresh()
+                self.assertEqual([e['code'] for e in window.selected], ['C171A10'])
+                self.assertIn('0 joints', window.summary.get())
+                window.reset()
+                self.assertEqual(len(window.selected), 2)
+        finally:
+            app.close()
+
     def test_changed_host_popup_explains_replacement(self):
         import queue
         import threading
@@ -257,6 +284,7 @@ class LogUITests(unittest.TestCase):
                 job, _, _, sftp = BackupTests().make_job(destination)
                 # Exercise the actual queue/dialog exchange with the worker.
                 del job.choose_destination
+                window.ip.set('127.0.0.1')
                 window.password.set('secret')
                 with patch('log_view.BackupJob', return_value=job), patch(
                         'log_view.filedialog.asksaveasfilename', return_value=str(destination)) as dialog:

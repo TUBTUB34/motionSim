@@ -1,0 +1,15 @@
+test_backup_archive_picker_reviews_program_and_matches_installation (tests.test_program_playback_ui.ProgramPlaybackUITests.test_backup_archive_picker_reviews_program_and_matches_installation) ... ok
+test_folder_lists_urps_and_reviews_only_selected_with_missing_installation_warning (tests.test_program_playback_ui.ProgramPlaybackUITests.test_folder_lists_urps_and_reviews_only_selected_with_missing_installation_warning) ... ok
+test_live_samples_cannot_overwrite_recorded_robot (tests.test_program_playback_ui.ProgramPlaybackUITests.test_live_samples_cannot_overwrite_recorded_robot) ... ok
+test_main_playback_seek_switch_pause_and_missing_model (tests.test_program_playback_ui.ProgramPlaybackUITests.test_main_playback_seek_switch_pause_and_missing_model) ... ok
+test_offline_source_selector_explains_missing_live_connection (tests.test_program_playback_ui.ProgramPlaybackUITests.test_offline_source_selector_explains_missing_live_connection) ... ok
+test_program_selection_review_export_and_invalidation (tests.test_program_playback_ui.ProgramPlaybackUITests.test_program_selection_review_export_and_invalidation) ... ok
+test_robot_snapshot_flows_to_urp_selection_and_report_without_live_telemetry (tests.test_program_playback_ui.ProgramPlaybackUITests.test_robot_snapshot_flows_to_urp_selection_and_report_without_live_telemetry) ... ok
+test_robot_source_cancelled_destination_and_host_trust_do_not_start_unapproved_work (tests.test_program_playback_ui.ProgramPlaybackUITests.test_robot_source_cancelled_destination_and_host_trust_do_not_start_unapproved_work) ... ok
+test_simulator_source_switch_preserves_both_views_and_pauses_flight (tests.test_program_playback_ui.ProgramPlaybackUITests.test_simulator_source_switch_preserves_both_views_and_pauses_flight) ... ok
+test_tcp_mounting_default_switch_and_reference_persistence (tests.test_program_playback_ui.ProgramPlaybackUITests.test_tcp_mounting_default_switch_and_reference_persistence) ... ok
+
+----------------------------------------------------------------------
+Ran 10 tests in 20.776s
+
+OK

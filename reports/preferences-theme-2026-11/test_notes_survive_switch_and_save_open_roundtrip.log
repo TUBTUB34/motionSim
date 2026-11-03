@@ -1,0 +1,6 @@
+test_notes_survive_switch_and_save_open_roundtrip (tests.test_commissioning_ui.CommissioningUITests.test_notes_survive_switch_and_save_open_roundtrip) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 1.129s
+
+OK

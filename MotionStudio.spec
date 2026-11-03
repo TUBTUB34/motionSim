@@ -9,8 +9,11 @@ root = Path(SPECPATH)
 for module in ('ui_theme.py', 'ui_dialogs.py', 'log_parser.py', 'log_data.py', 'log_view.py', 'flight_data.py',
                'flight_motion.py', 'flight_view.py', 'flight_charts.py', 'flight_pdf.py',
                'flight_transfer.py', 'flight_retrieval_view.py', 'transfer_stream.py',
-               'help_view.py', 'help_content.py', 'playback_view.py',
-               'program_check.py', 'program_motion.py', 'program_check_view.py', 'program_check_pdf.py', 'program_transfer.py'):
+               'help_view.py', 'help_content.py', 'playback_view.py', 'workspace_panel.py', 'app_shell.py', 'home_view.py',
+               'commissioning.py', 'commissioning_view.py', 'app_preferences.py', 'address_book.py', 'backup_view.py', 'robot_status.py',
+               'program_check.py', 'program_motion.py', 'program_check_view.py', 'program_check_pdf.py', 'program_transfer.py',
+               'diagnostic_view.py', 'diagnostic_pdf.py', 'diagnostic_transfer.py',
+               'diagnostic_guidance.py', 'robot_diagnostics.py'):
     if not (root / module).is_file():
         raise RuntimeError(f'Missing desktop module: {module}')
 # Python 3.14 on Windows ships Tcl/Tk scripts in ZIPs, rather than the

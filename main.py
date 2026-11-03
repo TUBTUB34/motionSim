@@ -15,7 +15,10 @@ from tooling import TOOLS, TCP_SOURCES
 from status_view import StatusView
 from telemetry import RUNTIME_STATES, enum_text, script_line_text
 from model_catalog import model_summary, show_catalog
-from ui_theme import FIELD, INK, WARNING, DANGER, ScrollableFrame, style_text, status_color
+import ui_theme as theme
+from ui_theme import ScrollableFrame, style_text, status_color
+from app_preferences import Preferences
+from address_book import SavedAddressCombobox, refresh_address_fields
 
 PAYLOAD_NOTICE = "Payload info will not be loaded without an SSH password. Blank username uses root."
 DEFAULT_IP = "10.22.33.81"
@@ -43,22 +46,35 @@ class HintEntry(ttk.Entry):
         super().destroy()
 
 class SimulatorApp:
-    def __init__(self, root):
+    def __init__(self, root, *, preferences_path=None):
         self.root = root
+        self.preferences = Preferences(preferences_path)
+        self.dark_mode = tk.BooleanVar(value=self.preferences.theme == 'dark')
+        self.address_notice = tk.StringVar(value=self.preferences.load_error or 'Type or choose an IP. Save IP keeps it for your next visit.')
         self.log_window = None
         self.flight_window = None
         self.flight_retrieval_window = None
         self.help_window = None
         self.program_check_window = None
+        self.diagnostic_window = None
+        self.backup_page = None
+        self.home_page = None
+        self.checklist_page = None
+        self.simulator_popout = None
+        self.report_tabs = None
+        self.flight_tabs = None
         self.recorded_panel = None
         self.recorded_source = None
         self.simulator_tab = None
         self.simulator_source = tk.StringVar(value='Live robot')
         for sequence, action in (('<F1>', self.open_help),
+                                 ('<Control-Key-0>', self.open_home),
                                  ('<Control-Key-1>', self.show_workspace),
                                  ('<Control-Key-2>', self.open_logs),
                                  ('<Control-Key-3>', self.open_flights),
-                                 ('<Control-Key-4>', self.open_program_check)):
+                                 ('<Control-Key-4>', self.open_program_check),
+                                 ('<Control-Key-5>', self.open_backups),
+                                 ('<Control-Key-6>', self.open_checklist)):
             root.bind_all(sequence, lambda event, action=action: self.workspace_shortcut(action), add='+')
         self.session = None
         self.settings = None
@@ -67,11 +83,12 @@ class SimulatorApp:
         self.last_status_update = 0.
         self.program_text = tk.StringVar(value="Waiting for program telemetry…")
         from ui_theme import apply_theme
-        apply_theme(root)
+        apply_theme(root, self.preferences.theme)
         root.title("UR Motion Studio")
-        root.geometry("700x760")
-        root.minsize(660, 720)
-        self.ip = tk.StringVar()
+        root.geometry("1440x900")
+        root.minsize(1120, 740)
+        self.ip = tk.StringVar(value=self.preferences.addresses[0] if self.preferences.addresses else DEFAULT_IP)
+        self.ip.trace_add('write', self.update_address_controls)
         self.username = tk.StringVar()
         self.password = tk.StringVar()
         self.installation = tk.StringVar()
@@ -98,23 +115,33 @@ class SimulatorApp:
         self.password.trace_add("write", self.update_notice)
         self.closed = False
         self.root.protocol("WM_DELETE_WINDOW", self.close)
+        from app_shell import WorkspaceShell
+        self.shell = WorkspaceShell(self)
+        self.simulator_host = self.shell.pages['simulator']
+        self.active_page = 'simulator'
+        self.setup_visible = False
         self.show_setup()
+        self.open_home()
         self.poll_id = self.root.after(33, self.poll)
 
     def clear(self):
-        if self.recorded_source and self.recorded_source.timeline:
+        popout = self.simulator_popout
+        separate_playback = (popout is not None and popout.winfo_exists() and popout.winfo_viewable()
+                             and popout.source_mode.get() == 'Flight report' and popout.source is self.recorded_source)
+        if self.recorded_source and self.recorded_source.timeline and not separate_playback:
             self.recorded_source.timeline.pause()
         self.recorded_panel = self.recorded_source = None
         self.simulator_tab = None
         self.details_view = None
         self.status_label = None
-        for widget in self.root.winfo_children():
-            if widget not in (self.log_window, self.flight_window, self.flight_retrieval_window, self.help_window, self.program_check_window):
-                widget.destroy()
+        for widget in self.simulator_host.winfo_children():
+            widget.destroy()
 
     def update_status_style(self, *_):
         if self.status_label is not None:
             self.status_label.configure(foreground=status_color(self.status.get()))
+        if hasattr(self, 'shell'):
+            self.shell.update_connection()
 
     def update_details(self, *_):
         if self.details_view is not None:
@@ -129,15 +156,16 @@ class SimulatorApp:
 
     def show_setup(self):
         self.clear()
-        self.root.geometry("1000x780")
-        self.root.minsize(760, 720)
-        heading = ttk.Frame(self.root, padding=(22, 16), style='Toolbar.TFrame')
+        self.setup_visible = True
+        self._select_page('simulator')
+        heading = ttk.Frame(self.simulator_host, padding=(22, 16), style='Toolbar.TFrame')
         heading.pack(fill='x')
-        ttk.Label(heading, text='UR MOTION STUDIO', style='Title.Panel.TLabel').pack(side='left')
+        ttk.Label(heading, text='Simulator', style='Title.Panel.TLabel').pack(side='left')
         ttk.Button(heading, text='How to', command=self.open_help).pack(side='right', padx=(14, 0))
         ttk.Label(heading, text='ROBOT CONNECTION', style='Section.Panel.TLabel').pack(side='right')
-        shell = ttk.Frame(self.root, padding=(22, 20))
-        shell.pack(fill='both', expand=True)
+        self.setup_scroll = ScrollableFrame(self.simulator_host, padding=(22, 20))
+        self.setup_scroll.pack(fill='both', expand=True)
+        shell = self.setup_scroll.content
         shell.columnconfigure(0, weight=3)
         shell.columnconfigure(1, weight=1)
         shell.rowconfigure(0, weight=1)
@@ -157,9 +185,23 @@ class SimulatorApp:
         self.setup_entries = {}
         for row, (label, variable, hint) in enumerate(fields, start=2):
             ttk.Label(panel, text=label, style='Panel.TLabel').grid(row=row, column=0, sticky="w", padx=(0, 14), pady=7)
-            entry = HintEntry(panel, textvariable=variable, hint=hint,
-                              show="*" if variable is self.password else "")
-            entry.grid(row=row, column=1, sticky="ew", pady=7)
+            if variable is self.ip:
+                addresses = ttk.Frame(panel, style='Panel.TFrame')
+                addresses.grid(row=row, column=1, sticky='ew', pady=7)
+                addresses.columnconfigure(0, weight=1)
+                entry = SavedAddressCombobox(addresses, self, textvariable=variable, width=18)
+                entry.grid(row=0, column=0, sticky='ew')
+                self.save_address_button = ttk.Button(addresses, text='Save IP', command=self.save_address)
+                self.save_address_button.grid(row=0, column=1, padx=(6, 0))
+                self.forget_address_button = ttk.Button(addresses, text='Forget', command=self.forget_address)
+                self.forget_address_button.grid(row=0, column=2, padx=(6, 0))
+                for button in (self.save_address_button, self.forget_address_button):
+                    button.bind('<Return>', lambda _event, item=button: (item.invoke(), 'break')[1])
+                self.update_address_controls()
+            else:
+                entry = HintEntry(panel, textvariable=variable, hint=hint,
+                                  show="*" if variable is self.password else "")
+                entry.grid(row=row, column=1, sticky="ew", pady=7)
             self.setup_entries[str(variable)] = entry
             entry.bind('<KeyRelease>', lambda _event, item=entry: item.state(['!invalid']))
             if variable is self.ip:
@@ -172,14 +214,16 @@ class SimulatorApp:
         model_detail = ttk.Label(model_info, textvariable=self.model_details, style='Muted.Panel.TLabel', wraplength=430)
         model_detail.pack(anchor='w', fill='x')
         ttk.Button(model_info, text='Compare robot sizes', command=lambda: show_catalog(self.root, self.model)).pack(anchor='w', pady=(10, 0))
-        notice = ttk.Label(panel, textvariable=self.notice, wraplength=430, foreground=WARNING, style='Panel.TLabel')
+        address_notice = ttk.Label(panel, textvariable=self.address_notice, wraplength=430, style='Muted.Panel.TLabel')
+        address_notice.grid(row=9, column=0, columnspan=2, sticky='w', pady=(0, 6))
+        notice = ttk.Label(panel, textvariable=self.notice, wraplength=430, foreground=theme.WARNING, style='Panel.TLabel')
         notice.grid(
-            row=9, column=0, columnspan=2, sticky="w", pady=8)
-        error = ttk.Label(panel, textvariable=self.error, wraplength=430, foreground=DANGER, style='Panel.TLabel')
-        error.grid(
             row=10, column=0, columnspan=2, sticky="w", pady=8)
+        error = ttk.Label(panel, textvariable=self.error, wraplength=430, foreground=theme.DANGER, style='Panel.TLabel')
+        error.grid(
+            row=11, column=0, columnspan=2, sticky="w", pady=8)
         ttk.Button(panel, text="Connect to robot", command=self.submit, style="Accent.TButton").grid(
-            row=11, column=0, columnspan=2, sticky="ew", pady=(8, 0))
+            row=12, column=0, columnspan=2, sticky="ew", pady=(8, 0))
         offline = ttk.Frame(shell, padding=16, style='Card.TFrame')
         offline.grid(row=0, column=1, sticky='nsew')
         ttk.Label(offline, text='OFFLINE ANALYSIS', style='Section.Panel.TLabel').pack(anchor='w', pady=(0, 12))
@@ -198,12 +242,159 @@ class SimulatorApp:
         def resize_setup(event):
             if event.widget is panel:
                 width = max(240, event.width - 40)
-                for item in (intro, model_detail, notice, error):
+                for item in (intro, model_detail, address_notice, notice, error):
                     item.configure(wraplength=width)
         panel.bind('<Configure>', resize_setup)
         offline.bind('<Configure>', lambda e: [item.configure(wraplength=max(150, e.width-32))
                                                for item in (offline_hint, offline_note)] if e.widget is offline else None)
         self.root.bind("<Return>", self.submit)
+
+    def update_address_controls(self, *_):
+        button = getattr(self, 'forget_address_button', None)
+        if button is not None and button.winfo_exists():
+            from ipaddress import ip_address
+            try:
+                saved = str(ip_address(self.ip.get().strip())) in self.preferences.addresses
+            except ValueError:
+                saved = False
+            button.configure(state='normal' if saved else 'disabled')
+
+    def remember_address(self, value):
+        try:
+            address = self.preferences.add_address(value)
+        except (ValueError, OSError) as error:
+            self.address_notice.set(str(error))
+            if isinstance(error, OSError):
+                messagebox.showerror('Could not save robot address', str(error), parent=self.root)
+            return False
+        refresh_address_fields(self.root)
+        self.update_address_controls()
+        self.address_notice.set(f'Saved {address} · Available in every robot IP list.')
+        return True
+
+    def save_address(self):
+        if self.remember_address(self.ip.get()):
+            from ipaddress import ip_address
+            self.ip.set(str(ip_address(self.ip.get().strip())))
+            self.setup_entries[str(self.ip)].state(['!invalid'])
+        else:
+            self.setup_entries[str(self.ip)].state(['invalid'])
+
+    def forget_address(self):
+        try:
+            removed = self.preferences.remove_address(self.ip.get())
+        except (ValueError, OSError) as error:
+            self.address_notice.set(str(error))
+            return
+        if removed:
+            self.address_notice.set('Removed from saved IPs. The current connection is unchanged.')
+            refresh_address_fields(self.root)
+            self.update_address_controls()
+
+    def set_theme(self, mode):
+        previous_load_error = self.preferences.load_error
+        try:
+            self.preferences.set_theme(mode)
+        except (ValueError, OSError) as error:
+            self.dark_mode.set(self.preferences.theme == 'dark')
+            messagebox.showerror('Could not save appearance', str(error), parent=self.root)
+            return False
+        theme.apply_theme(self.root, mode)
+        self.dark_mode.set(mode == 'dark')
+        if previous_load_error and self.address_notice.get() == previous_load_error:
+            self.address_notice.set('Type or choose an IP. Save IP keeps it for your next visit.')
+        return True
+
+    def toggle_theme(self):
+        self.set_theme('dark' if self.dark_mode.get() else 'light')
+
+    def _select_page(self, name):
+        self.active_page = name
+        self.shell.show(name)
+        self.shell.update_connection()
+        self.root.unbind('<Return>')
+        if name == 'simulator' and self.setup_visible:
+            self.root.bind('<Return>', self.submit)
+
+    def show_page(self, name):
+        actions = {'home': self.open_home, 'simulator': self.show_workspace, 'flights': self.open_flight_page,
+                   'logs': self.open_logs, 'backups': self.open_backups, 'reports': self.open_reports,
+                   'checklist': self.open_checklist}
+        actions[name]()
+
+    def navigate_panel(self, panel):
+        """Legacy raise/show calls select the embedded page without opening a window."""
+        routes = ((self.log_window, self.open_logs), (self.flight_window, self.open_flights),
+                  (self.flight_retrieval_window, self.open_flight_retrieval),
+                  (self.program_check_window, self.open_program_check),
+                  (self.diagnostic_window, self.open_diagnostics), (self.backup_page, self.open_backups),
+                  (self.checklist_page, self.open_checklist))
+        for candidate, action in routes:
+            if panel is candidate:
+                action()
+                return
+
+    def edit_connection_page(self):
+        if self.session is not None:
+            self.show_workspace()
+            self.simulator_source.set('Live robot')
+            self.select_simulator_source()
+        elif self.setup_visible:
+            self.show_workspace()
+        else:
+            self.show_setup()
+
+    def open_home(self):
+        if self.home_page is None:
+            from home_view import HomePage
+            self.home_page = HomePage(self, self.shell.pages['home'])
+            self.home_page.pack(fill='both', expand=True)
+        self.home_page.refresh(force=True)
+        self._select_page('home')
+
+    def open_checklist(self):
+        if self.checklist_page is None:
+            from commissioning_view import CommissioningPage
+            self.checklist_page = CommissioningPage(self, self.shell.pages['checklist'])
+            self.checklist_page.pack(fill='both', expand=True)
+        self._select_page('checklist')
+
+    def _ensure_reports(self):
+        if self.report_tabs is None:
+            self.report_tabs = ttk.Notebook(self.shell.pages['reports'])
+            self.report_tabs.pack(fill='both', expand=True, padx=12, pady=12)
+            self.program_host = ttk.Frame(self.report_tabs)
+            self.diagnostic_host = ttk.Frame(self.report_tabs)
+            self.report_tabs.add(self.program_host, text='Program Checker')
+            self.report_tabs.add(self.diagnostic_host, text='Robot Status')
+            self.report_tabs.bind('<<NotebookTabChanged>>', self._report_tab_changed)
+
+    def _report_tab_changed(self, _event=None):
+        if self.report_tabs.select() == str(self.diagnostic_host):
+            self._ensure_diagnostics()
+        else:
+            self._ensure_program_check()
+
+    def _ensure_program_check(self):
+        self._ensure_reports()
+        if self.program_check_window is None or not self.program_check_window.winfo_exists():
+            from program_check_view import ProgramCheckWindow
+            self.program_check_window = ProgramCheckWindow(self, parent=self.program_host)
+            self.program_check_window.pack(fill='both', expand=True)
+        return self.program_check_window
+
+    def _ensure_diagnostics(self):
+        self._ensure_reports()
+        if self.diagnostic_window is None or not self.diagnostic_window.winfo_exists():
+            from diagnostic_view import DiagnosticWindow
+            self.diagnostic_window = DiagnosticWindow(self, parent=self.diagnostic_host)
+            self.diagnostic_window.pack(fill='both', expand=True)
+        return self.diagnostic_window
+
+    def open_reports(self):
+        self._ensure_reports()
+        self._report_tab_changed()
+        self._select_page('reports')
 
     def open_help(self, topic='Getting started'):
         from help_view import HelpWindow
@@ -212,25 +403,26 @@ class SimulatorApp:
         self.help_window.show_topic(topic)
 
     def open_program_check(self):
-        if self.program_check_window is None or not self.program_check_window.winfo_exists():
-            from program_check_view import ProgramCheckWindow
-            self.program_check_window = ProgramCheckWindow(self)
-        self.program_check_window.deiconify()
-        self.program_check_window.lift()
+        self._ensure_program_check()
+        self.report_tabs.select(self.program_host)
+        self._select_page('reports')
+
+    def open_diagnostics(self):
+        self._ensure_diagnostics()
+        self.report_tabs.select(self.diagnostic_host)
+        self._select_page('reports')
 
     def open_recorded_playback(self, source):
         from playback_view import RecordedPlayback
         if self.simulator_tab is None or not self.simulator_tab.winfo_exists():
             self.clear()
+            self.setup_visible = False
             self.root.unbind('<Return>')
-            self.root.geometry('1180x800')
-            self.root.minsize(980, 620)
-            bar = ttk.Frame(self.root, padding=(16, 8), style='Toolbar.TFrame')
+            bar = ttk.Frame(self.simulator_host, padding=(16, 8), style='Toolbar.TFrame')
             bar.pack(fill='x')
             ttk.Button(bar, text='Connection setup', command=self.show_setup).pack(side='left')
-            ttk.Button(bar, text='Program Check', command=self.open_program_check).pack(side='right')
             ttk.Button(bar, text='How to', command=lambda: self.open_help('Recorded playback')).pack(side='right', padx=8)
-            self.tabs = ttk.Notebook(self.root)
+            self.tabs = ttk.Notebook(self.simulator_host)
             self.tabs.pack(fill='both', expand=True, padx=12, pady=(0, 12))
             self.simulator_tab = ttk.Frame(self.tabs)
             self.tabs.add(self.simulator_tab, text='Simulator')
@@ -249,6 +441,7 @@ class SimulatorApp:
         self.simulator_source.set('Flight report')
         self.select_simulator_source()
         self.tabs.select(self.simulator_tab)
+        self._select_page('simulator')
         self.root.deiconify()
         self.root.lift()
 
@@ -261,17 +454,13 @@ class SimulatorApp:
         self.source_selector.pack(side='left')
         self.source_selector.bind('<<ComboboxSelected>>', self.select_simulator_source)
         ttk.Button(bar, text='Choose flight report…', command=self.open_flights).pack(side='right')
-        ttk.Button(bar, text='Full backup…', command=self.make_full_backup).pack(side='right', padx=8)
+        ttk.Button(bar, text='Separate simulator', command=self.open_simulator_window).pack(side='right', padx=8)
 
     def select_simulator_source(self, _event=None):
         if self.simulator_source.get() == 'Flight report':
             if self.recorded_panel is None or not self.recorded_panel.winfo_exists():
-                from flight_view import FlightWindow
                 from playback_view import RecordedPlayback
-                if self.flight_window is None or not self.flight_window.winfo_exists():
-                    self.flight_window = FlightWindow(self)
-                    self.flight_window.withdraw()
-                self.recorded_source = self.flight_window
+                self.recorded_source = self._ensure_flights()
                 self.recorded_panel = RecordedPlayback(self.simulator_tab, self.recorded_source)
             self.live_simulator.pack_forget()
             self.recorded_panel.pack(fill='both', expand=True)
@@ -289,13 +478,75 @@ class SimulatorApp:
     def update_recorded_playback(self, source):
         if self.recorded_source is source and self.recorded_panel is not None and self.recorded_panel.winfo_exists():
             self.recorded_panel.sync()
+        if self.simulator_popout is not None and self.simulator_popout.winfo_exists():
+            self.simulator_popout.sync_recorded(source)
 
-    def open_flights(self):
+    def is_recording_visible(self, source):
+        main_visible = (self.active_page == 'simulator' and self.recorded_source is source
+                        and self.simulator_source.get() == 'Flight report')
+        other = self.simulator_popout
+        separate_visible = (other is not None and other.winfo_exists() and other.winfo_viewable()
+                            and other.source_mode.get() == 'Flight report' and other.source is source)
+        return main_visible or separate_visible
+
+    def open_simulator_window(self, source=None):
+        from app_shell import SimulatorPopout
+        if self.simulator_popout is None or not self.simulator_popout.winfo_exists():
+            self.simulator_popout = SimulatorPopout(self)
+        if source in ('Live robot', 'Flight report'):
+            self.simulator_popout.source_mode.set(source)
+            self.simulator_popout.change_source()
+        self.simulator_popout.deiconify()
+        self.simulator_popout.lift()
+
+    def _ensure_flight_tabs(self):
+        if self.flight_tabs is None:
+            self.flight_tabs = ttk.Notebook(self.shell.pages['flights'])
+            self.flight_tabs.pack(fill='both', expand=True, padx=12, pady=12)
+            self.flight_host = ttk.Frame(self.flight_tabs)
+            self.retrieval_host = ttk.Frame(self.flight_tabs)
+            self.flight_tabs.add(self.flight_host, text='Analysis & playback')
+            self.flight_tabs.add(self.retrieval_host, text='Retrieve from robot')
+            self.flight_tabs.bind('<<NotebookTabChanged>>', self._flight_tab_changed)
+
+    def _flight_tab_changed(self, _event=None):
+        if self.flight_tabs.select() == str(self.retrieval_host):
+            self._ensure_flight_retrieval()
+        else:
+            self._ensure_flights()
+
+    def _ensure_flights(self):
+        self._ensure_flight_tabs()
         if self.flight_window is None or not self.flight_window.winfo_exists():
             from flight_view import FlightWindow
-            self.flight_window = FlightWindow(self)
-        self.flight_window.deiconify()
-        self.flight_window.lift()
+            self.flight_window = FlightWindow(self, parent=self.flight_host)
+            self.flight_window.pack(fill='both', expand=True)
+        return self.flight_window
+
+    def _ensure_flight_retrieval(self):
+        self._ensure_flight_tabs()
+        self._ensure_flights()
+        if self.flight_retrieval_window is None or not self.flight_retrieval_window.winfo_exists():
+            from flight_retrieval_view import RobotFlightWindow
+            self.flight_retrieval_window = RobotFlightWindow(self, parent=self.retrieval_host)
+            self.flight_retrieval_window.pack(fill='both', expand=True)
+        return self.flight_retrieval_window
+
+    def open_flights(self):
+        self._ensure_flights()
+        self.flight_tabs.select(self.flight_host)
+        self._select_page('flights')
+
+    def open_flight_page(self):
+        """Navigation preserves the selected retrieval/analysis tab."""
+        self._ensure_flight_tabs()
+        self._flight_tab_changed()
+        self._select_page('flights')
+
+    def open_flight_retrieval(self):
+        self._ensure_flight_retrieval()
+        self.flight_tabs.select(self.retrieval_host)
+        self._select_page('flights')
 
     def workspace_shortcut(self, action):
         if self.root.grab_current() is None:
@@ -303,6 +554,7 @@ class SimulatorApp:
         return 'break'
 
     def show_workspace(self):
+        self._select_page('simulator')
         self.root.deiconify()
         self.root.lift()
         self.root.focus_set()
@@ -310,30 +562,28 @@ class SimulatorApp:
     def open_logs(self):
         if self.log_window is None or not self.log_window.winfo_exists():
             from log_view import LogWindow
-            self.log_window = LogWindow(self)
-        self.log_window.deiconify()
-        self.log_window.lift()
+            self.log_window = LogWindow(self, parent=self.shell.pages['logs'])
+            self.log_window.pack(fill='both', expand=True)
+        self._select_page('logs')
+
+    def open_backups(self):
+        if self.backup_page is None or not self.backup_page.winfo_exists():
+            from backup_view import BackupPage
+            self.backup_page = BackupPage(self, parent=self.shell.pages['backups'])
+            self.backup_page.pack(fill='both', expand=True)
+        self._select_page('backups')
 
     def make_full_backup(self):
-        """Use the active robot and the shared cancellable transfer workspace."""
-        self.open_logs()
-        window = self.log_window
-        if window.job is None and self.settings is not None:
-            changed_host = window.ip.get().strip() != self.settings.ip
-            window.ip.set(self.settings.ip)
-            window.username.set(self.settings.username or 'root')
-            if self.settings.password or changed_host:
-                window.password.set(self.settings.password)
-            if changed_host:
-                from log_transfer import DEFAULT_LOG_PATH
-                window.remote_path.set(DEFAULT_LOG_PATH)
-        window.make_backup(full=True)
+        """Open the dedicated backup page; creating an archive remains explicit."""
+        self.open_backups()
+        if hasattr(self.backup_page, 'select_full_backup'):
+            self.backup_page.select_full_backup()
 
     def submit(self, _event=None):
         if self.session is not None:
             return
         try:
-            self.settings = make_settings(self.ip.get().strip() or DEFAULT_IP,
+            self.settings = make_settings(self.ip.get().strip(),
                                           self.username.get().strip() or DEFAULT_USERNAME, self.password.get(),
                                           self.installation.get(), self.directory.get(), self.model.get())
         except ValueError as error:
@@ -349,6 +599,7 @@ class SimulatorApp:
                     entry.focus_set()
             return
         self.error.set("")
+        self.remember_address(self.settings.ip)
         self.installation.set(self.settings.installation)
         self.directory.set(self.settings.directory)
         self.installation_data = self.last_sample = None
@@ -365,26 +616,23 @@ class SimulatorApp:
     def show_view(self):
         self.root.unbind("<Return>")
         self.clear()
-        self.root.geometry("1180x760")
-        self.root.minsize(980, 620)
-        bar = ttk.Frame(self.root, padding=(18, 12), style='Toolbar.TFrame')
+        self.setup_visible = False
+        self._select_page('simulator')
+        bar = ttk.Frame(self.simulator_host, padding=(18, 12), style='Toolbar.TFrame')
         bar.pack(fill="x")
         ttk.Label(bar, text=f"{self.settings.model}  ·  {self.settings.ip}",
                   style='Title.Panel.TLabel').pack(side="left")
         ttk.Button(bar, text="Edit connection", command=self.edit_connection).pack(side="right", padx=6)
         self.connect_button = ttk.Button(bar, text="Disconnect", command=self.toggle_connection)
         self.connect_button.pack(side="right")
-        ttk.Button(bar, text="Logs & graphs", command=self.open_logs).pack(side="right", padx=6)
-        ttk.Button(bar, text="Program Check", command=self.open_program_check).pack(side="right", padx=6)
-        ttk.Button(bar, text="Flight reports", command=self.open_flights).pack(side="right", padx=6)
         ttk.Button(bar, text="How to", command=self.open_help).pack(side="right")
-        self.status_label = ttk.Label(self.root, textvariable=self.status, padding=(18, 8), style='Muted.TLabel')
+        self.status_label = ttk.Label(self.simulator_host, textvariable=self.status, padding=(18, 8), style='Muted.TLabel')
         self.status_label.pack(fill="x")
         self.update_status_style()
-        ttk.Label(self.root, text="Nominal model geometry · Read-only visualization · Saved payload is not a dynamics simulation\n"
+        ttk.Label(self.simulator_host, text="Nominal model geometry · Read-only visualization · Saved payload is not a dynamics simulation\n"
                   "© 2023 Universal Robots A/S. Use hereof is subject to Universal Robots A/S’ Terms and Conditions for Use of Graphical Documentation.",
                   padding=(10, 6), wraplength=950, style="Muted.TLabel").pack(side="bottom", fill="x")
-        self.tabs = ttk.Notebook(self.root)
+        self.tabs = ttk.Notebook(self.simulator_host)
         self.tabs.pack(fill="both", expand=True, padx=12)
         self.simulator_tab = ttk.Frame(self.tabs)
         self.status_panel = StatusView(self.tabs)
@@ -469,7 +717,7 @@ class SimulatorApp:
         ttk.Label(sidebar, text="Installation", style='Section.Panel.TLabel').pack(anchor="w")
         ttk.Label(sidebar, text=self.settings.remote_path, style='Muted.Panel.TLabel', wraplength=235).pack(anchor="w", pady=6)
         self.details_view = ScrolledText(sidebar, width=28, height=4, wrap="word",
-                                         background=FIELD, foreground=INK,
+                                         background=theme.FIELD, foreground=theme.INK,
                                          font=("TkDefaultFont", 10), relief="flat", padx=6, pady=6)
         self.details_view.pack(fill="both", expand=True, pady=6)
         style_text(self.details_view)
@@ -568,7 +816,9 @@ class SimulatorApp:
                     self.details.set(self.describe_installation(data))
                     if self.last_sample:
                         self.viewer.update_robot(self.last_sample, data,
-                            render=self.simulator_source.get() == 'Live robot')
+                            render=self.active_page == 'simulator' and self.simulator_source.get() == 'Live robot')
+                    if self.simulator_popout is not None:
+                        self.simulator_popout.sync_live(force=True)
                 elif kind == "host_key":
                     data.accepted = messagebox.askyesno("Verify robot SSH host",
                         f"SSH connection to {data.hostname}.\n\nHost fingerprint:\n{data.fingerprint}\n\n"
@@ -580,7 +830,7 @@ class SimulatorApp:
                 if sample and sample is not self.last_sample:
                     self.last_sample = sample
                     self.viewer.update_robot(sample, self.installation_data,
-                                             render=self.tabs.select() == str(self.simulator_tab)
+                                             render=self.active_page == 'simulator' and self.tabs.select() == str(self.simulator_tab)
                                              and self.simulator_source.get() == 'Live robot')
                     names = ("Base", "Shoulder", "Elbow", "Wrist 1", "Wrist 2", "Wrist 3")
                     self.joints.set("\n".join(f"{name:9} {math.degrees(q):8.2f}°" for name, q in zip(names, sample.joints)))
@@ -594,10 +844,25 @@ class SimulatorApp:
                     self.status.set(f"Live · RTDE · data age {age*1000:.0f} ms" if age < 1
                                     else f"Stale data · No update for {age:.1f} s · Last pose retained")
         if not self.closed:
+            self.shell.update_connection()
+            if self.home_page is not None and self.active_page == 'home':
+                self.home_page.refresh()
+            if self.simulator_popout is not None and self.simulator_popout.winfo_exists():
+                self.simulator_popout.sync_live()
             self.poll_id = self.root.after(33, self.poll)
 
     def close(self):
+        if self.closed:
+            return
+        if self.checklist_page is not None and not self.checklist_page.confirm_discard():
+            return
         self.closed = True
+        if self.checklist_page is not None:
+            self.checklist_page.shutdown()
+        if self.simulator_popout is not None:
+            self.simulator_popout.close()
+        if self.backup_page is not None:
+            self.backup_page.shutdown()
         if self.log_window is not None:
             self.log_window.shutdown()
         if self.flight_window is not None:
@@ -608,6 +873,8 @@ class SimulatorApp:
             self.help_window.shutdown()
         if self.program_check_window is not None:
             self.program_check_window.shutdown()
+        if self.diagnostic_window is not None:
+            self.diagnostic_window.shutdown()
         if self.session:
             self.session.stop()
         self.root.after_cancel(self.poll_id)
@@ -615,18 +882,24 @@ class SimulatorApp:
 
 if __name__ == "__main__":
     import sys
-    root = tk.Tk()
-    app = SimulatorApp(root)
-    if '--smoke-test' in sys.argv:
-        try:
-            from desktop_smoke import check
-            check(app)
-        except Exception:
-            import traceback
-            if sys.stderr is not None:
-                traceback.print_exc()
-            sys.exit(1)
-        finally:
-            app.close()
-    else:
-        root.mainloop()
+    from contextlib import nullcontext
+    from pathlib import Path
+    from tempfile import TemporaryDirectory
+    smoke = '--smoke-test' in sys.argv
+    # A packaged smoke run must never replace the user's saved addresses/theme.
+    with TemporaryDirectory(prefix='ur-smoke-settings-') if smoke else nullcontext() as folder:
+        root = tk.Tk()
+        app = SimulatorApp(root, preferences_path=Path(folder) / 'preferences.json' if smoke else None)
+        if smoke:
+            try:
+                from desktop_smoke import check
+                check(app)
+            except Exception:
+                import traceback
+                if sys.stderr is not None:
+                    traceback.print_exc()
+                sys.exit(1)
+            finally:
+                app.close()
+        else:
+            root.mainloop()

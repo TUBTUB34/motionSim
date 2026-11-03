@@ -1,0 +1,6 @@
+test_invalid_open_and_cancelled_save_keep_current_draft (tests.test_commissioning_ui.CommissioningUITests.test_invalid_open_and_cancelled_save_keep_current_draft) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 0.855s
+
+OK

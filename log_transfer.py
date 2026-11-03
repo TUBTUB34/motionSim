@@ -118,6 +118,8 @@ class LogJob:
             # impose a total duration limit on an actively progressing download.
             sftp.get_channel().settimeout(DOWNLOAD_IDLE_TIMEOUT)
             current = PurePosixPath(settings.path)
+            if current.suffix.lower() == '.bak':
+                current = current.with_suffix('.txt')
             backup = current.with_suffix('.bak')
             paths = []
             missing_backup = False
@@ -175,6 +177,8 @@ class LogJob:
         if len(paths) == 1 and self.save_path.with_suffix('.bak').exists():
             raise ValueError('Choose a different filename: an older .bak already exists here but the robot has no backup log.')
         staged = []
+        originals = {}
+        published = []
         try:
             for source, destination in zip(paths, destinations):
                 self.check_cancel()
@@ -184,13 +188,54 @@ class LogJob:
                         shutil.copyfileobj(original, stream)
                     stream.flush()
                     os.fsync(stream.fileno())
+            # A pair must not silently combine this download with an older
+            # current log if publishing the second file fails. Preserve the
+            # previous bytes before changing either destination.
+            if len(staged) > 1:
+                for _, destination in staged:
+                    self.check_cancel()
+                    if destination.exists():
+                        with tempfile.NamedTemporaryFile(dir=destination.parent, prefix='.ur-log-restore-',
+                                                         delete=False) as stream:
+                            originals[destination] = Path(stream.name)
+                            with destination.open('rb') as original:
+                                shutil.copyfileobj(original, stream)
+                            stream.flush()
+                            os.fsync(stream.fileno())
+                    else:
+                        originals[destination] = None
             self.check_cancel()
-            for temporary, destination in staged:
-                os.replace(temporary, destination)
+            try:
+                for temporary, destination in staged:
+                    os.replace(temporary, destination)
+                    published.append(destination)
+            except OSError as error:
+                recovery = []
+                for destination in reversed(published):
+                    original = originals.get(destination)
+                    try:
+                        if original is None:
+                            destination.unlink()
+                        else:
+                            os.replace(original, destination)
+                    except OSError:
+                        if original is not None:
+                            # Retain this copy for manual recovery when even
+                            # rollback is blocked by the destination filesystem.
+                            originals.pop(destination)
+                            recovery.append(f'{destination}: previous copy at {original}')
+                        else:
+                            recovery.append(f'{destination}: new file could not be removed')
+                if recovery:
+                    raise OSError(f'Log save failed: {error}. Recovery needed: ' + '; '.join(recovery)) from error
+                raise
             return destinations
         finally:
             for temporary, _ in staged:
                 temporary.unlink(missing_ok=True)
+            for original in originals.values():
+                if original is not None:
+                    original.unlink(missing_ok=True)
 
     def run(self):
         try:

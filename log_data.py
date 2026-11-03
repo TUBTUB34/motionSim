@@ -55,7 +55,7 @@ def select_events(events, joint="All joints", code="All codes", category="All in
                 raise ValueError("Use dates in YYYY-MM-DD format.") from None
     if start and end and start > end:
         raise ValueError("Start date must be on or before end date.")
-    return [e for e in events if (joint == "All joints" or e['joint'] == joint)
+    return [e for e in events if (joint in ("All joints", "All sources") or e['joint'] == joint)
             and (code == "All codes" or e['code'] == code)
             and (category == "All incidents" or e['category'] == category)
             and (not start or e['date'] >= start) and (not end or e['date'] <= end)]

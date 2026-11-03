@@ -21,6 +21,37 @@ class ConnectionSettings:
     def remote_path(self):
         return str(PurePosixPath(self.directory) / (self.installation + ".installation"))
 
+
+def active_robot_settings(app):
+    """An active simulator session owns file-transfer identity, including startup."""
+    session = getattr(app, 'session', None)
+    settings = getattr(app, 'settings', None)
+    if session is None or settings is None or session.stop_event.is_set():
+        return None
+    return settings
+
+
+def transfer_connection(app, ip, username, password, path='/root/log_history.txt'):
+    """Resolve credentials at action time; page fields cannot override a live robot."""
+    from log_transfer import LogConnection
+    settings = active_robot_settings(app)
+    if settings is not None:
+        if not settings.password:
+            raise ValueError('The simulator connection has no SSH password. Add it in Simulator → Connection, then reconnect to download files.')
+        ip, username, password = settings.ip, settings.username or 'root', settings.password
+    connection = LogConnection(ip.strip(), username.strip(), password, path)
+    remember = getattr(app, 'remember_address', None)
+    if callable(remember):
+        remember(connection.ip)
+    return connection
+
+
+def simulator_connection_text(settings):
+    text = f'Using simulator connection: {settings.ip} · {settings.username or "root"}'
+    if not settings.password:
+        text += '\nAdd an SSH password in Simulator → Connection to download files.'
+    return text
+
 def make_settings(ip, username, password, installation, directory="/programs", model="UR15"):
     ip = ip.strip()
     try:

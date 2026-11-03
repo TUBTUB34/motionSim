@@ -5,12 +5,63 @@ Charts open inside the application; no browser, web server or internet connectio
 is needed to view them. The simulator's motion, camera, overlays, tooling and RTDE
 behavior are retained.
 
+Start from **Home** for task shortcuts and a summary of loaded evidence or ongoing work.
+Use the persistent left navigation for **Simulator**, **Flight Reports**,
+**Logs**, **Backups**, **Reports** and **Checklist**. Switching pages preserves the selected
+files, results, filters and ongoing transfers. Reports has separate **Program
+Checker** and **Robot Status** tabs; Flight Reports has analysis and robot
+retrieval tabs. **Separate simulator** opens an optional second view for working
+beside flight charts, sharing the existing recording/playhead or live connection.
+
+## Saved IP addresses and appearance
+
+In **Simulator → Connection**, enter an address and choose **Save IP**. The editable
+IP dropdown shares your saved addresses with Logs, Backups, Program Checker and
+Robot Status. Valid connection and file-retrieval submissions also save the address
+automatically. IPv4 and IPv6 are supported; duplicates appear only once. The first
+saved address is shown when the app starts again. Choose **Forget** on the Connection
+screen to remove the selected address from the list; this does not disconnect a robot.
+
+Use **Dark mode** at the bottom of the left navigation to switch between dark and
+light appearance. The choice is saved immediately and restored on restart. Open
+pages, charts, playback position and ongoing work remain available when you switch.
+PDF reports keep their print palette.
+
+Only the IP list and appearance are stored; passwords are never saved. Preferences
+are in `%LOCALAPPDATA%\URMotionStudio\preferences.json` on Windows,
+`$XDG_CONFIG_HOME/URMotionStudio/preferences.json` (default
+`~/.config/URMotionStudio/preferences.json`) on Linux, and
+`~/Library/Application Support/URMotionStudio/preferences.json` on macOS.
+`MOTIONSIM_PREFERENCES_PATH` can override the file location for isolated testing.
+See [implementation and validation notes](docs/preferences-theme-2026-11.md).
+
+## UR guidance and commissioning records
+
+Both new UR PDFs in `docs/` now inform the Program Checker and Robot Status
+reports. Source checks cover payload transitions/inertia, contextual small blends,
+MoveP waits, controlled stops, processing load and external interfaces. References
+identify the guide and PDF pages. **Show checks** filters the review tree while PDF
+export retains every finding. Physical installation follow-up is explicitly
+unassessed until supported by an operator's inspection evidence; flight PDFs remain
+measurement reports.
+
+**Checklist** provides fourteen sourced commissioning and inspection topics. Record
+project/robot/reviewer details, your review state, evidence and follow-up dates.
+Save/open an editable JSON review or export every item and source to CSV. Navigation
+preserves drafts; closing or replacing a review checks for unsaved edits. Dates do
+not create automatic reminders. A recorded item is not an automatic pass.
+
+See [report-to-guidance mapping](docs/ur-report-guidance-2026-11.md),
+[official-source research and feature rationale](docs/ur-workflow-research-2026-11.md)
+and [whole-app review and validation](docs/app-review-2026-11.md).
+
 ## Logs & graphs
 
-1. Run `python main.py` and click **Logs & graphs**. This is also available while
+1. Run `python main.py` and click **Logs**. This is also available while
    the simulator is connected; log analysis does not require an RTDE connection.
-2. Enter the robot IP, SSH username (usually `root`) and password. The setup
-   screen's credentials are copied when the log workspace first opens.
+2. With an active simulator connection, its IP and SSH credentials are reused
+   automatically. Otherwise enter the robot IP, SSH username (usually `root`)
+   and password in the Logs page.
 3. Check **Remote log file**. The suggested path is
    `/root/log_history.txt`, matching the [UR service manual](https://www.universal-robots.com/manuals/EN/HTML/SW5_22/Content/prod-serv-man/E-series/serv-man-SD-data.htm);
    change it for your controller if necessary.
@@ -52,8 +103,10 @@ data until you exit the application. An unsuccessful load retains the previous l
 
 The parser, incident deduplication, monitored codes and joint diagnostic summaries
 are maintained in this repository's `log_parser.py`, with chart aggregation in
-`log_data.py`. Counts represent monitored joint incidents,
-not all controller messages or failure predictions. Missing joint mappings and
+`log_data.py`. Counts represent monitored joint and selected controller incidents,
+not all controller messages or failure predictions. C150–152 safety-limit proximity
+and subtype-specific C171 blend warnings appear under **Controller**, without being
+attributed to a joint. The joint overview remains separate. Missing joint mappings and
 malformed records are reported. Downloads/local files are limited to 64 MiB each (128 MiB per pair);
 chart bins widen beyond 366 periods, and more than 18 code series are combined
 into the 17 most frequent plus **Other series**, preserving total counts.
@@ -65,35 +118,44 @@ Cancellation closes the connection. No robot credentials are stored on disk.
 
 ## Robot backups
 
-Use **Simulator → Full backup…** for a combined robot-data archive. The action
-uses the current robot's SSH settings and opens the transfer workspace. Choose
-a local folder; progress and **Cancel** remain available in **Logs & graphs**.
-If SSH credentials are missing, enter them there and click **Full backup…**.
+Open **Backups** in the left navigation for a combined robot-data archive.
+Enter a **Project name**, choose a local folder, keep **Full robot backup**
+selected and choose **Create backup**. Progress, activity and **Cancel** stay on
+this page; switching pages retains the transfer. Opening Backups never starts
+a robot operation. While the simulator has an active connection, Backups, Logs,
+Flight Reports and robot report downloads automatically use its SSH credentials.
+Their credential fields are hidden; offline credential entry is shown after
+disconnecting. Reconnecting updates the shared identity. If the simulator was
+connected without an SSH password, add it in **Simulator → Connection** and
+reconnect before downloading.
+This is a robot-data archive, not a restorable controller image or the official UR
+Support File. It omits system/calibration files; use the matching UR procedures for
+those workflows.
 The archive includes the available `/programs`, `/apps`, `/data/apps`,
 `/root/log_history.txt`, `/root/log_history.bak`, and `/root/flightreports` sources.
 An edited remote log path or flight-retrieval folder is used when configured.
 Missing files/folders are listed as skipped; access or archive errors still stop
-the job. It saves `full-backup.tar` in the selected directory, adding a unique
+the job. It saves `ProjectName-YYYY-MM-DD.tar` using the UTC date at backup start,
+adding a unique
 suffix when that name already exists. Cancelling the folder chooser creates no
 robot archive. After the complete download is verified and flushed to disk, the
 app removes only its temporary TAR and directory from the robot.
 
-In **Logs & graphs**, enter the robot's SSH credentials, select **Programs**
-(`/programs`), **Apps** (`/data/apps`), or both under **Backup contents**, and click
-**Make backup…**. Both are selected by default; at least one must be selected.
-**Full backup…** always includes all available full-backup sources, independently
-of these checkboxes.
+For a smaller archive, turn off **Full robot backup** and select **Programs**
+(`/programs`), **Apps** (`/data/apps`), or both in **Advanced**. At least one must
+be selected. Full backup includes all available sources independently of these
+checkboxes. Advanced also holds the remote log and flight-folder paths.
 This works without loading logs or connecting the simulator. The app runs
 `tar -P -cf backup.tar` with the selected available directories, using a unique private temporary
 directory on the robot so an existing backup is not overwritten. The uncompressed
 archive includes absolute paths, as requested by `-P`.
 Missing directories are skipped and listed in the completion message. If neither
 directory exists, no archive is created. Permission and archive errors still fail
-the backup. **Status details…** opens the full message and lets you copy it.
+the backup. The activity panel retains the full result for review and copying.
 
-Once creation succeeds, choose where to save `backup.tar` on your PC. If you
-already selected a folder for logs or a previous backup in this session, the
-backup saves there automatically. Existing archives are preserved by adding a
+The destination folder and project name are chosen before starting. Both partial
+and full backups use the project/date filename shown on the page. Characters
+unsupported in Windows filenames are replaced with dashes. Existing archives are preserved by adding a
 unique suffix to the new backup's name when needed. Download
 progress, speed and estimated remaining time appear in the status bar. The app checks the downloaded byte count,
 flushes the file to disk and replaces the chosen destination only after the
@@ -126,7 +188,8 @@ executable outside the source tree when distributing it. Builds are unsigned.
 The build runs an offline smoke check of the packaged log and flight workspaces,
 PDF export, retrieval controls, transfer helper and robot renderer. You can repeat
 it with `URMotionStudio.exe --smoke-test` (exit code 0
-means success). It never connects to a robot.
+means success). It never connects to a robot and uses temporary preferences, leaving
+your saved addresses and appearance intact.
 The desktop log parser is included in `log_parser.py`; no separate
 graph-generator checkout or Git submodule is required to run, test or package the
 log page. The retired `Vibe_UR_Graph_generator/` directory is ignored if present,
@@ -165,9 +228,9 @@ and retains the verified legacy dimensions. Reach ratings are not used to scale
 or invent robot kinematics. Extended payload ratings depend on the manufacturer's
 operating conditions; this viewer does not enforce robot load limits.
 
-The desktop follows the supplied dark reference screenshots throughout: near-black
-canvases, navy panels, fine slate borders, cyan focus and selection, and compact
-native controls. Connection setup, the robot catalog, simulator, Status, View
+Dark mode follows the supplied reference screenshots: near-black canvases, navy
+panels, fine slate borders and cyan focus. Light mode uses pale panels, white inputs,
+dark text and blue focus. Both use compact native controls. Connection setup, the robot catalog, simulator, Status, View
 options, all log tabs, flight playback, and application confirmation/error dialogs
 share `ui_theme.py` tokens and components. Charts retain distinct series colors;
 recorded actual/target traces remain blue and lime. The theme uses the existing
@@ -252,8 +315,9 @@ simulator, Status, View options, the robot catalog, logs and filters, backups,
 flight playback, joint comparison, robot flight retrieval, exports, shortcuts
 and troubleshooting. Search matches both topic names and instructions; Escape
 closes the guide without closing the current workspace.
-**Ctrl+1** returns to the simulator/connection window, **Ctrl+2** opens logs,
-**Ctrl+3** opens flights and **Ctrl+4** opens Program Check. Workspace shortcuts
+**Ctrl+0** opens Home, **Ctrl+1** returns to the simulator/connection window, **Ctrl+2** opens logs,
+**Ctrl+3** opens flights, **Ctrl+4** opens Program Check, **Ctrl+5** opens Backups
+and **Ctrl+6** opens Checklist. Workspace shortcuts
 wait until any modal confirmation has closed. Dialogs offer **Copy details**;
 **Logs & graphs → Status details…** keeps long transfer errors readable and copyable.
 
@@ -541,6 +605,41 @@ Tests use synthetic data and mocked SCP; no physical robot is contacted.
 - [Official ROS driver's installation fixture (PolyScope 5.1)](https://github.com/UniversalRobots/Universal_Robots_ROS2_Driver/blob/main/.github/dockerursim/.vol/default.installation)
 
 ### Program Check reports and full-size flight playback
+
+**Reports → Robot Status** opens a client-facing review of robot
+logs and flight recordings. Choose a local folder containing `log_history.txt`,
+`log_history.bak` and flight ZIP/CSV files, including subfolders, or retrieve the
+sources from a robot over verified SSH. Live telemetry is not required. Retrieval
+only reads robot files; analysis stays local and does not send evidence to an AI
+service or execute a robot program.
+
+The status report leads with an overall assessment, the status of each of the
+six joints, specific program areas to review and practical next checks. Optional
+Advanced fields identify the client, robot asset and report preparer. The normal
+PDF is a concise client document; detailed incident evidence and charts are an
+optional appendix. It separates measured facts from hypotheses. A fault code,
+current peak or script line by itself is not a confirmed
+collision or a diagnosis of joint damage. Missing channels, uncertain robot
+identity and unverified time alignment are reported explicitly; controller
+uptime is not assumed to be a wall-clock timestamp.
+
+If log timestamps have no timezone, **Advanced → Log UTC offset** accepts a
+verified offset such as `+02:00` for those dates. Leave it blank when unknown.
+The report records this assumption; check daylight-saving changes before using
+one offset across a long history. Fault markers require explicit timing evidence.
+
+Robot collection creates a new local dataset with a `diagnostic_manifest.json`
+recording source identity and coverage. Completed files survive cancellation or
+partial failure. Limits are 64 MiB per log, 256 MiB per flight file, 2 GiB total,
+500 completed files and 10,000 inspected flight-directory entries. Missing,
+failed or omitted evidence is listed; partial collection never claims complete
+coverage. Use the coverage notes when deciding what additional evidence or
+physical checks are needed.
+
+Local analysis separately bounds its working set to 40 recordings, 500 candidate
+files, 512 MiB of source data and a 128 MiB estimated telemetry memory budget;
+omissions remain explicit in coverage. The source-backed analysis rules are in
+[Robot diagnostic research](docs/robot-diagnostic-research.md).
 
 Use **Program Check & PDF** from the connection screen (or **Program Check** in the
 live/flight workspace). Choose **Local folder → Choose folder…** to scan your

@@ -1,0 +1,6 @@
+...................[0;93m2026-11-02 10:41:36.628240642 [W:onnxruntime:Default, telemetry_1ds.cc:600 operator()] Failed to persist telemetry device ID; using an in-memory identifier[m
+.........
+----------------------------------------------------------------------
+Ran 28 tests in 15.321s
+
+OK

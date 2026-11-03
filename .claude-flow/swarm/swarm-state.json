@@ -50,7 +50,7 @@
       "swarmId": "swarm-1793378632574-mo2xky",
       "topology": "hierarchical",
       "maxAgents": 4,
-      "status": "running",
+      "status": "terminated",
       "agents": [
         "motionsim-windows",
         "motionsim-motionaudit",
@@ -67,7 +67,45 @@
         "consensusMechanism": "majority"
       },
       "createdAt": "2026-10-30T16:43:52.574Z",
-      "updatedAt": "2026-10-30T16:43:52.574Z"
+      "updatedAt": "2026-11-02T15:14:05.707Z",
+      "terminationReason": "no pid recorded and heartbeat is 71h stale"
+    },
+    "swarm-1793404026825-a8zf8x": {
+      "swarmId": "swarm-1793404026825-a8zf8x",
+      "topology": "hierarchical",
+      "maxAgents": 4,
+      "status": "terminated",
+      "agents": [],
+      "tasks": [],
+      "config": {
+        "topology": "hierarchical",
+        "maxAgents": 4,
+        "strategy": "specialized",
+        "communicationProtocol": "message-bus",
+        "autoScaling": true,
+        "consensusMechanism": "majority"
+      },
+      "createdAt": "2026-10-30T23:47:06.825Z",
+      "updatedAt": "2026-11-02T15:14:05.707Z",
+      "terminationReason": "no pid recorded and heartbeat is 63h stale"
+    },
+    "swarm-1793632445706-o8bulr": {
+      "swarmId": "swarm-1793632445706-o8bulr",
+      "topology": "hierarchical",
+      "maxAgents": 4,
+      "status": "running",
+      "agents": [],
+      "tasks": [],
+      "config": {
+        "topology": "hierarchical",
+        "maxAgents": 4,
+        "strategy": "specialized",
+        "communicationProtocol": "message-bus",
+        "autoScaling": true,
+        "consensusMechanism": "majority"
+      },
+      "createdAt": "2026-11-02T15:14:05.706Z",
+      "updatedAt": "2026-11-02T15:14:05.706Z"
     }
   },
   "version": "3.0.0"

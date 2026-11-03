@@ -1,5 +1,6 @@
 import io
 import errno
+import os
 from pathlib import Path
 import tempfile
 import unittest
@@ -36,6 +37,63 @@ class LogTests(unittest.TestCase):
         self.assertEqual(kind, 'loaded')
         self.assertTrue(data.metadata['save_error'])
         self.assertEqual(len(data.events), 1)
+
+    def test_pair_publish_failure_restores_previous_files(self):
+        for existing_backup in (True, False):
+            with self.subTest(existing_backup=existing_backup), tempfile.TemporaryDirectory() as folder:
+                directory = Path(folder)
+                current = directory / 'chosen.txt'
+                backup = current.with_suffix('.bak')
+                current.write_bytes(b'previous current')
+                if existing_backup:
+                    backup.write_bytes(b'previous backup')
+                sources = [directory / 'download.bak', directory / 'download.txt']
+                for source in sources:
+                    source.write_bytes(b'new ' + source.suffix.encode())
+                replace = os.replace
+
+                def publish(source, destination):
+                    if destination == current:
+                        raise PermissionError('Current log is open in another application')
+                    return replace(source, destination)
+
+                with patch('log_transfer.os.replace', side_effect=publish):
+                    with self.assertRaises(PermissionError):
+                        LogJob(save_path=current).save_downloads(sources)
+                self.assertEqual(current.read_bytes(), b'previous current')
+                if existing_backup:
+                    self.assertEqual(backup.read_bytes(), b'previous backup')
+                else:
+                    self.assertFalse(backup.exists())
+                self.assertFalse(list(directory.glob('.ur-log-*')))
+
+    def test_failed_pair_rollback_retains_previous_bytes_for_recovery(self):
+        with tempfile.TemporaryDirectory() as folder:
+            directory = Path(folder)
+            current = directory / 'chosen.txt'
+            backup = current.with_suffix('.bak')
+            current.write_bytes(b'previous current')
+            backup.write_bytes(b'previous backup')
+            sources = [directory / 'download.bak', directory / 'download.txt']
+            for source in sources:
+                source.write_bytes(b'new bytes')
+            replace = os.replace
+            calls = []
+
+            def publish(source, destination):
+                calls.append(destination)
+                if len(calls) > 1:
+                    raise PermissionError('Destination became read-only')
+                return replace(source, destination)
+
+            with patch('log_transfer.os.replace', side_effect=publish):
+                with self.assertRaisesRegex(OSError, 'Recovery needed') as caught:
+                    LogJob(save_path=current).save_downloads(sources)
+            recovery = list(directory.glob('.ur-log-restore-*'))
+            self.assertEqual(len(recovery), 1)
+            self.assertEqual(recovery[0].read_bytes(), b'previous backup')
+            self.assertIn(str(recovery[0]), str(caught.exception))
+            self.assertEqual(current.read_bytes(), b'previous current')
 
     def test_missing_remote_backup_does_not_mix_with_old_local_backup(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -201,6 +259,15 @@ class LogTests(unittest.TestCase):
         self.assertEqual(sftp.open.call_args_list, [call('/root/log_history.bak', 'rb'), call('/root/log_history.txt', 'rb')])
         self.assertEqual(loaded[0].metadata['files'], ['log_history.bak', 'log_history.txt'])
         self.assertIsNone(job.connection)
+
+    def test_remote_backup_path_loads_the_current_log_pair(self):
+        job, _, sftp = self.make_job(line().encode())
+        job.connection = LogConnection('127.0.0.1', 'root', 'secret', '/root/log_history.bak')
+        job.run()
+        self.assertEqual(self.results(job)[-1][0], 'loaded')
+        self.assertEqual(sftp.open.call_args_list,
+                         [call('/root/log_history.bak', 'rb'), call('/root/log_history.txt', 'rb')])
+        self.assertEqual(self.results(job)[-1][1].metadata['files'], ['log_history.bak', 'log_history.txt'])
 
     def test_logs_use_pipeline_and_include_appended_rows(self):
         from tests.test_transfer_stream import PipelinedFile

@@ -3,12 +3,13 @@ import tkinter as tk
 from tkinter import ttk
 
 from help_content import TOPICS
-from ui_theme import BACKGROUND, INK, ACCENT, style_tree, style_text
+import ui_theme as theme
+from ui_theme import style_tree, style_text
 
 
 class HelpWindow(tk.Toplevel):
     def __init__(self, app):
-        super().__init__(app.root, background=BACKGROUND)
+        super().__init__(app.root, background=theme.BACKGROUND)
         self.title('UR Motion Studio · How to')
         self.geometry('1040x760')
         self.minsize(700, 520)
@@ -49,8 +50,8 @@ class HelpWindow(tk.Toplevel):
         bar = ttk.Scrollbar(content, orient='vertical', command=self.text.yview)
         bar.grid(row=1, column=1, sticky='ns')
         self.text.configure(yscrollcommand=bar.set)
-        self.text.tag_configure('section', foreground=ACCENT, font=('TkDefaultFont', 11, 'bold'), spacing1=12)
-        self.text.tag_configure('body', foreground=INK)
+        self.text.tag_configure('section', foreground=theme.ACCENT, font=('TkDefaultFont', 11, 'bold'), spacing1=12)
+        self.text.tag_configure('body', foreground=theme.INK)
         ttk.Label(self, text='Offline guide · F1 opens help · Search matches topic titles and instructions',
                   style='Muted.TLabel', padding=(18, 10)).grid(row=2, column=0, columnspan=2, sticky='ew')
         self.query.trace_add('write', self._filter)

@@ -33,10 +33,16 @@ REFERENCES = (
     ('UR SpeedL velocity and acceleration', 'https://www.universal-robots.com/manuals/EN/HTML/SW5_24/Content/prod-scriptmanual/all_scripts/speedl_xd_a_t_aRot_a.htm'),
     ('UR ServoJ parameters', 'https://www.universal-robots.com/manuals/EN/HTML/SW5_24/Content/prod-scriptmanual/all_scripts/servoj_qavt0-008lookahead_time.htm'),
     ('UR configurable joint and tool speed limits', 'https://www.universal-robots.com/manuals/EN/HTML/SW5_25/Content/prod-usr-man/complianceUR7e/H_g5_sections/safetyFunctionsAndinterfaces/configurable_functions.htm'),
+    ('UR Application Deployment Workshop (May 2024), PDF pp. 25, 29–30: payload transitions and inertia', 'https://s3-eu-west-1.amazonaws.com/ur-support-site/100103/UR%20Application%20Deployment_Workshop_2024.pdf'),
+    ('UR Application Deployment Workshop (May 2024), PDF pp. 33–36: blends and process motion', 'https://s3-eu-west-1.amazonaws.com/ur-support-site/100103/UR%20Application%20Deployment_Workshop_2024.pdf'),
+    ('UR Installation Guide v1.3.3, PDF pp. 7, 10–11 (printed pp. 6, 9–10): continuity, processing and interfaces', 'https://s3-eu-west-1.amazonaws.com/ur-support-site/100103/Installation%20Guide%20V1.3.3_ENGLISH.pdf'),
+    ('UR Application Deployment Workshop (May 2024), PDF pp. 58–61: diagnostic instrumentation', 'https://s3-eu-west-1.amazonaws.com/ur-support-site/100103/UR%20Application%20Deployment_Workshop_2024.pdf'),
 )
 CATEGORIES = ('Initial payload / CoG / inertia', 'Dynamic payload changes', 'Initial TCP',
               'Dynamic TCP changes', 'Acceleration recommendations', 'Blend radius overlap',
-              'Blended motion continuation', 'Velocity specifications', 'Move distances')
+              'Blended motion continuation', 'Velocity specifications', 'Move distances',
+              'Payload transition and inertia', 'Process motion and waits',
+              'Diagnostics and program efficiency')
 
 @dataclass(frozen=True)
 class ProgramSource:
@@ -136,7 +142,7 @@ def discover_programs(path):
     installations = tuple(s for s in sources if PurePosixPath(s.name).suffix.lower() == '.installation')
     pairs = {}
     for source in (s for s in sources if PurePosixPath(s.name).suffix.lower() != '.installation'):
-        key = str(PurePosixPath(_member_name(source.member)).with_suffix('')) if source.member else str(source.path.with_suffix(''))
+        key = str(PurePosixPath(_member_name(source.member)).with_suffix('')) if source.member else source.path.with_suffix('').as_posix()
         entry = pairs.setdefault(key, {})
         suffix = PurePosixPath(source.name).suffix.lower()[1:]
         if suffix in entry:
@@ -221,7 +227,7 @@ def calls_in(script):
             comment = True
             masked[i] = ' '
     clean = ''.join(masked)
-    pattern = r'\b(movej|movel|movep|movec|optimovej|optimovel|servoj|speedj|speedl|set_payload|set_payload_mass|set_payload_cog|set_target_payload|set_tcp|motion_version_set)\s*\('
+    pattern = r'\b(movej|movel|movep|movec|optimovej|optimovel|servoj|speedj|speedl|set_payload|set_payload_mass|set_payload_cog|set_target_payload|set_tcp|motion_version_set|sleep|sync|stopj|stopl|socket_open|socket_close|position_deviation_warning|pause_on_error_code)\s*\('
     result = []
     for match in re.finditer(pattern, clean):
         prefix = clean[clean.rfind('\n', 0, match.start()) + 1:match.start()]
@@ -364,6 +370,14 @@ def configuration_values(call, definitions=None):
             vector('CoG' if call.name == 'set_payload_cog' else 'cog', 0 if call.name == 'set_payload_cog' else 1, 3, 'm from tool mount')
         if call.name == 'set_target_payload':
             vector('inertia', 2, 6, 'kg·m²', '[0,0,0,0,0,0]')
+            transition = read(argument(call, 'transition_time', 3, '0'))
+            if transition is None:
+                parts.append('transition_time: dynamic or unresolved')
+            elif not isinstance(transition, (int, float)) or transition < 0:
+                invalid = True
+                parts.append('transition_time must be a non-negative number of seconds')
+            else:
+                parts.append(f'transition_time: {transition:g} s')
     return '; '.join(parts) + '.' + (' ' + ' '.join(dict.fromkeys(notes)) if notes else ''), invalid
 
 
@@ -394,6 +408,63 @@ class ProgramReview:
     def checklist(self):
         priority = {'Review recommended': 3, 'Manual review': 2, 'Source observation': 1, 'Within guideline': 0}
         return [(category, max((f.status for f in self.findings if f.category == category), key=lambda s: priority[s], default='Manual review')) for category in CATEGORIES]
+
+
+def _deployment_findings(calls, supported, add):
+    """Apply the supplied UR workshop as review prompts, never execution proof."""
+    payloads = [call for call in calls if call.name == 'set_target_payload']
+    for call in payloads:
+        transition = literal(argument(call, 'transition_time', 3, '0'))
+        inertia = literal(argument(call, 'inertia', 2, '[0,0,0,0,0,0]'))
+        detail = ('Review the payload transition against the actual pickup/release. A nonzero transition can help with heavy parts or vacuum gripping; '
+                  'the program continues during the transition, so motion timing still needs validation. ')
+        if transition == 0:
+            detail += 'This call uses an instantaneous transition (0 s). '
+        elif isinstance(transition, (int, float)) and transition > 0:
+            detail += f'This call specifies {transition:g} s. '
+        else:
+            detail += 'Transition time is unresolved or invalid; review the source value. '
+        if inertia == [0, 0, 0, 0, 0, 0]:
+            detail += 'Zero/default inertia is present. Check whether a measured or CAD-derived inertia is needed for a long or widely distributed load; zero inertia is not automatically a fault.'
+        else:
+            detail += 'Verify inertia at the combined load CoG in kg·m², with axes aligned to the tool flange; source values do not establish the physical load.'
+        add(CATEGORIES[9], 'Manual review', detail, call, 10)
+    if not payloads:
+        add(CATEGORIES[9], 'Manual review', 'No set_target_payload call was found. Confirm the controller supports the selected payload API, and review inertia and pickup/release transition settings in the installation or external code. A missing call is not proof of an incorrect load model.', reference=10)
+
+    # Literal MoveJ/MoveL radii only: zero means a deliberate stop, while MoveP
+    # process paths can need smaller radii. Do not infer runtime branch order.
+    if supported:
+        for call in calls:
+            if call.name not in ('movej', 'movel'):
+                continue
+            radius = literal(argument(call, 'r', 4, '0'))
+            if isinstance(radius, (int, float)) and 0 < radius < .015:
+                add(CATEGORIES[5], 'Manual review', f'Configured blend radius={radius:g} m ({radius*1000:g} mm). '
+                    'The 2024 workshop suggests about 15 mm or more for general paths. Smaller radii can be intentional for clearance or process accuracy; '
+                    'review the actual path before increasing this value. This is not a safety limit or a proven motion fault.', call, 11)
+    process = [call for call in calls if call.name == 'movep']
+    if process:
+        add(CATEGORIES[10], 'Manual review', f'{len(process)} MoveP source call(s). Confirm constant TCP speed is required by the process. '
+            'Review waits, blocking I/O/gripper calls and operator actions along the executed path; plan a controlled stopl before a required wait. '
+            'Source order across definitions and branches does not prove an interrupted blend.', process[0], 12)
+    else:
+        add(CATEGORIES[10], 'Manual review', 'No MoveP call was found. Verify that waits, branches and continuously checked conditions do not interrupt blended motion. '
+            'Use appropriate controlled stops where interruption is required; external helpers and executed paths are not resolved by this review.', reference=12)
+    connections = [call for call in calls if call.name in ('socket_open', 'socket_close')]
+    if connections:
+        add(CATEGORIES[11], 'Manual review', f'{len(connections)} socket open/close source call(s). Review connection lifetime and reuse where practical. '
+            'Repeated connection setup can burden the controller; source counts do not establish how often the calls execute.', connections[0], 12)
+    add(CATEGORIES[11], 'Manual review', 'Review thread/event load and busy loops for appropriate yielding (such as sync or a wait). '
+        'A sync or sleep elsewhere in the file does not prove that every executed loop yields. Review unnecessary URCaps and interface activity if PolyScope is slow.', reference=12)
+    diagnostics = [call for call in calls if call.name in ('position_deviation_warning', 'pause_on_error_code')]
+    if diagnostics:
+        for call in diagnostics:
+            add(CATEGORIES[11], 'Source observation', 'Diagnostic command is present in source; execution and runtime settings are not proven. '
+                'Position-deviation thresholds are fractions of the controller stop deviation, not millimetres. pause_on_error_code must be re-enabled after a program stop.', call, 13)
+    else:
+        add(CATEGORIES[11], 'Manual review', 'For supervised troubleshooting, consider position_deviation_warning(True, 0.4), the workshop starting point, '
+            'or pause_on_error_code for the specific warning. Confirm support in the applicable controller manual. These optional diagnostics are not installed or executed by this report.', reference=13)
 
 
 def review_program(pair, profile='Auto (URP version)', limits=None):
@@ -472,4 +543,5 @@ def review_program(pair, profile='Auto (URP version)', limits=None):
     version_text = '; '.join(f'line {c.line}: {c.excerpt}' for c in versions[:12]) or 'No explicit motion-version call found.'
     add(CATEGORIES[5], 'Manual review', version_text + (f' ({len(versions)} source occurrences in total.)' if len(versions) > 12 else '') + ' Version 2 can reduce blend radii during planning. A static geometric overlap must not be presented as a proven skipped waypoint.', reference=2)
     add(CATEGORIES[6], 'Manual review', f'{len(blends)} motion calls have nonzero or unresolved radii. Verify continuation through branches, waits, stops and helper functions on the applicable controller. Static source inspection does not establish the executed path.', reference=3)
+    _deployment_findings(calls, supported, add)
     return ProgramReview(pair, metadata, hashes, len(script.splitlines()), calls, findings, effective_profile)

@@ -185,6 +185,14 @@ class ProgramPlaybackUITests(unittest.TestCase):
             window.tree.selection_set('finding4')
             window.show_finding()
             self.assertIn('universal-robots.com', window.details.get('1.0', 'end'))
+            full_count = len(window.review.findings)
+            window.finding_filter.set('Review recommended')
+            window.filter_findings()
+            self.assertTrue(window.tree.get_children())
+            for category in window.tree.get_children():
+                for item in window.tree.get_children(category):
+                    self.assertEqual(window.tree.item(item, 'values')[0], 'Review recommended')
+            self.assertEqual(len(window.review.findings), full_count)
             with patch('program_check_view.filedialog.asksaveasfilename', return_value=str(base/'report.pdf')):
                 window.export()
                 window.executor.submit(lambda: None).result(timeout=20)

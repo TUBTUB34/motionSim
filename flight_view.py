@@ -11,18 +11,20 @@ import numpy as np
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
 
-from flight_charts import (FlightCharts, JOINTS, METRICS, METRIC_LABELS, UNITS, BACKGROUND, PANEL, GRID,
-                           TEXT, MUTED, serialized_render, series_label, script_line_at)
+from flight_charts import (FlightCharts, JOINTS, METRICS, METRIC_LABELS, UNITS,
+                           serialized_render, series_label, script_line_at)
 from flight_data import discover_flights, load_flight
 from flight_motion import PlaybackTimeline
+from workspace_panel import WorkspacePanel
 from flight_transfer import default_library, discover_library
-from ui_theme import ACCENT, TARGET, SELECTED, style_text, style_toolbar, status_color
+import ui_theme as theme
+from ui_theme import style_text, style_toolbar, status_color
 
 
 class FlightCanvas(FigureCanvasTkAgg):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.get_tk_widget().configure(background=BACKGROUND, highlightthickness=0, borderwidth=0)
+        self.get_tk_widget().configure(background=theme.BACKGROUND, highlightthickness=0, borderwidth=0)
         self._repaint_id = None
         self.get_tk_widget().bind('<Expose>', self.refresh_pixels, add='+')
 
@@ -58,7 +60,7 @@ class FlightCanvas(FigureCanvasTkAgg):
 def label(parent, text=None, variable=None, *, muted=False, size=10, bold=False, **kwargs):
     kwargs.setdefault('anchor', 'w')
     return tk.Label(parent, text=text, textvariable=variable, background=parent.cget('background'),
-                    foreground=MUTED if muted else TEXT, font=('TkDefaultFont', size, 'bold' if bold else 'normal'),
+                    foreground=theme.MUTED if muted else theme.INK, font=('TkDefaultFont', size, 'bold' if bold else 'normal'),
                     **kwargs)
 
 
@@ -67,9 +69,9 @@ def button(parent, text, command, *, accent=False, **kwargs):
                       style='Accent.TButton' if accent else 'TButton', **kwargs)
 
 
-class FlightWindow(tk.Toplevel):
-    def __init__(self, app):
-        super().__init__(app.root, background=BACKGROUND)
+class FlightWindow(WorkspacePanel):
+    def __init__(self, app, parent=None):
+        super().__init__(app.root, page_host=parent, on_show=lambda: app.navigate_panel(self), on_hide=getattr(app, 'show_workspace', None), background=theme.BACKGROUND)
         self.app = app
         self.title('UR Motion Studio · Flight reports')
         self.geometry('1420x920')
@@ -115,28 +117,31 @@ class FlightWindow(tk.Toplevel):
     def _build(self):
         self.columnconfigure(0, weight=1)
         self.rowconfigure(1, weight=1)
-        heading = tk.Frame(self, background=PANEL, padx=20, pady=12)
+        heading = tk.Frame(self, background=theme.PANEL, padx=20, pady=12)
         heading.grid(row=0, column=0, sticky='ew')
         label(heading, 'FLIGHT REPORTS', size=15, bold=True).pack(side='left')
         button(heading, 'How to', lambda: self.app.open_help('Flight reports')).pack(side='left', padx=14)
         button(heading, 'Open simulator', self.show_simulator).pack(side='right')
+        if self.embedded and hasattr(self.app, 'open_simulator_window'):
+            button(heading, 'Separate simulator', self.show_separate_simulator).pack(side='right', padx=8)
         self.export_button = button(heading, 'Export measurements…', self.export_pdf, accent=True, state='disabled')
         self.export_button.pack(side='right', padx=10)
-        button(heading, 'Program Check…', lambda: self.app.open_program_check()).pack(side='right', padx=8)
-        button(heading, 'Retrieve…', self.open_remote_reports).pack(side='right')
-        self.body = tk.Frame(self, background=BACKGROUND, padx=12, pady=10)
+        if not self.embedded:
+            button(heading, 'Program Check…', lambda: self.app.open_program_check()).pack(side='right', padx=8)
+            button(heading, 'Retrieve…', self.open_remote_reports).pack(side='right')
+        self.body = tk.Frame(self, background=theme.BACKGROUND, padx=12, pady=10)
         self.body.grid(row=1, column=0, sticky='nsew')
         self.body.columnconfigure(0, weight=1)
         self.body.rowconfigure(0, weight=1)
         self.pages = ttk.Notebook(self.body)
         self.pages.grid(row=0, column=0, sticky='nsew')
-        chart_area = tk.Frame(self.pages, background=BACKGROUND, padx=8, pady=8)
+        chart_area = tk.Frame(self.pages, background=theme.BACKGROUND, padx=8, pady=8)
         self.pages.add(chart_area, text='Graphs')
         self.chart_area = chart_area
         chart_area.bind('<Configure>', self._resize)
         chart_area.columnconfigure(0, weight=1)
         chart_area.rowconfigure(3, weight=1)
-        files = tk.Frame(chart_area, background=PANEL, padx=10, pady=9)
+        files = tk.Frame(chart_area, background=theme.PANEL, padx=10, pady=9)
         files.grid(row=0, column=0, sticky='ew')
         files.columnconfigure(1, weight=1)
         label(files, 'Flight report', bold=True).grid(row=0, column=0, padx=(0, 10))
@@ -154,9 +159,9 @@ class FlightWindow(tk.Toplevel):
         self.metadata_label = label(chart_area, variable=self.metadata, muted=True, size=9,
                                     justify='left', wraplength=750)
         self.metadata_label.grid(row=1, column=0, sticky='ew', pady=10)
-        filters = tk.Frame(chart_area, background=BACKGROUND)
+        filters = tk.Frame(chart_area, background=theme.BACKGROUND)
         filters.grid(row=2, column=0, sticky='ew', pady=(0, 5))
-        row = tk.Frame(filters, background=BACKGROUND)
+        row = tk.Frame(filters, background=theme.BACKGROUND)
         row.pack(fill='x')
         label(row, 'Mode').pack(side='left', padx=(0, 6))
         self.mode_combo = ttk.Combobox(row, textvariable=self.view_mode,
@@ -168,7 +173,7 @@ class FlightWindow(tk.Toplevel):
         self.joint_combo.pack(side='left')
         self.joint_combo.bind('<<ComboboxSelected>>', self.redraw_charts)
         button(row, 'Reset zoom', self.reset_zoom).pack(side='right')
-        row = tk.Frame(filters, background=BACKGROUND)
+        row = tk.Frame(filters, background=theme.BACKGROUND)
         row.pack(fill='x', pady=(6, 0))
         label(row, 'View').pack(side='left', padx=(0, 6))
         self.focus_combo = ttk.Combobox(row, textvariable=self.focus, state='readonly', width=15,
@@ -190,7 +195,7 @@ class FlightWindow(tk.Toplevel):
                 values=('Per joint', 'Shared'), state='disabled')
         self.scale_combo.pack(side='left')
         self.scale_combo.bind('<<ComboboxSelected>>', self.redraw_charts)
-        self.joint_checks = tk.Frame(filters, background=BACKGROUND)
+        self.joint_checks = tk.Frame(filters, background=theme.BACKGROUND)
         self.joint_checks.pack(fill='x', pady=(6, 0))
         for column, (name, variable) in enumerate(zip(JOINTS, self.compare_joints)):
             ttk.Checkbutton(self.joint_checks, text=name, variable=variable,
@@ -200,13 +205,13 @@ class FlightWindow(tk.Toplevel):
         self.view_notice_label = label(filters, variable=self.view_notice, muted=True, size=8,
                                        wraplength=750, justify='left')
         self.view_notice_label.pack(fill='x', pady=(6, 0))
-        chart_frame = tk.Frame(chart_area, background=BACKGROUND, highlightbackground=GRID, highlightthickness=1)
+        chart_frame = tk.Frame(chart_area, background=theme.BACKGROUND, highlightbackground=theme.BORDER, highlightthickness=1)
         chart_frame.grid(row=3, column=0, sticky='nsew')
-        self.figure = Figure(figsize=(9, 6), dpi=100, facecolor=BACKGROUND)
+        self.figure = Figure(figsize=(9, 6), dpi=100, facecolor=theme.BACKGROUND)
         self.charts = FlightCharts(self.figure)
         chart_frame.columnconfigure(0, weight=1)
         chart_frame.rowconfigure(0, weight=1)
-        self.chart_viewport = tk.Canvas(chart_frame, background=BACKGROUND, highlightthickness=0, height=180,
+        self.chart_viewport = tk.Canvas(chart_frame, background=theme.BACKGROUND, highlightthickness=0, height=180,
                                         yscrollincrement=1)
         self.chart_viewport.grid(row=0, column=0, sticky='nsew')
         scroll = ttk.Scrollbar(chart_frame, orient='vertical', command=self.scroll_chart)
@@ -218,30 +223,30 @@ class FlightWindow(tk.Toplevel):
         self.chart_viewport.bind('<Configure>', self._size_plot)
         plot = self.canvas.get_tk_widget()
         plot.configure(takefocus=True)
-        plot.bind('<FocusIn>', lambda _: chart_frame.configure(highlightbackground=ACCENT))
-        plot.bind('<FocusOut>', lambda _: chart_frame.configure(highlightbackground=GRID))
+        plot.bind('<FocusIn>', lambda _: chart_frame.configure(highlightbackground=theme.ACCENT))
+        plot.bind('<FocusOut>', lambda _: chart_frame.configure(highlightbackground=theme.BORDER))
         plot.bind('<MouseWheel>', self.wheel_chart)
         plot.bind('<Button-4>', lambda e: self.scroll_chart('scroll', -48, 'units'))
         plot.bind('<Button-5>', lambda e: self.scroll_chart('scroll', 48, 'units'))
         plot.bind('<Next>', lambda e: self.scroll_chart('scroll', 1, 'pages'))
         plot.bind('<Prior>', lambda e: self.scroll_chart('scroll', -1, 'pages'))
-        self.line_axis = tk.Canvas(chart_frame, background=BACKGROUND, height=42, highlightthickness=0)
+        self.line_axis = tk.Canvas(chart_frame, background=theme.BACKGROUND, height=42, highlightthickness=0)
         self.line_axis.grid(row=1, column=0, sticky='ew')
         self.line_axis.bind('<Configure>', lambda _: self.draw_line_axis())
-        self.figure.text(.5, .5, 'Loading flight recordings…', color=MUTED, ha='center')
+        self.figure.text(.5, .5, 'Loading flight recordings…', color=theme.MUTED, ha='center')
         self.canvas.mpl_connect('motion_notify_event', self.hover)
         self.canvas.mpl_connect('button_press_event', self.graph_click)
         self.canvas.mpl_connect('draw_event', self.chart_drawn)
         self.toolbar = NavigationToolbar2Tk(self.canvas, chart_area, pack_toolbar=False)
         self.toolbar.grid(row=4, column=0, sticky='ew')
         style_toolbar(self.toolbar)
-        details = tk.Frame(self.pages, background=BACKGROUND, padx=18, pady=18)
+        details = tk.Frame(self.pages, background=theme.BACKGROUND, padx=18, pady=18)
         self.pages.add(details, text='Sample details')
         label(details, 'SELECTED SAMPLE', bold=True).pack(anchor='w', pady=(0, 12))
         self.readout_label = label(details, variable=self.readout, size=10, justify='left', wraplength=900)
         self.readout_label.pack(fill='x', anchor='n')
         details.bind('<Configure>', lambda e: self.readout_label.configure(wraplength=max(300, e.width-40)))
-        self.side = tk.Frame(self.pages, background=PANEL, padx=18, pady=18)
+        self.side = tk.Frame(self.pages, background=theme.PANEL, padx=18, pady=18)
         self.pages.add(self.side, text='Recording & script')
         self.side.columnconfigure(0, weight=1)
         self.side.rowconfigure(4, weight=1)
@@ -251,13 +256,13 @@ class FlightWindow(tk.Toplevel):
         label(self.side, 'SYNCHRONIZED SCRIPT', muted=True, size=10, bold=True).grid(row=2, column=0, sticky='w', pady=(10, 5))
         self.script_heading = label(self.side, 'No recorded script line', muted=True, size=9)
         self.script_heading.grid(row=3, column=0, sticky='w', pady=(0, 8))
-        self.script = tk.Text(self.side, background=BACKGROUND, foreground=TEXT, relief='flat',
+        self.script = tk.Text(self.side, background=theme.BACKGROUND, foreground=theme.INK, relief='flat',
                               wrap='word', height=8, width=32, font=('TkFixedFont', 10),
                               state='disabled', padx=12, pady=12)
         self.script.grid(row=4, column=0, sticky='nsew')
         style_text(self.script)
-        self.script.tag_configure('current', foreground=TARGET, background=SELECTED)
-        controls = tk.Frame(self, background=PANEL, padx=16, pady=10)
+        self.script.tag_configure('current', foreground=theme.TARGET, background=theme.SELECTED)
+        controls = tk.Frame(self, background=theme.PANEL, padx=16, pady=10)
         controls.grid(row=2, column=0, sticky='ew')
         controls.columnconfigure(3, weight=1)
         self.play_button = button(controls, 'Play', self.toggle_play, accent=True, state='disabled', width=7)
@@ -269,10 +274,10 @@ class FlightWindow(tk.Toplevel):
         combo.grid(row=0, column=2, padx=(0, 10))
         combo.bind('<<ComboboxSelected>>', self.change_speed)
         self.scrubber = tk.Scale(controls, from_=0, to=1, resolution=.001, orient='horizontal',
-                                 showvalue=False, command=self.scrub, background=PANEL, foreground=TEXT,
-                                 troughcolor=BACKGROUND, highlightthickness=1, sliderlength=15,
-                                 highlightbackground=PANEL, highlightcolor=ACCENT, takefocus=True,
-                                 activebackground=ACCENT, borderwidth=0, state='disabled')
+                                 showvalue=False, command=self.scrub, background=theme.PANEL, foreground=theme.INK,
+                                 troughcolor=theme.BACKGROUND, highlightthickness=1, sliderlength=15,
+                                 highlightbackground=theme.PANEL, highlightcolor=theme.ACCENT, takefocus=True,
+                                 activebackground=theme.ACCENT, borderwidth=0, state='disabled')
         self.scrubber.grid(row=0, column=3, sticky='ew')
         label(controls, variable=self.script_position, size=10, width=25, anchor='e').grid(row=0, column=4, padx=(10, 0))
         self.status_label = label(self, variable=self.status, muted=True, size=9, padx=16, pady=7,
@@ -280,6 +285,7 @@ class FlightWindow(tk.Toplevel):
         self.status_label.grid(row=3, column=0, sticky='ew')
         self._status_trace = self.status.trace_add('write', lambda *_:
             self.status_label.configure(foreground=status_color(self.status.get())))
+        theme.register_theme_callback(self, self.refresh_theme)
         self.bind('<Configure>', self._resize)
 
     def _resize(self, event):
@@ -386,12 +392,21 @@ class FlightWindow(tk.Toplevel):
             self.load_path(path)
 
     def open_remote_reports(self):
+        if hasattr(self.app, 'open_flight_retrieval'):
+            self.app.open_flight_retrieval()
+            return
         from flight_retrieval_view import RobotFlightWindow
         window = getattr(self.app, 'flight_retrieval_window', None)
         if window is None or not window.winfo_exists():
             window = self.app.flight_retrieval_window = RobotFlightWindow(self.app)
         window.deiconify()
         window.lift()
+
+    def show_separate_simulator(self):
+        self.app.open_simulator_window()
+        popout = self.app.simulator_popout
+        popout.source_mode.set('Flight report')
+        popout.change_source()
 
     def select_flight(self, _event=None):
         index = self.flight_combo.current()
@@ -500,6 +515,12 @@ class FlightWindow(tk.Toplevel):
         self.charts.capture_background(self.canvas)
         self.draw_line_axis()
 
+    def refresh_theme(self):
+        self.charts.refresh_theme()
+        style_toolbar(self.toolbar)
+        self.draw_line_axis()
+        self.canvas.draw_idle()
+
     def draw_line_axis(self):
         if not hasattr(self, 'line_axis'):
             return
@@ -507,19 +528,19 @@ class FlightWindow(tk.Toplevel):
         axis.delete('all')
         width = axis.winfo_width()
         if not self.charts.axes or self.report is None:
-            axis.create_text(width/2, 24, text='Script line unavailable', fill=MUTED, font=('TkDefaultFont', 9))
+            axis.create_text(width/2, 24, text='Script line unavailable', fill=theme.MUTED, font=('TkDefaultFont', 9))
             return
         plot = self.charts.axes[0]
         low, high = plot.get_xlim()
         left, right = plot.get_position().x0 * width, plot.get_position().x1 * width
-        axis.create_line(left, 1, right, 1, fill=GRID)
+        axis.create_line(left, 1, right, 1, fill=theme.BORDER)
         for timestamp in plot.get_xticks():
             if low <= timestamp <= high and high > low:
                 x = left + (timestamp-low) / (high-low) * (right-left)
                 number = script_line_at(self.report, timestamp)
-                axis.create_line(x, 1, x, 5, fill=MUTED)
-                axis.create_text(x, 13, text=str(number) if number is not None else '—', fill=MUTED, font=('TkDefaultFont', 8))
-        axis.create_text(width/2, 32, text='Script line number · recorded source', fill=MUTED, font=('TkDefaultFont', 9))
+                axis.create_line(x, 1, x, 5, fill=theme.MUTED)
+                axis.create_text(x, 13, text=str(number) if number is not None else '—', fill=theme.MUTED, font=('TkDefaultFont', 8))
+        axis.create_text(width/2, 32, text='Script line number · recorded source', fill=theme.MUTED, font=('TkDefaultFont', 9))
 
     def change_mode(self, _event=None):
         comparing = self.view_mode.get() == 'Compare joints'
@@ -733,7 +754,9 @@ class FlightWindow(tk.Toplevel):
         now = time.monotonic()
         delta = now - self._last_tick
         self._last_tick = now
-        if self.timeline and self.timeline.playing and not self.loading and (self.state() != 'withdrawn' or getattr(self.app, 'recorded_source', None) is self):
+        visible = self.winfo_viewable() or (self.app.is_recording_visible(self) if hasattr(self.app, 'is_recording_visible')
+                                           else getattr(self.app, 'recorded_source', None) is self)
+        if self.timeline and self.timeline.playing and not self.loading and visible:
             self.timeline.tick(delta)
             self.update_time(self.timeline.elapsed)
         self.after_id = self.after(30, self.poll)
@@ -745,7 +768,7 @@ class FlightWindow(tk.Toplevel):
         self.charts.axes = []
         self.charts.playheads = []
         self.charts.backgrounds = None
-        self.figure.text(.5, .5, text, color=MUTED, ha='center', wrap=True)
+        self.figure.text(.5, .5, text, color=theme.MUTED, ha='center', wrap=True)
         self.canvas.draw_idle()
 
     def hide(self):
@@ -760,8 +783,10 @@ class FlightWindow(tk.Toplevel):
             return
         self.closed = True
         self.after_cancel(self.after_id)
-        if self.canvas._repaint_id is not None:
-            self.canvas.get_tk_widget().after_cancel(self.canvas._repaint_id)
-            self.canvas._repaint_id = None
+        for name in ('_repaint_id', '_idle_draw_id', '_event_loop_id'):
+            callback = getattr(self.canvas, name, None)
+            if callback is not None:
+                self.canvas.get_tk_widget().after_cancel(callback)
+                setattr(self.canvas, name, None)
         self.executor.shutdown(wait=False, cancel_futures=True)
         self.destroy()

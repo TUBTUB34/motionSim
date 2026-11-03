@@ -1,0 +1,514 @@
+[
+  {
+    "name": "app_shell.py",
+    "sha256": "a9345cdf15c362d5dd0954da16a732c077f093aa5f35b0a453a0853715d16ac0"
+  },
+  {
+    "name": "backup_transfer.py",
+    "sha256": "d68ea114e2b9e48a8889fc1cad10b68aa03560312bc0ba2896182ac3ec43fcab"
+  },
+  {
+    "name": "backup_view.py",
+    "sha256": "60ad9ef59930ec40a77f9e01cde6d470f31ac08df7c5bc8d9f69c1f4a791cb98"
+  },
+  {
+    "name": "build_windows.bat",
+    "sha256": "81ec1fe79b1a8fbcbcfb48d2cf194ee4656e5ef5b68032ba92b1d1350ddf9db5"
+  },
+  {
+    "name": "commissioning.py",
+    "sha256": "a954955b7a2679ba9260e582a73a98bef75576a39e4adf56c36920b538dea8ce"
+  },
+  {
+    "name": "commissioning_view.py",
+    "sha256": "34234f2ddb37489918b2f406baebb8242695aca401b492de2dddcab57401e4bc"
+  },
+  {
+    "name": "connection.py",
+    "sha256": "bf7e5d242aa9ddc2bd738ab647de92808fd31034516905aa41953eb32e72dc77"
+  },
+  {
+    "name": "desktop_smoke.py",
+    "sha256": "04a8dfa370d8113247974513ba98addb6dc319a3c94656d921b15661df94b41c"
+  },
+  {
+    "name": "diagnostic_guidance.py",
+    "sha256": "aea466bc43a88771e3a3a9b9bce3e9e6dcdc556802be0a9c125e159fad1dbd75"
+  },
+  {
+    "name": "diagnostic_pdf.py",
+    "sha256": "013cbad678514924c7e59dbe61a7f0293390531e8a750e83e47bfa46e2b57216"
+  },
+  {
+    "name": "diagnostic_transfer.py",
+    "sha256": "4372ea301d3bcf1c975b5d1842ca6a4d80cfaf7750de8fcdc9c853ad7a60535a"
+  },
+  {
+    "name": "diagnostic_view.py",
+    "sha256": "922818492abd7507a794322e6cadd369a305786990fe67f875c68fdb85cb398c"
+  },
+  {
+    "name": "flight_charts.py",
+    "sha256": "3f4760b9580a625bcf9434a9fa716b56ebe370a2e794b6a52457e75ec9928e27"
+  },
+  {
+    "name": "flight_data.py",
+    "sha256": "f2e7a6200ade6d72288bbaa3d61b3f7eb0a44cc30d24520874cc02e474486c0f"
+  },
+  {
+    "name": "flight_motion.py",
+    "sha256": "3c498306d79eb177501af3d4fc35acb45f13858914de29d8581d8cc822e8131b"
+  },
+  {
+    "name": "flight_pdf.py",
+    "sha256": "186d7153c4d986e97d3f3b1f277c44e151b92f35684b5fd07861ce827ea4509a"
+  },
+  {
+    "name": "flight_retrieval_view.py",
+    "sha256": "2aaac6a88685cd4e9f2b193e13c4fe699724b7ad2a82b4ef2cbf3da615a2ede0"
+  },
+  {
+    "name": "flight_transfer.py",
+    "sha256": "f8aab97508511a97973c99cc4ed74375c477422aaf8ae71fd060909139a05827"
+  },
+  {
+    "name": "flight_view.py",
+    "sha256": "d46a656f0cc4edb73a21a67df4fa090b2ea57ba2920dbaca06694d918e517b1a"
+  },
+  {
+    "name": "help_content.py",
+    "sha256": "d408ddbaebc0b9e09a61eeaa9e42b6884db1fbe8f33613384d3bcb48d225ca9e"
+  },
+  {
+    "name": "help_view.py",
+    "sha256": "4fee091def97c668a5428faee9b7f55f4d1d37f9239a00d496a95cd2abed9bac"
+  },
+  {
+    "name": "home_view.py",
+    "sha256": "6bd33cbeeee107fa95017c56d2e1866a5e0e9909fad5bc4ff687bec803c22a21"
+  },
+  {
+    "name": "installation.py",
+    "sha256": "48348ba962f204ffa3ef0a958a826b06dbc68dd3f8491e413763992f8bda7a46"
+  },
+  {
+    "name": "kinematics.py",
+    "sha256": "296c990abe7776bba166e51fa6336b2da0840292d0aad8302317995982788ceb"
+  },
+  {
+    "name": "log_data.py",
+    "sha256": "c61ddb904b7ff62f61731e6c89bdf365d015456b421787fe5cba3e69da01ef2b"
+  },
+  {
+    "name": "log_parser.py",
+    "sha256": "a0ae4e91981d8961a89c936f3d876b83f8f2ffa7a07f2aea300002162b5ac944"
+  },
+  {
+    "name": "log_transfer.py",
+    "sha256": "dcf51503f3c597818fc1baea83958c6c09ae7dc8afce25ade1149c44f0942914"
+  },
+  {
+    "name": "log_view.py",
+    "sha256": "a26f58388efc3c59ae82faeceb48f8132be9af3d10ed390c0180fa5dbe4582b7"
+  },
+  {
+    "name": "main.py",
+    "sha256": "e66e440cb672dcbb6132e7011216e6540e7913d18119577506e0b8e37c247e0a"
+  },
+  {
+    "name": "model_catalog.py",
+    "sha256": "53cbad86c0ec2c72460b371976fe7d3e2ba66a9586e38b4b5afcafcf411013da"
+  },
+  {
+    "name": "MotionStudio.spec",
+    "sha256": "831dbad1a15d8747875eb2171bfa264d2842314b7a393135c74d6b8f7083c931"
+  },
+  {
+    "name": "playback_view.py",
+    "sha256": "6ad6edeac1782d6a7741a7833dc6af76b86d2b0c711a275fe1193db47a789b22"
+  },
+  {
+    "name": "program_check.py",
+    "sha256": "bb7e7dbe477235b4ad70f200fbff5599289ee511ab7108cccbde5f9d1df5cf64"
+  },
+  {
+    "name": "program_check_pdf.py",
+    "sha256": "8f786d1385b684051673755ac8cef06ad4c11f1db46dfcd8fdf7f244b0357a12"
+  },
+  {
+    "name": "program_check_view.py",
+    "sha256": "ad08f909623e7603c5fa59540c5022fecc496f664d3708092f27ffcf80db67cb"
+  },
+  {
+    "name": "program_motion.py",
+    "sha256": "183700636af29aa2ead1e3963842b4935fdf0e8c78e408ec6c59a644b49180c9"
+  },
+  {
+    "name": "program_transfer.py",
+    "sha256": "d2d456699c51b05d6aa9e3d49ecff262f4294e9a8ff1e26db2f435c53a2977c7"
+  },
+  {
+    "name": "rasterizer.py",
+    "sha256": "832c3297ae6c3abd050292aadf159f1a0bebbb5cb9e3e908743417c739d9ad8d"
+  },
+  {
+    "name": "requirements-build.txt",
+    "sha256": "aaba059ec420c5bc343f8bbe92f835e653c5474a079b55b2767c270eee82167f"
+  },
+  {
+    "name": "requirements.txt",
+    "sha256": "8b0f38f44aa658b5cc1eea33a2eaf11fef0c5c518e73edeee05d9fd85238fe8b"
+  },
+  {
+    "name": "robot_assets.py",
+    "sha256": "915a573dc11d6c0f95b5bd9a8d456f062e00384db4bf9adc762bb5470f1fb73b"
+  },
+  {
+    "name": "robot_diagnostics.py",
+    "sha256": "38f27fd998b823525819152a1acf0c7f9b1d364188103d2962897d036be9a168"
+  },
+  {
+    "name": "robot_status.py",
+    "sha256": "09aa4f6ece725431e75f2d0a7cbf7f0c71318e3d7eed607c5f9a206f9609f1cd"
+  },
+  {
+    "name": "rtde_client.py",
+    "sha256": "96ea0e971dc536808ab84b8383cb44ef737740278c5057b841149276169a2709"
+  },
+  {
+    "name": "session.py",
+    "sha256": "6aba63aa07615b1b6329dafedab86dd5899fe1fe83710371768bb2a3e7c9f355"
+  },
+  {
+    "name": "ssh_trust.py",
+    "sha256": "f2224600cb167faf34ffd77dda0e89ead9b46c78d90d27cbd58e23198f6a5253"
+  },
+  {
+    "name": "status_view.py",
+    "sha256": "4e0e44d13164e5e90035e967589f28a764269dbf286efde10f96f0022b2c15a3"
+  },
+  {
+    "name": "telemetry.py",
+    "sha256": "3e08109ba669b47ee5f0c9b3bfe919c4839927a08bcf80907d6a6d44f54c40f5"
+  },
+  {
+    "name": "tooling.py",
+    "sha256": "c704f2692437cac4576d45e2beacb576d3a950c894c6a3837d9c2046b9b842ac"
+  },
+  {
+    "name": "transfer.py",
+    "sha256": "c4fed9aadeb4112a697274f3910716edbed44999d5835b7c341ddcc342bdece7"
+  },
+  {
+    "name": "transfer_stream.py",
+    "sha256": "e28621c94752023fe09cd6521b6d060816af314ef0cba9d2d32f963e4094c05a"
+  },
+  {
+    "name": "ui_dialogs.py",
+    "sha256": "79538c8f66eafcff78490406acdedfad50f83a2aeccde036a7b351e2f9e1adee"
+  },
+  {
+    "name": "ui_theme.py",
+    "sha256": "4dbc0a4964ea60aff38446670d09d6c3defcbfb535c7864af9c14adaa0110f71"
+  },
+  {
+    "name": "view.py",
+    "sha256": "941166516efd19a8c1d50d4d65299595a4582e865f792d1497baca9f1753d25c"
+  },
+  {
+    "name": "workspace_panel.py",
+    "sha256": "7fe5277068930448ed6d14e6e7c0275f3a7e6b53e5dd05b318cc967143bf2080"
+  },
+  {
+    "name": "tests/__init__.py",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "name": "tests/test_backup.py",
+    "sha256": "3fe0b6c73485a930da4e79d78712b0fa0fc1967c4f08fd17c371a08655f459cb"
+  },
+  {
+    "name": "tests/test_backup_page.py",
+    "sha256": "3623d929a704141e076c54215fbd31a9328a15415076973663416a64284b0b7e"
+  },
+  {
+    "name": "tests/test_camera.py",
+    "sha256": "da1bc4cca006feab83f0f74805f0583f3a37d5cb0aadf0ca88a9e09bd7703408"
+  },
+  {
+    "name": "tests/test_commissioning.py",
+    "sha256": "c5e25f912a4e3cbcead1c962d519c3a8fa29b720cf8fc167d072f349b2dd8886"
+  },
+  {
+    "name": "tests/test_commissioning_ui.py",
+    "sha256": "f4565beda5f194085a5236707a9c6e01ad36873dea11837af58dfbba67f44d85"
+  },
+  {
+    "name": "tests/test_connection_sharing.py",
+    "sha256": "e7fdb494e52b13eb2f27d48deb25957dbe392917248e233976981c7d209714f1"
+  },
+  {
+    "name": "tests/test_core.py",
+    "sha256": "115ecdf5aed777bb4bf275728e34fa47a4e51e3d4d4bca1b1f74c8e1dc39eddd"
+  },
+  {
+    "name": "tests/test_design_ui.py",
+    "sha256": "20895a232405330e0e03e079c045b48fa8d2bdb5b6876dddfec3507277d70941"
+  },
+  {
+    "name": "tests/test_diagnostic_guidance.py",
+    "sha256": "945fe62e180943344e3205cec91b1738ecbf842804918812a7a4bd5d0e49c55d"
+  },
+  {
+    "name": "tests/test_diagnostic_pdf.py",
+    "sha256": "ff881eca480758e519f9954c2f302b474eb1d87567713b3e2dc0d0ad00b584cd"
+  },
+  {
+    "name": "tests/test_diagnostic_transfer.py",
+    "sha256": "e227d9989f3a8e05040b38ddfbeac260af7b4db932ecb99eefcef3986c36b00b"
+  },
+  {
+    "name": "tests/test_diagnostic_ui.py",
+    "sha256": "fa8c1c56445018b24057bf9cae4770209ae74cfcd15cf2920c7b46accb510c6a"
+  },
+  {
+    "name": "tests/test_flight_data.py",
+    "sha256": "123fe752200e3189bee059f7e63950bddabd9d6a4feeac8acdebc438994745c8"
+  },
+  {
+    "name": "tests/test_flight_motion.py",
+    "sha256": "94d4b3353a77475a67dd462443276d06230f5cb3c7bcbe6596d58544f482bbf3"
+  },
+  {
+    "name": "tests/test_flight_pdf.py",
+    "sha256": "9ba0c1c55815fcae9d363cca14621f4ba4fffaebbe62057c4ee18e8e0d885088"
+  },
+  {
+    "name": "tests/test_flight_retrieval_integration.py",
+    "sha256": "32b88ac1594639f9ae043e368a4765e938abb588375f461b72f0fef5a983d13b"
+  },
+  {
+    "name": "tests/test_flight_retrieval_ui.py",
+    "sha256": "470655d35ee1a94b04d79344237c31298601cfa68f1f74e3f270a201d0dfd207"
+  },
+  {
+    "name": "tests/test_flight_transfer.py",
+    "sha256": "98c65600ccd5307ace0ffa768cec5a0d677144799dd66c7564b9af5c67a348b6"
+  },
+  {
+    "name": "tests/test_flight_ui.py",
+    "sha256": "9014abfa6d6e487710a08ce63f0cefa4324c579b759471fed913e23a63cad3c5"
+  },
+  {
+    "name": "tests/test_home.py",
+    "sha256": "9610d750f9c0074b108aa7f2446aa1273a8122f605de2a64f87d1a85a138d3c4"
+  },
+  {
+    "name": "tests/test_joint_comparison.py",
+    "sha256": "36c8d5bba1c5995750daece68db41910e346f2ae4af568f386fe3926d86db4f7"
+  },
+  {
+    "name": "tests/test_log_parser.py",
+    "sha256": "4bee182247b0bf262eaa4895bfbddf00408bcc7301d6bd6c4c97027012b1ca0e"
+  },
+  {
+    "name": "tests/test_log_ui.py",
+    "sha256": "93b4a4df0fb03fc22daf744c55f1a2261042fba51043c09b420ac8a9560f2d52"
+  },
+  {
+    "name": "tests/test_logs.py",
+    "sha256": "6c81e8ab085779e3e466c2a996b721b8a45c0e410fdf115b71dc6b09a6c6f604"
+  },
+  {
+    "name": "tests/test_model_catalog.py",
+    "sha256": "fa49d9cfe756b41bc44a5bb6087870e393c8228f4057445eb4d8c80723d6ebcf"
+  },
+  {
+    "name": "tests/test_program_archive.py",
+    "sha256": "f73ba9b9df8e3d0bf62a4d9ae4b45e3a1ce0186b5e791ed9384fb45ae6577057"
+  },
+  {
+    "name": "tests/test_program_backup.py",
+    "sha256": "a837743413156b544f7cd20d1b7b6a154e77f4c4483ad9b2f5e0237d00e909f8"
+  },
+  {
+    "name": "tests/test_program_check.py",
+    "sha256": "151fabd18946efeeeac8ceb3b2243c67f9da45d407422d72752c338e58efe2af"
+  },
+  {
+    "name": "tests/test_program_check_pdf.py",
+    "sha256": "84c7229115b7fe7af5f91f78c53a4b3954e2c682d46872ab86afae03c565a6ee"
+  },
+  {
+    "name": "tests/test_program_motion.py",
+    "sha256": "6ed43d388c9d7a1f325adf8b011341e18f75e7ee6863ed455f6bbd1be3beea3a"
+  },
+  {
+    "name": "tests/test_program_playback_ui.py",
+    "sha256": "3a5f3b08c3840bd78ba039117af2a950f0746f3ab6149c28fe992261990c1d7f"
+  },
+  {
+    "name": "tests/test_program_transfer.py",
+    "sha256": "f0fe5d207b335aa12a03b8ebb3c5a4f58285ee9db4086cc8f1b4ca5f1231936c"
+  },
+  {
+    "name": "tests/test_rasterizer.py",
+    "sha256": "f53d5981b2f7bde56e83eba694bdbefba6cf802b8cc7c96b0685e20af9eb93a6"
+  },
+  {
+    "name": "tests/test_robot_assets.py",
+    "sha256": "e7df2dd5edb96abbcef9596cccf67c56b526ff822965b252dcd62782740aed98"
+  },
+  {
+    "name": "tests/test_robot_diagnostics.py",
+    "sha256": "f27bfb07c736eec31827f4f07f76afef78746cf039e76d75f958a41b5b8989d7"
+  },
+  {
+    "name": "tests/test_robot_status.py",
+    "sha256": "64064dc125b9e17575298aa4524b6832fc183119fc2bcd7ac6e20bc6cab8840f"
+  },
+  {
+    "name": "tests/test_robot_status_pdf.py",
+    "sha256": "a967617f35904d58c4dca8df43c215b095b4f454cdb3dc08442bf404206c21eb"
+  },
+  {
+    "name": "tests/test_ssh_trust.py",
+    "sha256": "0f30b9aa692f0b3796629475f36aa07a59812bee6eb84cd478c5a481d8370f46"
+  },
+  {
+    "name": "tests/test_telemetry.py",
+    "sha256": "40d94adf98422e49aee9a2b29f9e470bb68a7712ab4e2edb1642b91beee7f369"
+  },
+  {
+    "name": "tests/test_theme.py",
+    "sha256": "ec2fb826ae59eec5c5cac31d75f94e49221b12fad69ab1d514751efefa2d7ae3"
+  },
+  {
+    "name": "tests/test_tooling.py",
+    "sha256": "32b46b62c98c10c2ba17deee13848490de8797dd91a052977a5d0f10355ec050"
+  },
+  {
+    "name": "tests/test_transfer.py",
+    "sha256": "635ac7d67de3734a4206aef0dc184d611c390f7bb0171f2e24c4e1135cb1bc88"
+  },
+  {
+    "name": "tests/test_transfer_stream.py",
+    "sha256": "e33caa353db05d0f9c98b2a28ef785b5fa271bfee6fa54a90acf3657575cee5c"
+  },
+  {
+    "name": "tests/test_ui.py",
+    "sha256": "e6cafee2b31462c6639795a548ab8e6c77e36693266465301d176d87afd2969a"
+  },
+  {
+    "name": "tests/test_workspace_ui.py",
+    "sha256": "43f78d2639f178e7930399238ca37106fae0cef1707a95990659f7944162bae7"
+  },
+  {
+    "name": "assets/robots/LICENSE-BSD.txt",
+    "sha256": "143077f9f6a8de5a99f78c2c2472801fb53cf240277ef661642f079b9acdfff8"
+  },
+  {
+    "name": "assets/robots/LICENSE-UR-GRAPHICS.txt",
+    "sha256": "f173efc8bd4b0ffaec2280b2dd126805ff7dddee8758b3d869132afc1776daa8"
+  },
+  {
+    "name": "assets/robots/manifest.json",
+    "sha256": "013c72d6fae77c057eed360553f64788587cb00efb8fdf74a3e32d108cca7fef"
+  },
+  {
+    "name": "assets/robots/README.md",
+    "sha256": "b3e3c8406fde4a85b819c70b360492524531369cea4728ab02ba34bade604ee8"
+  },
+  {
+    "name": "assets/robots/ur10.npz",
+    "sha256": "9213ffabce7379547d06271f6671241966741044e813f59fae985e3344e1b1d7"
+  },
+  {
+    "name": "assets/robots/ur10e.npz",
+    "sha256": "3f278931d4395f10de78b277e414935a3f522f228acd3aa4d1bba75f9eff35cc"
+  },
+  {
+    "name": "assets/robots/ur12e.npz",
+    "sha256": "3f278931d4395f10de78b277e414935a3f522f228acd3aa4d1bba75f9eff35cc"
+  },
+  {
+    "name": "assets/robots/ur15.npz",
+    "sha256": "d2b225cb60f8269ac21105564eae24a4741c8f12239102971ece69465d2d6507"
+  },
+  {
+    "name": "assets/robots/ur16e.npz",
+    "sha256": "9a8203431c82fcb9d3d978191fbace42b7faf74445ad7966071f21173b81df1a"
+  },
+  {
+    "name": "assets/robots/ur18.npz",
+    "sha256": "3b72ebfe654478fae6d7064e614c240e6bbcbecacde25748544f3f97f5153cf0"
+  },
+  {
+    "name": "assets/robots/ur20.npz",
+    "sha256": "e4cd9311c07a57eb272d73cfa627019eee959e44a3461f858b5a3ea9aed6ff56"
+  },
+  {
+    "name": "assets/robots/ur3.npz",
+    "sha256": "ad774ab94765f26bd16f6dd8c6cd86b0179895a69281b80adf7be989fdfe3d92"
+  },
+  {
+    "name": "assets/robots/ur30.npz",
+    "sha256": "714a6096962043f2a6e7966f66ad1198bef2a201a431cbc7fbe2f265440ad145"
+  },
+  {
+    "name": "assets/robots/ur3e.npz",
+    "sha256": "b7a68d794a17cf87b7d8ad62fce4f7966b644107a7259fd5afa1d771afbf1023"
+  },
+  {
+    "name": "assets/robots/ur5.npz",
+    "sha256": "7b458c23f97b2cdc6779a1bc7c694c8670d858826b80f41ec2abdf5937aa5ead"
+  },
+  {
+    "name": "assets/robots/ur5e.npz",
+    "sha256": "2e6c8f605323be12e3ae45c7b4987b9b0c6dea37c769fed922f97bd9d58bd6c9"
+  },
+  {
+    "name": "assets/robots/ur7e.npz",
+    "sha256": "2e6c8f605323be12e3ae45c7b4987b9b0c6dea37c769fed922f97bd9d58bd6c9"
+  },
+  {
+    "name": "assets/robots/ur8long.npz",
+    "sha256": "0941697f1377ba7228e7168bc407094e9347b362efa49561d32236aed777a241"
+  },
+  {
+    "name": "assets/flightreports/psm.ura",
+    "sha256": "5f6956544160471b796815093bb306e3361852724f0bd0bda70cd1c83d9e5b91"
+  },
+  {
+    "name": "assets/flightreports/recording20261012_15_10_47.zip",
+    "sha256": "0a0b042a818c3e00c3eb53ea8f4e267b710c7d70049d54e7bf3208f09c8b772b"
+  },
+  {
+    "name": "assets/flightreports/recording20261012_15_11_33.zip",
+    "sha256": "5caa9160182397d9374db46658223c3dd73492934afaa91025ee3e37bac6bed4"
+  },
+  {
+    "name": "assets/flightreports/recording20261013_18_06_08.zip",
+    "sha256": "942476ef1a7c45a10d67c65cc228a598b70623d63c649b9f489c49eaa0dcc796"
+  },
+  {
+    "name": "assets/flightreports/recording20261013_19_06_14.zip",
+    "sha256": "799ceeccbacc269b1b3b6258840b992597615ec43ac987f28e6c3a061ac5db3e"
+  },
+  {
+    "name": "assets/flightreports/recording20261013_19_12_20.zip",
+    "sha256": "e65cccd216ab4bfaca010baf9f80de5d50d9450e1287976fb47b6731de232968"
+  },
+  {
+    "name": "assets/flightreports/robot_configuration20261014_19_16_56.zip",
+    "sha256": "342c94f7a8e0a7b13906b291b001aa8c5b1dda44c2cb4c48dd744a13c703ce9b"
+  },
+  {
+    "name": "docs/Installation Guide V1.3.3_ENGLISH.pdf",
+    "sha256": "5061916e32aeb9151ebf074d13cdf638e35c84a3ea03cf6ae08694c784cb534c"
+  },
+  {
+    "name": "docs/UR Application Deployment_Workshop_2024.pdf",
+    "sha256": "c9ada93c7bcabb6626adc8fe097039077962b1bca11c9fdb1515fddaf6932b97"
+  }
+]

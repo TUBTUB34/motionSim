@@ -168,11 +168,12 @@ class FlightRetrievalUITests(unittest.TestCase):
         self.assertTrue(current.closed)
         self.assertTrue(self.window.refresh_button.instate(['disabled']))
 
-    def test_edited_credentials_cannot_download_from_old_selection(self):
+    def test_edited_simulator_credentials_cannot_download_from_old_selection(self):
         self.listed()
         previous = self.window.controller
         self.window.tree.selection_set(self.entries[0].path)
-        self.window.password.set('updated-fixture-password')
+        from dataclasses import replace
+        self.app.settings = replace(self.app.settings, password='updated-fixture-password')
         self.window.download_selected()
         self.assertTrue(previous.closed)
         self.assertIsNot(previous, self.window.controller)

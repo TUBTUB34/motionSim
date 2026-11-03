@@ -1,0 +1,100 @@
+{
+  "recorded_at": "2026-11-02T18:53:57.344227+00:00",
+  "headless": {
+    "command": ".venv/bin/python -m unittest discover -s tests -v",
+    "exit_code": 0,
+    "discovered": 477,
+    "passed": 355,
+    "graphical_skips": 122,
+    "log": "linux-tests.log"
+  },
+  "desktop_smoke": {
+    "command": ".venv/bin/python main.py --smoke-test",
+    "exit_code": 0,
+    "log": "linux-source-smoke.log",
+    "preferences": "TemporaryDirectory owned by the smoke CLI; removed on exit"
+  },
+  "visual_review": {
+    "captures": 26,
+    "surfaces_per_mode": 13,
+    "dimensions": [
+      1120,
+      740
+    ],
+    "receipt": "visual-qa.json"
+  },
+  "preferences_model_tests_after_portability_fix": {
+    "passed": 11
+  },
+  "new_native_test_suites": {
+    "tests.test_preferences_ui": 9,
+    "tests.test_theme_switch": 4,
+    "tests.test_surface_themes": 3
+  },
+  "network": "No physical controller operations; robot actions mocked in tests",
+  "headless_source_hashes": {
+    "address_book.py": "a21ac4729d932bf44ef8d3eb9cbdfd0b1896f09750b47f56130ef191c5c05cac",
+    "app_preferences.py": "ae4314cd4c916694eaf1b046f99718018a4902cd50dd060b797d6c12290a6c57",
+    "app_shell.py": "44826d47bd9fdd6f060debe74957e4c3fbcbcce303640e6a488c1838431e844d",
+    "backup_transfer.py": "d68ea114e2b9e48a8889fc1cad10b68aa03560312bc0ba2896182ac3ec43fcab",
+    "backup_view.py": "828ee22cc0aa3cf0bd009b0f69d19a592ed7bcb7d1f0ff1f4adcfb3fa72f1b72",
+    "commissioning.py": "a954955b7a2679ba9260e582a73a98bef75576a39e4adf56c36920b538dea8ce",
+    "commissioning_view.py": "4be307d2b9d340ac165e6456e7797bcea88fac64a4dde361c575f58c20e5589a",
+    "connection.py": "f49f67b269021de400915e7b2c6a52143d32c2c340984460bfe0d7069cd1a49c",
+    "desktop_smoke.py": "4c6e2a64e4fb4298e22dc53b39618b29c38f62dfb5781b50d15ff88ff9a23c4c",
+    "diagnostic_guidance.py": "aea466bc43a88771e3a3a9b9bce3e9e6dcdc556802be0a9c125e159fad1dbd75",
+    "diagnostic_pdf.py": "013cbad678514924c7e59dbe61a7f0293390531e8a750e83e47bfa46e2b57216",
+    "diagnostic_transfer.py": "4372ea301d3bcf1c975b5d1842ca6a4d80cfaf7750de8fcdc9c853ad7a60535a",
+    "diagnostic_view.py": "77eec5a4eedb7ea4b40a2d69cc2d0fb3399eb36b827e5400d2f84557c35375be",
+    "flight_charts.py": "b892516680dad1889faa8d41463a60ea73056637dd740ec16637b37ecef4e6c7",
+    "flight_data.py": "f2e7a6200ade6d72288bbaa3d61b3f7eb0a44cc30d24520874cc02e474486c0f",
+    "flight_motion.py": "3c498306d79eb177501af3d4fc35acb45f13858914de29d8581d8cc822e8131b",
+    "flight_pdf.py": "186d7153c4d986e97d3f3b1f277c44e151b92f35684b5fd07861ce827ea4509a",
+    "flight_retrieval_view.py": "4f0ec8ffce3025367f03f28d00c0e5deadbb80bea2b3a4773beebbbaa1c2802c",
+    "flight_transfer.py": "f8aab97508511a97973c99cc4ed74375c477422aaf8ae71fd060909139a05827",
+    "flight_view.py": "9c955823d4289c7c2feb2babdd336b21c2f293f57a12107ca5362fa262dccebd",
+    "help_content.py": "e15db4a0d2221dfab5c4a9660c62c8d658599279fa9f8149f12d933995528e12",
+    "help_view.py": "4ce2ce783dc5859e13abc45dfc08ea28f5c9e92169977bfca4d024a46cb25eb6",
+    "home_view.py": "ba72bffd1a98e62b1455b16673dfc3517f29c1498d2dfbc26aa690ef7aa0f7a8",
+    "installation.py": "48348ba962f204ffa3ef0a958a826b06dbc68dd3f8491e413763992f8bda7a46",
+    "kinematics.py": "296c990abe7776bba166e51fa6336b2da0840292d0aad8302317995982788ceb",
+    "log_data.py": "c61ddb904b7ff62f61731e6c89bdf365d015456b421787fe5cba3e69da01ef2b",
+    "log_parser.py": "a0ae4e91981d8961a89c936f3d876b83f8f2ffa7a07f2aea300002162b5ac944",
+    "log_transfer.py": "dcf51503f3c597818fc1baea83958c6c09ae7dc8afce25ade1149c44f0942914",
+    "log_view.py": "0035d0301294f5b009710a5c6d7fd459015b36f082410e1dedea60a551dc74c7",
+    "main.py": "a971e006f124ef069c27c63ed4a27799db35e9c4e6d2037360dfcadd3334106b",
+    "model_catalog.py": "53cbad86c0ec2c72460b371976fe7d3e2ba66a9586e38b4b5afcafcf411013da",
+    "playback_view.py": "6ad6edeac1782d6a7741a7833dc6af76b86d2b0c711a275fe1193db47a789b22",
+    "program_check.py": "bb7e7dbe477235b4ad70f200fbff5599289ee511ab7108cccbde5f9d1df5cf64",
+    "program_check_pdf.py": "8f786d1385b684051673755ac8cef06ad4c11f1db46dfcd8fdf7f244b0357a12",
+    "program_check_view.py": "f8e841f23234e39d89179137ee29c0eeff1c20035657d403d95c14fe247370ee",
+    "program_motion.py": "183700636af29aa2ead1e3963842b4935fdf0e8c78e408ec6c59a644b49180c9",
+    "program_transfer.py": "d2d456699c51b05d6aa9e3d49ecff262f4294e9a8ff1e26db2f435c53a2977c7",
+    "rasterizer.py": "832c3297ae6c3abd050292aadf159f1a0bebbb5cb9e3e908743417c739d9ad8d",
+    "robot_assets.py": "915a573dc11d6c0f95b5bd9a8d456f062e00384db4bf9adc762bb5470f1fb73b",
+    "robot_diagnostics.py": "38f27fd998b823525819152a1acf0c7f9b1d364188103d2962897d036be9a168",
+    "robot_status.py": "09aa4f6ece725431e75f2d0a7cbf7f0c71318e3d7eed607c5f9a206f9609f1cd",
+    "rtde_client.py": "96ea0e971dc536808ab84b8383cb44ef737740278c5057b841149276169a2709",
+    "session.py": "6aba63aa07615b1b6329dafedab86dd5899fe1fe83710371768bb2a3e7c9f355",
+    "ssh_trust.py": "f2224600cb167faf34ffd77dda0e89ead9b46c78d90d27cbd58e23198f6a5253",
+    "status_view.py": "f8cde342163fd91c2ffa93bc9f10bf24f42a57d1edb575ec984214cea232f913",
+    "telemetry.py": "3e08109ba669b47ee5f0c9b3bfe919c4839927a08bcf80907d6a6d44f54c40f5",
+    "tooling.py": "c704f2692437cac4576d45e2beacb576d3a950c894c6a3837d9c2046b9b842ac",
+    "transfer.py": "c4fed9aadeb4112a697274f3910716edbed44999d5835b7c341ddcc342bdece7",
+    "transfer_stream.py": "e28621c94752023fe09cd6521b6d060816af314ef0cba9d2d32f963e4094c05a",
+    "ui_dialogs.py": "6f2669d7b1bdc40ac345044d2c12b38eed030b780986bac120f1aa70b71fd527",
+    "ui_theme.py": "0435031d91f26d433349ee97f93107bb005ad8985844a2334d8fea8dfecf8a81",
+    "view.py": "c7a462d07c74979830d7b2c3865ca0587004851ae9a06b3d389301dd44af7bcc",
+    "workspace_panel.py": "623eaa43ecf45497c71e7506592a1833a64bb8fb93079478d46091ec2a8cc139"
+  },
+  "program_path_followup": {
+    "command": ".venv/bin/python -m unittest tests.test_program_check -q",
+    "passed": 19,
+    "exit_code": 0,
+    "log": "linux-program-check.log",
+    "source_hashes": {
+      "program_check.py": "4957ae66ea5685d7456a878c14721259ad269ad0839ed298cff9a91e1ee89bd9",
+      "tests/test_program_check.py": "c3348919dc01bc0d1d181b6f8f365af46e516f9d67d053077113aafbabebcc9c"
+    }
+  }
+}

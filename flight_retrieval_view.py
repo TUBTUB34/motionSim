@@ -8,8 +8,10 @@ from tkinter import ttk, filedialog
 
 import ui_dialogs as messagebox
 from flight_transfer import FlightTransfer, DEFAULT_FLIGHT_DIRECTORY, default_library
-from log_transfer import LogConnection
-from ui_theme import BACKGROUND, MUTED, style_tree, status_color
+from connection import active_robot_settings, transfer_connection
+from workspace_panel import WorkspacePanel
+import ui_theme as theme
+from ui_theme import style_tree, status_color
 
 
 def byte_text(value):
@@ -28,9 +30,9 @@ def flight_date(entry):
         return datetime.fromtimestamp(entry.mtime, timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC') if entry.mtime else 'Unavailable'
 
 
-class RobotFlightWindow(tk.Toplevel):
-    def __init__(self, app):
-        super().__init__(app.root, background=BACKGROUND)
+class RobotFlightWindow(WorkspacePanel):
+    def __init__(self, app, parent=None):
+        super().__init__(app.root, page_host=parent, on_show=lambda: app.navigate_panel(self), on_hide=getattr(app, 'show_workspace', None), background=theme.BACKGROUND)
         self.app = app
         self.title('UR Motion Studio · Retrieve flight reports')
         self.geometry('1120x790')
@@ -79,11 +81,14 @@ class RobotFlightWindow(tk.Toplevel):
         settings.grid(row=2, column=0, sticky='ew')
         settings.columnconfigure(1, weight=1)
         settings.columnconfigure(3, weight=1)
-        ttk.Label(settings, text='SSH username').grid(row=0, column=0, sticky='w', padx=(0, 8))
-        self.user_entry = ttk.Entry(settings, textvariable=self.username, width=18)
+        self.credentials = ttk.Frame(settings)
+        self.credentials.grid(row=0, column=0, columnspan=4, sticky='ew')
+        self.credentials.columnconfigure((1, 3), weight=1)
+        ttk.Label(self.credentials, text='SSH username').grid(row=0, column=0, sticky='w', padx=(0, 8))
+        self.user_entry = ttk.Entry(self.credentials, textvariable=self.username, width=18)
         self.user_entry.grid(row=0, column=1, sticky='ew', padx=(0, 16))
-        ttk.Label(settings, text='SSH password').grid(row=0, column=2, sticky='w', padx=(0, 8))
-        self.password_entry = ttk.Entry(settings, textvariable=self.password, show='•', width=18)
+        ttk.Label(self.credentials, text='SSH password').grid(row=0, column=2, sticky='w', padx=(0, 8))
+        self.password_entry = ttk.Entry(self.credentials, textvariable=self.password, show='•', width=18)
         self.password_entry.grid(row=0, column=3, sticky='ew')
         ttk.Label(settings, text='Robot folder').grid(row=1, column=0, sticky='w', pady=(8, 0))
         self.directory_entry = ttk.Entry(settings, textvariable=self.directory)
@@ -154,12 +159,13 @@ class RobotFlightWindow(tk.Toplevel):
 
     def _sync_connection(self):
         state, session, settings = self._connection_state()
-        if session is not self._session:
+        if session is not self._session or (active_robot_settings(self.app) is not None and settings != getattr(self, '_settings', None)):
             if self.controller:
                 self.controller.close()
             self.controller = None
             self._controller_key = None
             self._session = session
+            self._settings = settings
             self._last_state = None
             self._busy = self._failed = False
             self.entries.clear()
@@ -168,12 +174,12 @@ class RobotFlightWindow(tk.Toplevel):
             self.summary.set('Refresh to list this robot’s flight reports.')
             if settings is not None:
                 self._host = settings.ip
-                username, password = settings.username or 'root', settings.password
-                logs = getattr(self.app, 'log_window', None)
-                if not password and logs is not None and logs.winfo_exists() and logs.ip.get() == settings.ip:
-                    username, password = logs.username.get(), logs.password.get()
-                self.username.set(username)
-                self.password.set(password)
+                self.username.set(settings.username or 'root')
+                self.password.set(settings.password)
+        if active_robot_settings(self.app) is not None:
+            self.credentials.grid_remove()
+        else:
+            self.credentials.grid()
         if state != self._last_state:
             if state == 'disconnected':
                 if self.controller:
@@ -186,8 +192,10 @@ class RobotFlightWindow(tk.Toplevel):
                 self.connection_status.set(f'Connecting to {settings.ip} · Waiting for robot telemetry…')
                 self.status.set('Connecting · Wait for robot telemetry before refreshing reports.')
             else:
-                self.connection_status.set(f'Connected to {settings.ip} · File transfer uses the existing verified SSH workflow.')
+                self.connection_status.set(f'Connected to {settings.ip} · Using simulator SSH credentials.')
                 self.status.set('Ready · Refresh reports to open the file connection. Credentials stay in memory.')
+                if not settings.password:
+                    self.status.set('Add an SSH password in Simulator → Connection, then reconnect to download files.')
             self._last_state = state
         self._update_controls()
 
@@ -209,6 +217,7 @@ class RobotFlightWindow(tk.Toplevel):
         return self._busy or bool(self.controller and self.controller.busy)
 
     def _ensure_controller(self):
+        self._sync_connection()
         state, session, settings = self._connection_state()
         if state != 'connected':
             self.status.set('Connect to the robot from the main window before retrieving reports.')
@@ -217,7 +226,7 @@ class RobotFlightWindow(tk.Toplevel):
             directory = self.directory.get().strip()
             if not directory.startswith('/') or any(c in directory for c in '\x00\r\n'):
                 raise ValueError('Enter an absolute robot report folder.')
-            connection = LogConnection(settings.ip, self.username.get().strip() or 'root', self.password.get(), directory)
+            connection = transfer_connection(self.app, settings.ip, self.username.get(), self.password.get(), directory)
             key = (session, connection, self.library.get())
             if self.controller is None or key != self._controller_key:
                 if self.controller:
@@ -409,6 +418,9 @@ class RobotFlightWindow(tk.Toplevel):
         self.after_id = self.after(100, self.poll)
 
     def show_connection(self):
+        if self.embedded:
+            self.app.show_setup()
+            return
         self.withdraw()
         self.app.root.deiconify()
         self.app.root.lift()

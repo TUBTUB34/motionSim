@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch
 
 from log_transfer import LogConnection
 from program_check import discover_programs, review_program
-from program_transfer import ProgramSourceJob
+from program_transfer import ProgramSourceJob, _safe_name
 
 
 class FakeSFTP:
@@ -142,6 +142,16 @@ class ProgramTransferTests(unittest.TestCase):
                 job.run()
                 self.assertEqual(len(self.events(job, 'error')), 1)
                 self.assertEqual(list(self.destination.iterdir()), [])
+
+    def test_portable_windows_filename_validation(self):
+        # Includes device aliases and suffixes that remain reserved even when
+        # validation runs on a non-Windows Python 3.10 installation.
+        for name in ('COM1.script', 'lpt9.urp', 'COM¹.script', 'LPT².installation',
+                     'NUL .script', 'CONOUT$.urp', 'folder ', 'folder.'):
+            with self.subTest(name=name), self.assertRaises(ValueError):
+                _safe_name(name)
+        for name in ('COM10.script', 'my tool.urp', 'conveyor', 'install.v2.installation'):
+            self.assertEqual(_safe_name(name), name)
 
     def test_case_collisions_never_overwrite_windows_sources(self):
         job, _, _ = self.make_job({'/programs/Demo.urp': b'a', '/programs/demo.urp': b'b'})

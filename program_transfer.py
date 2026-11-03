@@ -1,7 +1,6 @@
 """Read-only robot program snapshots for the source report workflow."""
 from pathlib import Path, PurePosixPath
 import errno
-import ntpath
 import os
 import shutil
 import stat
@@ -18,13 +17,17 @@ MAX_ENTRIES = 100_000
 MAX_DIRECTORIES = 4096
 MAX_DEPTH = 32
 SOURCE_SUFFIXES = {'.urp', '.script', '.installation'}
+WINDOWS_DEVICE_NAMES = {'CON', 'PRN', 'AUX', 'NUL', 'CONIN$', 'CONOUT$'} | {
+    f'{prefix}{number}' for prefix in ('COM', 'LPT') for number in '123456789¹²³'
+}
 
 
 def _safe_name(name):
     """Keep source identities unchanged across Linux and Windows snapshots."""
     if (not isinstance(name, str) or name in ('', '.', '..')
             or any(ord(c) < 32 or c in '<>:"/\\|?*' for c in name)
-            or ntpath.isreserved(name)):
+            or name.endswith((' ', '.'))
+            or name.partition('.')[0].rstrip(' ').upper() in WINDOWS_DEVICE_NAMES):
         raise ValueError(f'Robot filename cannot be saved safely: {name!r}')
     return name
 

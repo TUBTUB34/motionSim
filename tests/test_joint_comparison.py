@@ -8,7 +8,7 @@ from unittest.mock import patch
 import numpy as np
 from matplotlib.figure import Figure
 
-from flight_charts import FlightCharts, JOINT_COLORS
+from flight_charts import FlightCharts, joint_colors
 from flight_data import load_flight
 from tests.test_flight_ui import flight
 
@@ -48,7 +48,7 @@ class JointComparisonTests(unittest.TestCase):
                          ['Base', 'Elbow', 'Wrist 3'])
         for index, joint in enumerate((0, 2, 5)):
             actual, target = lines[index*2:index*2+2]
-            self.assertEqual(actual.get_color(), JOINT_COLORS[joint])
+            self.assertEqual(actual.get_color(), joint_colors()[joint])
             self.assertEqual(target.get_color(), actual.get_color())
             self.assertEqual(actual.get_linestyle(), '-')
             self.assertEqual(target.get_linestyle(), '--')
@@ -56,7 +56,7 @@ class JointComparisonTests(unittest.TestCase):
         for line, joint in zip(charts.axes[0].lines[:-1], (0, 2, 5)):
             np.testing.assert_array_equal(line.get_ydata(), np.arange(5.) + joint * 10)
             self.assertIn('Target', line.get_label())
-            self.assertEqual(line.get_color(), JOINT_COLORS[joint])
+            self.assertEqual(line.get_color(), joint_colors()[joint])
 
     def test_separate_joint_graphs_preserve_series_scales_and_gaps(self):
         report = recording()
@@ -67,7 +67,7 @@ class JointComparisonTests(unittest.TestCase):
         for axis, joint in zip(charts.axes, (0, 2, 5)):
             self.assertIn(('Base', 'Elbow', 'Wrist 3')[(0, 2, 5).index(joint)], axis.get_title(loc='left'))
             line = axis.lines[0]
-            self.assertEqual(line.get_color(), JOINT_COLORS[joint])
+            self.assertEqual(line.get_color(), joint_colors()[joint])
             self.assertEqual(line.get_linestyle(), '--')
             self.assertTrue(np.isnan(line.get_ydata()[2]))
             self.assertEqual([text.get_text() for text in axis.get_legend().get_texts()], ['Target'])

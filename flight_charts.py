@@ -4,8 +4,7 @@ from matplotlib.ticker import MaxNLocator, FuncFormatter
 from matplotlib.lines import Line2D
 from functools import wraps
 from threading import RLock
-from ui_theme import (BACKGROUND, PANEL, BORDER as GRID, INK as TEXT,
-                      MUTED, ACCENT as ACTUAL, TARGET, DANGER)
+import ui_theme as theme
 
 # Matplotlib font/rendering state is shared even by independent figures.
 # PDF rendering takes this lock per page, never for an entire export.
@@ -25,6 +24,59 @@ METRIC_LABELS = {metric: metric.replace('_', ' ').title() for metric in METRICS}
 UNITS = {'position': 'rad', 'velocity': 'rad/s', 'acceleration': 'rad/s²', 'current': 'A',
          'torque': 'Nm', 'temperature': '°C', 'voltage': 'V', 'control_mode': 'code'}
 JOINT_COLORS = ('#53b8f2', '#e8ac58', '#ad91ef', '#66d3b4', '#ef819a', '#d7d676')
+LIGHT_JOINT_COLORS = ('#006da5', '#996000', '#7751b5', '#16765d', '#b53760', '#757314')
+
+
+def joint_colors():
+    return LIGHT_JOINT_COLORS if theme.MODE == 'light' else JOINT_COLORS
+
+
+def chart_palette():
+    """Snapshot the colors an interactive figure currently uses."""
+    palette = {name: getattr(theme, name) for name in
+               ('BACKGROUND', 'PANEL', 'BORDER', 'INK', 'MUTED', 'ACTUAL', 'TARGET', 'DANGER')}
+    palette.update({f'joint{index}': color for index, color in enumerate(joint_colors())})
+    palette.update({f'log{index}': color for index, color in enumerate(theme.CHART_SERIES)})
+    return palette
+
+
+@serialized_render
+def retheme_figure(figure, previous):
+    """Recolor existing artists without replacing traces, limits or zoom history."""
+    from matplotlib.collections import Collection
+    from matplotlib.colors import to_rgb, to_rgba
+    from matplotlib.patches import Patch
+    from matplotlib.text import Text
+    current = chart_palette()
+    replacements = {to_rgb(color): current[name] for name, color in previous.items()}
+
+    def recolor(value):
+        try:
+            rgba = to_rgba(value)
+        except (ValueError, TypeError):
+            return value
+        replacement = replacements.get(rgba[:3])
+        if replacement is None:
+            return value
+        return replacement if isinstance(value, str) and rgba[3] == 1 else (*to_rgb(replacement), rgba[3])
+
+    for artist in figure.findobj():
+        if isinstance(artist, Text):
+            artist.set_color(recolor(artist.get_color()))
+        elif isinstance(artist, Line2D):
+            artist.set_color(recolor(artist.get_color()))
+            artist.set_markerfacecolor(recolor(artist.get_markerfacecolor()))
+            artist.set_markeredgecolor(recolor(artist.get_markeredgecolor()))
+        elif isinstance(artist, Collection):
+            artist.set_facecolors([recolor(color) for color in artist.get_facecolors()])
+            artist.set_edgecolors([recolor(color) for color in artist.get_edgecolors()])
+        elif isinstance(artist, Patch):
+            artist.set_facecolor(recolor(artist.get_facecolor()))
+            artist.set_edgecolor(recolor(artist.get_edgecolor()))
+    # New tick labels created after panning also need the active palette.
+    for axis in figure.axes:
+        axis.tick_params(colors=theme.MUTED, grid_color=theme.BORDER)
+    return current
 
 
 def series_label(report, metric, joint, target=False):
@@ -74,12 +126,14 @@ class FlightCharts:
         self.report = None
         self.selected_time = 0.
         self._layout_key = None
+        self._palette = chart_palette()
 
     @serialized_render
     def draw(self, report, joint=1, focus='All readings', *, compare_joints=None, series='Actual + target', separate_joints=False, shared_scale=False):
         self.report = report
+        self._palette = chart_palette()
         self.figure.clear()
-        self.figure.set_facecolor(BACKGROUND)
+        self.figure.set_facecolor(theme.BACKGROUND)
         metrics = METRICS if focus == 'All readings' else (focus.lower().replace(' ', '_'),)
         comparing = compare_joints is not None
         joints = tuple(dict.fromkeys(compare_joints)) if comparing else (joint,)
@@ -96,14 +150,14 @@ class FlightCharts:
                                          sharey=metric_axes.get(metric) if separate and shared_scale else None)
             metric_axes.setdefault(metric, ax)
             self.axes.append(ax)
-            ax.set_facecolor(BACKGROUND)
+            ax.set_facecolor(theme.BACKGROUND)
             ax.set_title(f'{METRIC_LABELS[metric]} · ' + (f'{JOINTS[panel_joints[0]]} · {series}' if separate else (f'Compare joints · {series}' if comparing else f'Joint {joint} {JOINTS[joint]}')),
-                         color=TEXT, loc='left', fontsize=9, fontweight='bold', pad=7)
+                         color=theme.INK, loc='left', fontsize=9, fontweight='bold', pad=7)
             legend_handles = []
             for selected in panel_joints:
                 plotted = False
                 for target in targets:
-                    color = JOINT_COLORS[selected] if comparing else (TARGET if target else ACTUAL)
+                    color = joint_colors()[selected] if comparing else (theme.TARGET if target else theme.ACTUAL)
                     values = report.series(metric, selected, target=target)
                     label = series_label(report, metric, selected, target)
                     if comparing and not separate:
@@ -118,48 +172,52 @@ class FlightCharts:
                         if isolated:
                             ax.scatter(report.timestamps[isolated], values[isolated], color=color, s=12)
                 if comparing and plotted:
-                    legend_handles.append(Line2D([], [], color=JOINT_COLORS[selected], marker='o',
+                    legend_handles.append(Line2D([], [], color=joint_colors()[selected], marker='o',
                                                  linestyle='None', markersize=4, label=JOINTS[selected]))
             if metric == 'current' and not comparing:
                 for key, label, style in [('current_upper', 'Recorded upper limit', '-'),
                                           ('current_lower', 'Recorded lower limit', '--')]:
                     values = report.series(key, joint)
                     if np.isfinite(values).any():
-                        ax.plot(*gap_series(report, values), color=DANGER, linestyle=style,
+                        ax.plot(*gap_series(report, values), color=theme.DANGER, linestyle=style,
                                 linewidth=.8, label=label)
             if not ax.lines:
                 ax.text(.5, .5, 'No joints selected' if not joints else 'No recorded measurements for this selection', transform=ax.transAxes,
-                        ha='center', color=MUTED)
+                        ha='center', color=theme.MUTED)
             else:
                 options = dict(handles=legend_handles) if comparing and not separate else {}
-                ax.legend(loc='upper right', fontsize=7, labelcolor=TEXT,
-                          facecolor=PANEL, edgecolor=GRID, framealpha=.85, ncol=3 if comparing else 2,
+                ax.legend(loc='upper right', fontsize=7, labelcolor=theme.INK,
+                          facecolor=theme.PANEL, edgecolor=theme.BORDER, framealpha=.85, ncol=3 if comparing else 2,
                           **options)
             safety = report.columns.get('Safety mode')
             if safety is not None:
                 # Protective-stop shading is sourced only from recorded mode 3.
                 for segment in report.valid_segments(np.where(safety == 3, safety, np.nan)):
                     ax.axvspan(report.timestamps[segment.start], report.timestamps[segment.stop-1],
-                               color=DANGER, alpha=.12, linewidth=0)
-            ax.set_ylabel(UNITS[metric], color=MUTED, fontsize=8)
+                               color=theme.DANGER, alpha=.12, linewidth=0)
+            ax.set_ylabel(UNITS[metric], color=theme.MUTED, fontsize=8)
             if metric == 'control_mode':
                 ax.yaxis.set_major_locator(MaxNLocator(integer=True))
-            ax.tick_params(colors=MUTED, labelsize=7)
+            ax.tick_params(colors=theme.MUTED, labelsize=7)
             if index < len(panels) - 1:
                 ax.tick_params(labelbottom=False)
-            ax.grid(color=GRID, linewidth=.65)
+            ax.grid(color=theme.BORDER, linewidth=.65)
             for spine in ax.spines.values():
-                spine.set_edgecolor(GRID)
+                spine.set_edgecolor(theme.BORDER)
             ax.xaxis.set_major_formatter(FuncFormatter(
                 lambda timestamp, _position: str(line) if (line := script_line_at(report, timestamp)) is not None else '—'))
             start, end = float(report.timestamps[0]), float(report.timestamps[-1])
             ax.set_xlim(start, end if end > start else start + .001)
-            self.playheads.append(ax.axvline(float(report.timestamps[0]), color=TEXT,
+            self.playheads.append(ax.axvline(float(report.timestamps[0]), color=theme.INK,
                                             linewidth=.85, linestyle='--', animated=True))
         self.axes[-1].set_xlabel('Script line number · recorded source' +
-                                ('\nSolid: actual · Dashed: target' if comparing else ''), color=MUTED, fontsize=8)
+                                ('\nSolid: actual · Dashed: target' if comparing else ''), color=theme.MUTED, fontsize=8)
         self._layout()
         self.selected_time = float(report.timestamps[0])
+
+    def refresh_theme(self):
+        self._palette = retheme_figure(self.figure, self._palette)
+        self.backgrounds = None
 
     def _layout(self):
         height = max(150., self.figure.bbox.height)
