@@ -1,0 +1,616 @@
+{
+  "build_root": "C:\\Users\\apex\\AppData\\Local\\Temp\\motionsim-upgrade-20261112-vfrq8o52",
+  "source_manifest": [
+    {
+      "file": "address_book.py",
+      "sha256": "a21ac4729d932bf44ef8d3eb9cbdfd0b1896f09750b47f56130ef191c5c05cac"
+    },
+    {
+      "file": "app_preferences.py",
+      "sha256": "ae4314cd4c916694eaf1b046f99718018a4902cd50dd060b797d6c12290a6c57"
+    },
+    {
+      "file": "app_shell.py",
+      "sha256": "39fd14000c751ce15dce67739b8661ee5cbc82f5518559d9e79047dc957641a3"
+    },
+    {
+      "file": "backup_transfer.py",
+      "sha256": "6ebc2033feaebe78ebd0ec864d304e18c5c6852b5aaaac18d5ad25e5ac47ce52"
+    },
+    {
+      "file": "backup_view.py",
+      "sha256": "7160b30318badd53084e80d1754542151bff96e873f1a441f8d59a947116bf89"
+    },
+    {
+      "file": "commissioning.py",
+      "sha256": "a954955b7a2679ba9260e582a73a98bef75576a39e4adf56c36920b538dea8ce"
+    },
+    {
+      "file": "commissioning_view.py",
+      "sha256": "4be307d2b9d340ac165e6456e7797bcea88fac64a4dde361c575f58c20e5589a"
+    },
+    {
+      "file": "connection.py",
+      "sha256": "f49f67b269021de400915e7b2c6a52143d32c2c340984460bfe0d7069cd1a49c"
+    },
+    {
+      "file": "desktop_smoke.py",
+      "sha256": "079576dbc206d2023b78e20b206fa21b720658f43984cd09e5683c23bb3f7606"
+    },
+    {
+      "file": "diagnostic_guidance.py",
+      "sha256": "aea466bc43a88771e3a3a9b9bce3e9e6dcdc556802be0a9c125e159fad1dbd75"
+    },
+    {
+      "file": "diagnostic_pdf.py",
+      "sha256": "6109619cb940e8e10349f793ecf49146b378468acf5a6a865dfccfd4b9164317"
+    },
+    {
+      "file": "diagnostic_transfer.py",
+      "sha256": "4372ea301d3bcf1c975b5d1842ca6a4d80cfaf7750de8fcdc9c853ad7a60535a"
+    },
+    {
+      "file": "diagnostic_view.py",
+      "sha256": "77eec5a4eedb7ea4b40a2d69cc2d0fb3399eb36b827e5400d2f84557c35375be"
+    },
+    {
+      "file": "flight_charts.py",
+      "sha256": "d0a29b34a45fc26c50f0ff27da3717801430c1a9c0e656dfa76d1cc4adb41bfe"
+    },
+    {
+      "file": "flight_data.py",
+      "sha256": "b3b66142f34ba0b7b453ec3766a131aa36ca8309e2dbc841416429ae151abc37"
+    },
+    {
+      "file": "flight_motion.py",
+      "sha256": "3c498306d79eb177501af3d4fc35acb45f13858914de29d8581d8cc822e8131b"
+    },
+    {
+      "file": "flight_pdf.py",
+      "sha256": "54e9485916649209556fd5d1cd471b6f195b1e82423d77361358a0905a9ec6e5"
+    },
+    {
+      "file": "flight_retrieval_view.py",
+      "sha256": "4f0ec8ffce3025367f03f28d00c0e5deadbb80bea2b3a4773beebbbaa1c2802c"
+    },
+    {
+      "file": "flight_stats.py",
+      "sha256": "eda227aaa078c6235eee3fd2bec562ff15d476644cedd3dc4f9f6c6b74f1bea2"
+    },
+    {
+      "file": "flight_transfer.py",
+      "sha256": "f8aab97508511a97973c99cc4ed74375c477422aaf8ae71fd060909139a05827"
+    },
+    {
+      "file": "flight_view.py",
+      "sha256": "bb92ed71afd7cba5e21e8fae6d69b569f27cb34948c452dfd2841e0f72e5acb4"
+    },
+    {
+      "file": "help_content.py",
+      "sha256": "04ddf5cc407b03c0724af4d60f3b45facc5e7081ba2ccacef47a4a4e68756c3c"
+    },
+    {
+      "file": "help_view.py",
+      "sha256": "4ce2ce783dc5859e13abc45dfc08ea28f5c9e92169977bfca4d024a46cb25eb6"
+    },
+    {
+      "file": "home_view.py",
+      "sha256": "b963040f1c6ee546bc1f4bf0ced23bec977efaba5fab23b5f32b9c3e7076abcb"
+    },
+    {
+      "file": "installation.py",
+      "sha256": "48348ba962f204ffa3ef0a958a826b06dbc68dd3f8491e413763992f8bda7a46"
+    },
+    {
+      "file": "kinematics.py",
+      "sha256": "d3fb01f75a48be4928ff7bd18c7118e0fe3373fb65fd7522baef62860677dec9"
+    },
+    {
+      "file": "live_recorder.py",
+      "sha256": "14dcfaed4dcac97dc0746b356ae6692a903eecc76cc8df665d753557a8c20121"
+    },
+    {
+      "file": "live_view.py",
+      "sha256": "df27ad50997cfa849f8e5834445f4bf0171d6e21edb660f342c47ebca5c0abfb"
+    },
+    {
+      "file": "log_data.py",
+      "sha256": "c61ddb904b7ff62f61731e6c89bdf365d015456b421787fe5cba3e69da01ef2b"
+    },
+    {
+      "file": "log_parser.py",
+      "sha256": "a0ae4e91981d8961a89c936f3d876b83f8f2ffa7a07f2aea300002162b5ac944"
+    },
+    {
+      "file": "log_transfer.py",
+      "sha256": "dcf51503f3c597818fc1baea83958c6c09ae7dc8afce25ade1149c44f0942914"
+    },
+    {
+      "file": "log_view.py",
+      "sha256": "0035d0301294f5b009710a5c6d7fd459015b36f082410e1dedea60a551dc74c7"
+    },
+    {
+      "file": "main.py",
+      "sha256": "054c0af2fd9eabc7f0e8aeae53bb0b03041baebb3f0c56b3428685e51dab51a0"
+    },
+    {
+      "file": "model_catalog.py",
+      "sha256": "53cbad86c0ec2c72460b371976fe7d3e2ba66a9586e38b4b5afcafcf411013da"
+    },
+    {
+      "file": "playback_view.py",
+      "sha256": "f45f45e8d7ea86de8a3a738b34c3f835f7e56c649cee8a7401fea76996ad35fe"
+    },
+    {
+      "file": "program_check.py",
+      "sha256": "4957ae66ea5685d7456a878c14721259ad269ad0839ed298cff9a91e1ee89bd9"
+    },
+    {
+      "file": "program_check_pdf.py",
+      "sha256": "1a315aa46bccec5948649d871d7d58ba4e104adf9c17428b8aca18a33104d97d"
+    },
+    {
+      "file": "program_check_view.py",
+      "sha256": "f8e841f23234e39d89179137ee29c0eeff1c20035657d403d95c14fe247370ee"
+    },
+    {
+      "file": "program_motion.py",
+      "sha256": "183700636af29aa2ead1e3963842b4935fdf0e8c78e408ec6c59a644b49180c9"
+    },
+    {
+      "file": "program_transfer.py",
+      "sha256": "d2d456699c51b05d6aa9e3d49ecff262f4294e9a8ff1e26db2f435c53a2977c7"
+    },
+    {
+      "file": "rasterizer.py",
+      "sha256": "832c3297ae6c3abd050292aadf159f1a0bebbb5cb9e3e908743417c739d9ad8d"
+    },
+    {
+      "file": "robot_assets.py",
+      "sha256": "915a573dc11d6c0f95b5bd9a8d456f062e00384db4bf9adc762bb5470f1fb73b"
+    },
+    {
+      "file": "robot_diagnostics.py",
+      "sha256": "38f27fd998b823525819152a1acf0c7f9b1d364188103d2962897d036be9a168"
+    },
+    {
+      "file": "robot_status.py",
+      "sha256": "09aa4f6ece725431e75f2d0a7cbf7f0c71318e3d7eed607c5f9a206f9609f1cd"
+    },
+    {
+      "file": "rtde_client.py",
+      "sha256": "736c394a3e2fb6c55525171622a66ea57ed1d8461de382263ee75b5e57aea068"
+    },
+    {
+      "file": "session.py",
+      "sha256": "b93ea9d88a6c9dffdd97f557e4db439161e17ff00df3fc3d6fd4a5dc7fbf3392"
+    },
+    {
+      "file": "ssh_trust.py",
+      "sha256": "f2224600cb167faf34ffd77dda0e89ead9b46c78d90d27cbd58e23198f6a5253"
+    },
+    {
+      "file": "status_view.py",
+      "sha256": "f8cde342163fd91c2ffa93bc9f10bf24f42a57d1edb575ec984214cea232f913"
+    },
+    {
+      "file": "telemetry.py",
+      "sha256": "a0bb41da488253eef9f3bc544dcf922aba78a441832a576ebf33dfb120a4aded"
+    },
+    {
+      "file": "tooling.py",
+      "sha256": "c704f2692437cac4576d45e2beacb576d3a950c894c6a3837d9c2046b9b842ac"
+    },
+    {
+      "file": "transfer.py",
+      "sha256": "c4fed9aadeb4112a697274f3910716edbed44999d5835b7c341ddcc342bdece7"
+    },
+    {
+      "file": "transfer_stream.py",
+      "sha256": "e28621c94752023fe09cd6521b6d060816af314ef0cba9d2d32f963e4094c05a"
+    },
+    {
+      "file": "ui_dialogs.py",
+      "sha256": "6f2669d7b1bdc40ac345044d2c12b38eed030b780986bac120f1aa70b71fd527"
+    },
+    {
+      "file": "ui_theme.py",
+      "sha256": "d29ee8ae6cbc8fc86b27b853fdfad068a81aa0fc9f281701fc01f698ae479a87"
+    },
+    {
+      "file": "view.py",
+      "sha256": "e88797c9e9974e54563452cb6f81eccbb1c6afd607c443900e88900ab15f9beb"
+    },
+    {
+      "file": "workspace_panel.py",
+      "sha256": "623eaa43ecf45497c71e7506592a1833a64bb8fb93079478d46091ec2a8cc139"
+    },
+    {
+      "file": "MotionStudio.spec",
+      "sha256": "1247c61b686d95b067363089fedf18f361d6ff06ccbcbfa25daccf884f9c1459"
+    },
+    {
+      "file": "build_windows.bat",
+      "sha256": "81ec1fe79b1a8fbcbcfb48d2cf194ee4656e5ef5b68032ba92b1d1350ddf9db5"
+    },
+    {
+      "file": "requirements.txt",
+      "sha256": "8b0f38f44aa658b5cc1eea33a2eaf11fef0c5c518e73edeee05d9fd85238fe8b"
+    },
+    {
+      "file": "requirements-build.txt",
+      "sha256": "aaba059ec420c5bc343f8bbe92f835e653c5474a079b55b2767c270eee82167f"
+    },
+    {
+      "file": "assets/flightreports/psm.ura",
+      "sha256": "5f6956544160471b796815093bb306e3361852724f0bd0bda70cd1c83d9e5b91"
+    },
+    {
+      "file": "assets/flightreports/recording20261012_15_10_47.zip",
+      "sha256": "0a0b042a818c3e00c3eb53ea8f4e267b710c7d70049d54e7bf3208f09c8b772b"
+    },
+    {
+      "file": "assets/flightreports/recording20261012_15_11_33.zip",
+      "sha256": "5caa9160182397d9374db46658223c3dd73492934afaa91025ee3e37bac6bed4"
+    },
+    {
+      "file": "assets/flightreports/recording20261013_18_06_08.zip",
+      "sha256": "942476ef1a7c45a10d67c65cc228a598b70623d63c649b9f489c49eaa0dcc796"
+    },
+    {
+      "file": "assets/flightreports/recording20261013_19_06_14.zip",
+      "sha256": "799ceeccbacc269b1b3b6258840b992597615ec43ac987f28e6c3a061ac5db3e"
+    },
+    {
+      "file": "assets/flightreports/recording20261013_19_12_20.zip",
+      "sha256": "e65cccd216ab4bfaca010baf9f80de5d50d9450e1287976fb47b6731de232968"
+    },
+    {
+      "file": "assets/flightreports/robot_configuration20261014_19_16_56.zip",
+      "sha256": "342c94f7a8e0a7b13906b291b001aa8c5b1dda44c2cb4c48dd744a13c703ce9b"
+    },
+    {
+      "file": "assets/robots/LICENSE-BSD.txt",
+      "sha256": "143077f9f6a8de5a99f78c2c2472801fb53cf240277ef661642f079b9acdfff8"
+    },
+    {
+      "file": "assets/robots/LICENSE-UR-GRAPHICS.txt",
+      "sha256": "f173efc8bd4b0ffaec2280b2dd126805ff7dddee8758b3d869132afc1776daa8"
+    },
+    {
+      "file": "assets/robots/manifest.json",
+      "sha256": "013c72d6fae77c057eed360553f64788587cb00efb8fdf74a3e32d108cca7fef"
+    },
+    {
+      "file": "assets/robots/README.md",
+      "sha256": "b3e3c8406fde4a85b819c70b360492524531369cea4728ab02ba34bade604ee8"
+    },
+    {
+      "file": "assets/robots/source_textures/UR15_DIFF_8bit_2K.jpg",
+      "sha256": "24f6f9408be1dc1dd60df0fce90ae85d1e5e7a19aa9da603cd6251be8ef2af46"
+    },
+    {
+      "file": "assets/robots/source_textures/UR18_DIFF_8bit_2K.jpg",
+      "sha256": "133921636a0050bc221fbaee2eac6eba2a8fc926b095e2b631e51bf9a18f064b"
+    },
+    {
+      "file": "assets/robots/source_textures/UR20_DIFF_8bit_2K.png",
+      "sha256": "9c659b5115540ac6f0af94d504e04ca734afaa304dc0c1e8392741c20ca055ea"
+    },
+    {
+      "file": "assets/robots/source_textures/UR30_DIFF_8bit_2K.png",
+      "sha256": "de839c03e28ef6e22a381e5132aa261e373f3fb1cfb0c327b0cc453d848bb890"
+    },
+    {
+      "file": "assets/robots/source_textures/UR8Long_DIFF_8bit_2K.jpg",
+      "sha256": "b69dd0410ed0896c63ecbeb38effc1c293242ed2b9796b74ed90580bbf49bc11"
+    },
+    {
+      "file": "assets/robots/ur10.npz",
+      "sha256": "9213ffabce7379547d06271f6671241966741044e813f59fae985e3344e1b1d7"
+    },
+    {
+      "file": "assets/robots/ur10e.npz",
+      "sha256": "3f278931d4395f10de78b277e414935a3f522f228acd3aa4d1bba75f9eff35cc"
+    },
+    {
+      "file": "assets/robots/ur12e.npz",
+      "sha256": "3f278931d4395f10de78b277e414935a3f522f228acd3aa4d1bba75f9eff35cc"
+    },
+    {
+      "file": "assets/robots/ur15.npz",
+      "sha256": "d2b225cb60f8269ac21105564eae24a4741c8f12239102971ece69465d2d6507"
+    },
+    {
+      "file": "assets/robots/ur16e.npz",
+      "sha256": "9a8203431c82fcb9d3d978191fbace42b7faf74445ad7966071f21173b81df1a"
+    },
+    {
+      "file": "assets/robots/ur18.npz",
+      "sha256": "3b72ebfe654478fae6d7064e614c240e6bbcbecacde25748544f3f97f5153cf0"
+    },
+    {
+      "file": "assets/robots/ur20.npz",
+      "sha256": "e4cd9311c07a57eb272d73cfa627019eee959e44a3461f858b5a3ea9aed6ff56"
+    },
+    {
+      "file": "assets/robots/ur3.npz",
+      "sha256": "ad774ab94765f26bd16f6dd8c6cd86b0179895a69281b80adf7be989fdfe3d92"
+    },
+    {
+      "file": "assets/robots/ur30.npz",
+      "sha256": "714a6096962043f2a6e7966f66ad1198bef2a201a431cbc7fbe2f265440ad145"
+    },
+    {
+      "file": "assets/robots/ur3e.npz",
+      "sha256": "b7a68d794a17cf87b7d8ad62fce4f7966b644107a7259fd5afa1d771afbf1023"
+    },
+    {
+      "file": "assets/robots/ur5.npz",
+      "sha256": "7b458c23f97b2cdc6779a1bc7c694c8670d858826b80f41ec2abdf5937aa5ead"
+    },
+    {
+      "file": "assets/robots/ur5e.npz",
+      "sha256": "2e6c8f605323be12e3ae45c7b4987b9b0c6dea37c769fed922f97bd9d58bd6c9"
+    },
+    {
+      "file": "assets/robots/ur7e.npz",
+      "sha256": "2e6c8f605323be12e3ae45c7b4987b9b0c6dea37c769fed922f97bd9d58bd6c9"
+    },
+    {
+      "file": "assets/robots/ur8long.npz",
+      "sha256": "0941697f1377ba7228e7168bc407094e9347b362efa49561d32236aed777a241"
+    },
+    {
+      "file": "assets/Screenshots of what i want/shoulder_acceleration.png",
+      "sha256": "5509331962d19a3c29d73401c63f4b68145738f51ff174671ec0a34dc0f7f913"
+    },
+    {
+      "file": "assets/Screenshots of what i want/shoulder_current.png",
+      "sha256": "5b74a47484bacb6cf9044328493e152a92c359cd8dd2514bfefbc3b5af168cbf"
+    },
+    {
+      "file": "assets/Screenshots of what i want/shoulder_readings.png",
+      "sha256": "cd91466810231429191323ce8c51a8722a18d41473bb6798de5d651814624344"
+    },
+    {
+      "file": "assets/Screenshots of what i want/URacle-Program-Check-App_DoughFactory.pdf",
+      "sha256": "e02091b1097e69f6e1fb3d29b2d0db0db20ffaf412f364f3b3b7a35c48522073"
+    },
+    {
+      "file": "assets/Screenshots of what i want/URacle-Program-Check-App_DoughFactory.pdf\uf03aZone.Identifier",
+      "sha256": "b952d24cf701bc4e7a7d21e1ae85c611824e80579a89836c0cb49b193446ccfe"
+    },
+    {
+      "file": "tests/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "tests/test_app_preferences.py",
+      "sha256": "b7af9f37fa1272e227fe82ad5c0874fbf9a19e67252699a9dca752ddf938176c"
+    },
+    {
+      "file": "tests/test_backup.py",
+      "sha256": "872a36e3c42c6f180753b52c0172e7dbc9a3a13b68df1d275ed425b8549c4e57"
+    },
+    {
+      "file": "tests/test_backup_page.py",
+      "sha256": "18c8d48ff5c08353b39933c4145906875939935a04a47137f8577c5bb8f1d6fa"
+    },
+    {
+      "file": "tests/test_camera.py",
+      "sha256": "da1bc4cca006feab83f0f74805f0583f3a37d5cb0aadf0ca88a9e09bd7703408"
+    },
+    {
+      "file": "tests/test_commissioning.py",
+      "sha256": "c5e25f912a4e3cbcead1c962d519c3a8fa29b720cf8fc167d072f349b2dd8886"
+    },
+    {
+      "file": "tests/test_commissioning_ui.py",
+      "sha256": "f4565beda5f194085a5236707a9c6e01ad36873dea11837af58dfbba67f44d85"
+    },
+    {
+      "file": "tests/test_connection_sharing.py",
+      "sha256": "e7fdb494e52b13eb2f27d48deb25957dbe392917248e233976981c7d209714f1"
+    },
+    {
+      "file": "tests/test_core.py",
+      "sha256": "573afb4fd59ea23a23883170a2f617a74bb95909f07b703ec09e02a224a9e837"
+    },
+    {
+      "file": "tests/test_design_ui.py",
+      "sha256": "3b4e53bd1ebf79b70332832628a577beb2b321c605e28090e336f0bf88226585"
+    },
+    {
+      "file": "tests/test_diagnostic_guidance.py",
+      "sha256": "945fe62e180943344e3205cec91b1738ecbf842804918812a7a4bd5d0e49c55d"
+    },
+    {
+      "file": "tests/test_diagnostic_pdf.py",
+      "sha256": "05b6c1225afbe7f12c8949e898b3b06f857a3fc467a408641970b29213ca3e0d"
+    },
+    {
+      "file": "tests/test_diagnostic_transfer.py",
+      "sha256": "e227d9989f3a8e05040b38ddfbeac260af7b4db932ecb99eefcef3986c36b00b"
+    },
+    {
+      "file": "tests/test_diagnostic_ui.py",
+      "sha256": "fa8c1c56445018b24057bf9cae4770209ae74cfcd15cf2920c7b46accb510c6a"
+    },
+    {
+      "file": "tests/test_flight_data.py",
+      "sha256": "14f99e2676808ac510ca28844753ba6a8b41b30b020ad2a1dc69627929d6f492"
+    },
+    {
+      "file": "tests/test_flight_motion.py",
+      "sha256": "94d4b3353a77475a67dd462443276d06230f5cb3c7bcbe6596d58544f482bbf3"
+    },
+    {
+      "file": "tests/test_flight_pdf.py",
+      "sha256": "e68056343aad6a35bb5d8c420363efa5aa3c61acc8e0f5865803e8f7e9efef7e"
+    },
+    {
+      "file": "tests/test_flight_retrieval_integration.py",
+      "sha256": "265dc324ab7d43d318a77646f177cb31b2272be043c5db04bd7ae92a19995656"
+    },
+    {
+      "file": "tests/test_flight_retrieval_ui.py",
+      "sha256": "470655d35ee1a94b04d79344237c31298601cfa68f1f74e3f270a201d0dfd207"
+    },
+    {
+      "file": "tests/test_flight_transfer.py",
+      "sha256": "98c65600ccd5307ace0ffa768cec5a0d677144799dd66c7564b9af5c67a348b6"
+    },
+    {
+      "file": "tests/test_flight_ui.py",
+      "sha256": "a397cb601086902a45ed32b81147d18af1a3709042524d31590c00ab8860ecb3"
+    },
+    {
+      "file": "tests/test_home.py",
+      "sha256": "f33718617f03b4f3093a7d31272d70ca5ac0130a87ec6bcbf7e9d6aaaf394e35"
+    },
+    {
+      "file": "tests/test_joint_comparison.py",
+      "sha256": "0c87952639b7023612d64d64c940cad10354be30e2bfbab7da07cb9fc686aefd"
+    },
+    {
+      "file": "tests/test_live_recorder.py",
+      "sha256": "da439b372a253c4d9963737888b37934481f6181f14dfd16ef37722db30e347f"
+    },
+    {
+      "file": "tests/test_live_ui.py",
+      "sha256": "0f2c69121df069ab954454788f97ca148fbd82ec80f57cd2d6867d5dabc9b335"
+    },
+    {
+      "file": "tests/test_log_parser.py",
+      "sha256": "4bee182247b0bf262eaa4895bfbddf00408bcc7301d6bd6c4c97027012b1ca0e"
+    },
+    {
+      "file": "tests/test_log_ui.py",
+      "sha256": "93b4a4df0fb03fc22daf744c55f1a2261042fba51043c09b420ac8a9560f2d52"
+    },
+    {
+      "file": "tests/test_logs.py",
+      "sha256": "6c81e8ab085779e3e466c2a996b721b8a45c0e410fdf115b71dc6b09a6c6f604"
+    },
+    {
+      "file": "tests/test_model_catalog.py",
+      "sha256": "fa49d9cfe756b41bc44a5bb6087870e393c8228f4057445eb4d8c80723d6ebcf"
+    },
+    {
+      "file": "tests/test_preferences_ui.py",
+      "sha256": "2654c002dac65f825be294f1f2b2f06bb22f59776cd3c4474f4a7945a82bc230"
+    },
+    {
+      "file": "tests/test_program_archive.py",
+      "sha256": "f73ba9b9df8e3d0bf62a4d9ae4b45e3a1ce0186b5e791ed9384fb45ae6577057"
+    },
+    {
+      "file": "tests/test_program_backup.py",
+      "sha256": "a837743413156b544f7cd20d1b7b6a154e77f4c4483ad9b2f5e0237d00e909f8"
+    },
+    {
+      "file": "tests/test_program_check.py",
+      "sha256": "c3348919dc01bc0d1d181b6f8f365af46e516f9d67d053077113aafbabebcc9c"
+    },
+    {
+      "file": "tests/test_program_check_pdf.py",
+      "sha256": "649e7b5c7d1428d67d4c3e271dd9cf062a2c4cb8a6b3333bc150fdb9d514a085"
+    },
+    {
+      "file": "tests/test_program_motion.py",
+      "sha256": "6ed43d388c9d7a1f325adf8b011341e18f75e7ee6863ed455f6bbd1be3beea3a"
+    },
+    {
+      "file": "tests/test_program_playback_ui.py",
+      "sha256": "2e86c3446c99870d039fccad600bf936143eeebe360e7ae52d3cfd03800e4b14"
+    },
+    {
+      "file": "tests/test_program_transfer.py",
+      "sha256": "f0fe5d207b335aa12a03b8ebb3c5a4f58285ee9db4086cc8f1b4ca5f1231936c"
+    },
+    {
+      "file": "tests/test_rasterizer.py",
+      "sha256": "f53d5981b2f7bde56e83eba694bdbefba6cf802b8cc7c96b0685e20af9eb93a6"
+    },
+    {
+      "file": "tests/test_robot_assets.py",
+      "sha256": "e7df2dd5edb96abbcef9596cccf67c56b526ff822965b252dcd62782740aed98"
+    },
+    {
+      "file": "tests/test_robot_diagnostics.py",
+      "sha256": "f27bfb07c736eec31827f4f07f76afef78746cf039e76d75f958a41b5b8989d7"
+    },
+    {
+      "file": "tests/test_robot_status.py",
+      "sha256": "64064dc125b9e17575298aa4524b6832fc183119fc2bcd7ac6e20bc6cab8840f"
+    },
+    {
+      "file": "tests/test_robot_status_pdf.py",
+      "sha256": "a967617f35904d58c4dca8df43c215b095b4f454cdb3dc08442bf404206c21eb"
+    },
+    {
+      "file": "tests/test_ssh_trust.py",
+      "sha256": "0f30b9aa692f0b3796629475f36aa07a59812bee6eb84cd478c5a481d8370f46"
+    },
+    {
+      "file": "tests/test_surface_themes.py",
+      "sha256": "347528c6edd7239d1cf96d3c25c838b52d429d1b30178cfb536429df90c6cbb8"
+    },
+    {
+      "file": "tests/test_telemetry.py",
+      "sha256": "40d94adf98422e49aee9a2b29f9e470bb68a7712ab4e2edb1642b91beee7f369"
+    },
+    {
+      "file": "tests/test_theme.py",
+      "sha256": "ec2fb826ae59eec5c5cac31d75f94e49221b12fad69ab1d514751efefa2d7ae3"
+    },
+    {
+      "file": "tests/test_theme_switch.py",
+      "sha256": "9c19413acba99fdeebf667c7ab479b7e99cfa41c8452536eb2dff073dc0de8f2"
+    },
+    {
+      "file": "tests/test_tooling.py",
+      "sha256": "32b46b62c98c10c2ba17deee13848490de8797dd91a052977a5d0f10355ec050"
+    },
+    {
+      "file": "tests/test_transfer.py",
+      "sha256": "635ac7d67de3734a4206aef0dc184d611c390f7bb0171f2e24c4e1135cb1bc88"
+    },
+    {
+      "file": "tests/test_transfer_stream.py",
+      "sha256": "e33caa353db05d0f9c98b2a28ef785b5fa271bfee6fa54a90acf3657575cee5c"
+    },
+    {
+      "file": "tests/test_ui.py",
+      "sha256": "e6cafee2b31462c6639795a548ab8e6c77e36693266465301d176d87afd2969a"
+    },
+    {
+      "file": "tests/test_workspace_ui.py",
+      "sha256": "6d3d966d5ebd9049c86289b547d298f7d52018defb3d12c71588195f78fbc3e1"
+    }
+  ],
+  "checks": [
+    {
+      "name": "windows-focused-tests",
+      "exit_code": 0,
+      "seconds": 76.23
+    },
+    {
+      "name": "windows-source-smoke",
+      "exit_code": 0,
+      "seconds": 19.06
+    },
+    {
+      "name": "windows-build",
+      "exit_code": 0,
+      "seconds": 178.55
+    }
+  ],
+  "artifact": {
+    "sha256": "dfb2e0ca90e13c37b438a17854de3a5012bfaa4eba537c3d654fa135566c8576",
+    "size": 109059439,
+    "path": "dist/URMotionStudio.exe"
+  },
+  "source_hashes_verified": true
+}

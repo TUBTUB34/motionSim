@@ -126,6 +126,48 @@ class BackupTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             BackupJob(sources=())
 
+    def test_contents_select_any_combination_of_programs_apps_logs_and_flights(self):
+        connection = LogConnection('127.0.0.1', 'root', 'secret', '/data/logs/log_history.txt')
+        paths = {'programs': ['/programs'], 'apps': ['/apps', '/data/apps'],
+                 'logs': ['/data/logs/log_history.txt', '/data/logs/log_history.bak'], 'flights': ['/data/reports']}
+        for chosen in (('logs',), ('flights',), ('programs', 'flights'), ('apps', 'logs'), tuple(paths)):
+            with self.subTest(chosen=chosen):
+                job = BackupJob(connection=connection, contents=chosen, flight_directory='/data/reports')
+                self.assertEqual([path for path, _kind in job.sources],
+                                 [path for name in paths if name in chosen for path in paths[name]])
+                self.assertEqual(job.full, False)
+        for invalid in ((), ('programs', 'system')):
+            with self.subTest(invalid=invalid), self.assertRaises(ValueError):
+                BackupJob(connection=connection, contents=invalid)
+        # An unused flight folder is not validated; a selected one must be absolute.
+        BackupJob(connection=connection, contents=('logs',), flight_directory='relative')
+        with self.assertRaises(ValueError):
+            BackupJob(connection=connection, contents=('flights',), flight_directory='relative')
+
+    def test_logs_only_backup_archives_both_history_files_and_reports_a_missing_rotation(self):
+        with tempfile.TemporaryDirectory() as folder:
+            destination = Path(folder) / 'backup.tar'
+            client = MagicMock()
+            channel = client.get_transport.return_value.open_session.return_value
+            channel.recv_ready.return_value = False
+            channel.exit_status_ready.return_value = True
+            channel.recv_exit_status.return_value = 0
+            sftp = client.open_sftp.return_value.__enter__.return_value
+            def attributes(path):
+                if path == '/root/log_history.bak':
+                    raise FileNotFoundError(errno.ENOENT, 'Not found', path)
+                return SimpleNamespace(st_size=7, st_mode=stat.S_IFREG | 0o644)
+            sftp.stat.side_effect = attributes
+            sftp.open.side_effect = lambda *args: io.BytesIO(b'archive')
+            job = BackupJob(connection=LogConnection('127.0.0.1', 'root', 'secret'),
+                            client_factory=lambda: client, contents=('logs',))
+            job.choose_destination = MagicMock(return_value=destination)
+            job.run()
+            self.assertEqual(shlex.split(channel.exec_command.call_args.args[0]),
+                             ['tar', '-P', '-cf', job.remote_path, '/root/log_history.txt'])
+            self.assertEqual(destination.read_bytes(), b'archive')
+            self.assertIn('Skipped missing sources: /root/log_history.bak', self.message(job))
+
     def test_missing_apps_only_does_not_create_archive(self):
         job, _, channel, sftp = self.make_job(None, sources=('/data/apps',))
         sftp.stat.side_effect = FileNotFoundError(errno.ENOENT, 'No such file')

@@ -23,6 +23,8 @@ class RobotSession:
         self.stop_event = threading.Event()
         self.events = queue.Queue()
         self.latest = None
+        # Optional callable receiving every sample on the receiver thread.
+        self.sink = None
         self.sample_lock = threading.Lock()
         self.threads = []
 
@@ -50,6 +52,9 @@ class RobotSession:
                     break
                 with self.sample_lock:
                     self.latest = sample
+                sink = self.sink
+                if sink is not None:
+                    sink(sample)
                 if first:
                     first = False
                     self.events.put(("connected", None))

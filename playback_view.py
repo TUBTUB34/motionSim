@@ -12,7 +12,7 @@ class RecordedPlayback(ttk.Frame):
         self.robot = None
         self.report = None
         self.setting_scale = False
-        self.mounting = tk.StringVar(value='TCP mounting')
+        self.mounting = tk.StringVar(value='World (mounting)')
         self.columnconfigure(0, weight=1)
         self.rowconfigure(2, weight=1)
         bar = ttk.Frame(self, padding=(16, 10), style='Toolbar.TFrame')
@@ -24,7 +24,7 @@ class RecordedPlayback(ttk.Frame):
         alignment.pack(side='left', padx=(20, 0))
         ttk.Label(alignment, text='Align view to', style='Panel.TLabel').pack(side='left', padx=(0, 8))
         self.mounting_selector = ttk.Combobox(alignment, textvariable=self.mounting,
-                values=('TCP mounting', 'Robot base'), state='readonly', width=16)
+                values=('World (mounting)', 'TCP mounting', 'Robot base'), state='readonly', width=17)
         self.mounting_selector.pack(side='left')
         self.mounting_selector.bind('<<ComboboxSelected>>', self.change_mounting)
         self.caption = tk.StringVar()
@@ -64,7 +64,7 @@ class RecordedPlayback(ttk.Frame):
 
     def change_mounting(self, _event=None):
         if self.robot:
-            self.robot.set_view_frame('Live TCP' if self.mounting.get() == 'TCP mounting' else 'Robot base')
+            self.robot.set_view_frame({'TCP mounting': 'Live TCP'}.get(self.mounting.get(), self.mounting.get()))
 
     def reset_camera(self):
         if self.robot:
@@ -105,7 +105,7 @@ class RecordedPlayback(ttk.Frame):
         if self.robot and sample is not None:
             self.notice.grid_remove()
             self.robot.grid()
-            self.robot.update_robot(sample, None, render=bool(self.winfo_ismapped()))
+            self.robot.update_robot(sample, report.installation, render=bool(self.winfo_ismapped()))
             self.note.set('Left-drag: rotate · Right-drag: pan · Wheel: zoom · ' + sample.tcp_source)
         else:
             if self.robot:

@@ -98,7 +98,8 @@ class FlightRetrievalIntegrationTests(unittest.TestCase):
                 content = target.read_bytes()
                 self.assertTrue(content.startswith(b'%PDF-'))
                 self.assertTrue(content.rstrip().endswith(b'%%EOF'))
-                self.assertEqual(len(re.findall(rb'/Type\s*/Page\b', content)), 10)
+                # Overview, statistics, six joint chart pages and data notes.
+                self.assertEqual(len(re.findall(rb'/Type\s*/Page\b', content)), 9)
                 self.assertEqual(list(root.glob('.flight-report-*')), [])
 
                 # PyMuPDF is available in the developer environment; keep this
@@ -109,7 +110,7 @@ class FlightRetrievalIntegrationTests(unittest.TestCase):
                     fitz = None
                 if fitz is not None:
                     with fitz.open(target) as document:
-                        self.assertEqual(document.page_count, 10)
+                        self.assertEqual(document.page_count, 9)
                         for page in document:
                             self.assertTrue(page.get_text().strip())
                             pixmap = page.get_pixmap(matrix=fitz.Matrix(.5, .5), alpha=False)

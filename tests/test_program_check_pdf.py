@@ -61,6 +61,10 @@ class ProgramReportGroupingTests(unittest.TestCase):
                 self.assertIn('Not assessed by this report', text)
                 self.assertIn('Mounting and orientation', ' '.join(text.split()))
                 self.assertIn('Guide p. 5', text)
+                self.assertIn('Program Check Report', pdf[0].get_text())
+                self.assertNotIn('/very-long/', text, 'The local folder of a reviewed file is not published')
+                for number, page in enumerate(pdf, 1):
+                    self.assertIn(f'Page {number} of {len(pdf)}', page.get_text())
                 for page in pdf:
                     boxes = []
                     for block in page.get_text('dict')['blocks']:

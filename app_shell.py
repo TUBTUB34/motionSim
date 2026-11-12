@@ -3,45 +3,55 @@ import tkinter as tk
 import time
 from tkinter import ttk
 
+import ui_theme as theme
+
 
 class WorkspaceShell(ttk.Frame):
-    PAGES = (('home', 'Home'), ('simulator', 'Simulator'), ('flights', 'Flight reports'),
-             ('logs', 'Logs'), ('backups', 'Backups'), ('reports', 'Reports'),
-             ('checklist', 'Checklist'))
+    """Top navigation, one persistent page per workflow, and a status footer."""
+    PAGES = (('home', 'Home'), ('simulator', 'Simulator'), ('live', 'Live monitor'),
+             ('flights', 'Flight reports'), ('logs', 'Logs'), ('reports', 'Reports'),
+             ('backups', 'Backups'), ('checklist', 'Checklist'))
 
     def __init__(self, app):
         super().__init__(app.root)
         self.app = app
         self.pack(fill='both', expand=True)
-        self.columnconfigure(1, weight=1)
-        self.rowconfigure(0, weight=1)
-        rail = ttk.Frame(self, padding=(12, 18), style='Panel.TFrame', width=176)
-        rail.grid(row=0, column=0, sticky='ns')
-        rail.grid_propagate(False)
-        rail.columnconfigure(0, weight=1)
-        footer = len(self.PAGES) + 2
-        rail.rowconfigure(footer - 1, weight=1)
-        ttk.Label(rail, text='UR MOTION\nSTUDIO', style='Title.Panel.TLabel').grid(
-            row=0, column=0, sticky='w', padx=4, pady=(0, 28))
+        self.columnconfigure(0, weight=1)
+        self.rowconfigure(1, weight=1)
+        bar = ttk.Frame(self, padding=(14, 0), style='Panel.TFrame')
+        bar.grid(row=0, column=0, sticky='ew')
         self.buttons = {}
-        for row, (name, label) in enumerate(self.PAGES, 1):
-            button = ttk.Button(rail, text=label, command=lambda page=name: app.show_page(page))
-            button.grid(row=row, column=0, sticky='ew', pady=(0, 7))
+        for name, label in self.PAGES:
+            button = ttk.Button(bar, text=label, style='Nav.TButton', command=lambda page=name: app.show_page(page))
+            button.pack(side='left')
             self.buttons[name] = button
-        ttk.Separator(rail).grid(row=footer, column=0, sticky='ew', pady=12)
-        self.connection = tk.StringVar(value='Not connected')
-        ttk.Label(rail, textvariable=self.connection, style='Muted.Panel.TLabel',
-                  wraplength=145).grid(row=footer+1, column=0, sticky='w', padx=4, pady=(0, 14))
-        self.theme_toggle = ttk.Checkbutton(rail, text='Dark mode', variable=app.dark_mode,
-                                            command=app.toggle_theme)
-        self.theme_toggle.grid(row=footer+2, column=0, sticky='w', pady=(0, 12))
-        self.theme_toggle.bind('<Return>', lambda _event: (self.theme_toggle.invoke(), 'break')[1])
-        ttk.Button(rail, text='Connection', command=app.edit_connection_page).grid(row=footer+3, column=0, sticky='ew')
-        ttk.Button(rail, text='Help', command=app.open_help).grid(row=footer+4, column=0, sticky='ew', pady=(8, 0))
+        ttk.Button(bar, text='Help', style='Nav.TButton', command=app.open_help).pack(side='left')
+        self.connection_button = ttk.Button(bar, text='Connect robot', command=app.edit_connection_page)
+        self.connection_button.pack(side='right', pady=7)
+        ttk.Separator(self).grid(row=0, column=0, sticky='sew')
         self.content = ttk.Frame(self)
-        self.content.grid(row=0, column=1, sticky='nsew')
+        self.content.grid(row=1, column=0, sticky='nsew')
+        ttk.Separator(self).grid(row=2, column=0, sticky='new')
+        footer = ttk.Frame(self, padding=(18, 7), style='Panel.TFrame')
+        footer.grid(row=2, column=0, sticky='ew')
+        footer.columnconfigure(2, weight=1)
+        self.indicator = tk.Canvas(footer, width=10, height=10, background=theme.PANEL, highlightthickness=0)
+        self.indicator.grid(row=0, column=0, padx=(0, 8))
+        self.dot = self.indicator.create_oval(1, 1, 9, 9, fill=theme.DISABLED, outline='')
+        self.connection = tk.StringVar(value='Not connected')
+        self.connection_label = ttk.Label(footer, style='Panel.TLabel')
+        self.connection_label.grid(row=0, column=1, sticky='w')
+        self.summary = tk.StringVar()
+        ttk.Label(footer, textvariable=self.summary, style='Muted.Panel.TLabel', anchor='center').grid(
+            row=0, column=2, sticky='ew', padx=16)
+        self.theme_toggle = ttk.Checkbutton(footer, text='Dark mode', variable=app.dark_mode,
+                                            command=app.toggle_theme, style='Panel.TCheckbutton')
+        self.theme_toggle.grid(row=0, column=3, padx=(0, 18))
+        self.theme_toggle.bind('<Return>', lambda _event: (self.theme_toggle.invoke(), 'break')[1])
+        ttk.Label(footer, text='UR MOTION STUDIO', style='Section.Panel.TLabel').grid(row=0, column=4)
         self.pages = {name: ttk.Frame(self.content) for name, _label in self.PAGES}
         self.active = None
+        self._dot_state = None
 
     def show(self, name):
         if self.active != name:
@@ -50,20 +60,27 @@ class WorkspaceShell(ttk.Frame):
             self.pages[name].pack(fill='both', expand=True)
             self.active = name
         for key, button in self.buttons.items():
-            button.configure(style='Accent.TButton' if key == name else 'TButton')
+            button.configure(style='NavActive.TButton' if key == name else 'Nav.TButton')
 
     def update_connection(self):
         app = self.app
         if app.settings is None:
-            value = 'Not connected\nLocal files available'
+            value, state = 'Not connected\nLocal files available', 'DISABLED'
         else:
             state = 'Connected' if app.session is not None and app.last_sample is not None else (
                 'Connecting' if app.session is not None else 'Disconnected')
             if state == 'Connected' and time.monotonic() - app.last_sample.received_at >= 1:
                 state = 'Stale telemetry'
             value = f'{state}\n{app.settings.model} · {app.settings.ip}'
+            state = {'Connected': 'SUCCESS', 'Disconnected': 'DISABLED'}.get(state, 'WARNING')
         if self.connection.get() != value:
             self.connection.set(value)
+            self.connection_label.configure(text=value.replace('\n', ' · '))
+            self.connection_button.configure(text='Connect robot' if app.session is None else 'Connection')
+        # The token name is kept, so a theme switch repaints the dot correctly.
+        if self._dot_state != (state, theme.MODE):
+            self._dot_state = (state, theme.MODE)
+            self.indicator.itemconfigure(self.dot, fill=getattr(theme, state))
 
 
 class SimulatorPopout(tk.Toplevel):

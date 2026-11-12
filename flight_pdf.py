@@ -1,33 +1,43 @@
-"""Vector PDF reports using the supplied Program Check report's visual structure.
+"""Flight Recording Report PDFs, and the A4 page frame shared by every report.
 
-Program facts are static source observations, never compliance certification or
-claims that a particular branch executed. All plotted telemetry covers the full
-selected recording, independently of the desktop viewport and selected joint.
+All figures are recorded measurements over the complete selected recording,
+independently of the desktop viewport and selected joint. No limit is inferred
+and no verdict is given; missing channels stay unavailable, derived quantities
+are labelled, and program facts are static source counts, never proof that a
+particular branch executed.
 """
 from collections import Counter
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 import os
 import re
 import tempfile
 
 import numpy as np
-from matplotlib.backends.backend_agg import RendererAgg
 from matplotlib.backends.backend_pdf import PdfPages
+from matplotlib.colors import to_rgba
 from matplotlib.figure import Figure
 from matplotlib.font_manager import FontProperties
-from matplotlib.patches import Rectangle
+from matplotlib.lines import Line2D
+from matplotlib.patches import Patch, Rectangle
+from matplotlib.textpath import text_to_path
 
-from flight_data import JOINTS, UNITS
-from flight_charts import RENDER_LOCK
+from flight_data import JOINTS
+from flight_charts import RENDER_LOCK, script_line_at
+from flight_stats import Peak, joint_statistics, protective_stops, recording_overview, state_changes
 
 PAGE_WIDTH, PAGE_HEIGHT = 595.32, 841.92
 LEFT, RIGHT, BOTTOM = 70.0, 525.32, 758.0
-INK, MUTED, BAR = '#073746', '#657e85', '#677f84'
-ACTUAL, TARGET = '#278ec1', '#79ad35'
-NOTE = ('Source observations and recorded measurements only. Program compliance and '
-        'application suitability are not certified. Missing measurements remain unavailable; '
-        'derived quantities are identified. Review the original recording and robot program.')
+INK, MUTED, BAR = '#073746', '#56707a', '#677f84'
+ACTUAL, TARGET, STOP = '#1f7fb5', '#5a8f1f', '#c0392b'
+DEGREES = 180 / np.pi
+NOTE = ('Recorded measurements only; no limits are inferred and no verdict is given. A current peak or a '
+        'protective stop alone does not show a collision or a fault. Missing channels are unavailable, never zero.')
+# metric, panel title, display unit, factor from the recorded unit
+PANELS = (('position', 'Position', '°', DEGREES), ('velocity', 'Speed', '°/s', DEGREES),
+          ('acceleration', 'Acceleration', '°/s²', DEGREES), ('current', 'Current', 'A', 1.),
+          ('torque', 'Torque', 'Nm', 1.))
 
 
 @dataclass(frozen=True)
@@ -75,234 +85,490 @@ def measurement_summary(report):
 
 
 class _Report:
-    def __init__(self, pdf, source, subtitle="FLIGHT RECORD ANALYSIS", note=NOTE):
-        self.pdf, self.source = pdf, source
-        self.subtitle, self.note = subtitle, note
-        self.figure = None
-        self.page_number = 0
-        self.renderer = RendererAgg(600, 850, 72)
+    """A4 frame for all reports: header, wrapped text, tables and 'Page N of M' footers."""
+    section = ''
 
-    def lines(self, text, width, size=9, weight='normal'):
+    def __init__(self, pdf, source, subtitle='FLIGHT RECORDING REPORT', note=NOTE):
+        self.pdf, self.source = pdf, str(source)
+        self.subtitle, self.note = subtitle, note
+        self.generated = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')
+        self.figure = None
+        self.pages = []
+
+    def lines(self, text, width, size=9.5, weight='normal'):
         font = FontProperties(family='DejaVu Sans', size=size, weight=weight)
         def fits(value):
-            with RENDER_LOCK:
-                return self.renderer.get_text_width_height_descent(value, font, False)[0] <= width
+            # Unhinted advances are what the PDF embeds; hinted raster widths differ by several percent.
+            return text_to_path.get_text_width_height_descent(value, font, False)[0] <= width
         result = []
-        for paragraph in str(text).split('\n'):
-            current = ''
-            for word in paragraph.split():
-                candidate = f'{current} {word}'.strip()
-                if current and not fits(candidate):
-                    result.append(current)
-                    current = ''
-                # Long filenames and source expressions must not escape their box.
-                while not fits(word) and len(word) > 1:
-                    cut = len(word) - 1
-                    while cut > 1 and not fits(word[:cut]):
-                        cut -= 1
-                    if current:
+        with RENDER_LOCK:
+            for paragraph in str(text).split('\n'):
+                current = ''
+                for word in paragraph.split():
+                    if current and not fits(current + ' ' + word):
                         result.append(current)
                         current = ''
-                    result.append(word[:cut])
-                    word = word[cut:]
-                current = f'{current} {word}'.strip()
-            result.append(current)
+                    # Long filenames and source expressions must not escape their box;
+                    # binary search keeps very long source paths inexpensive to wrap.
+                    while not fits(word) and len(word) > 1:
+                        low, high = 1, len(word)
+                        while low < high:
+                            middle = (low+high+1)//2
+                            if fits(word[:middle]):
+                                low = middle
+                            else:
+                                high = middle-1
+                        # Prefer to break a path or URL after a separator near the end of the line.
+                        low = max(word.rfind(mark, low//2, low) for mark in '/_-.,=:')+1 or low
+                        result.append(word[:low])
+                        word = word[low:]
+                    current = (current + ' ' + word).strip()
+                result.append(current)
         return result
 
-    def text(self, x, y, text, size=9, color=INK, weight='normal', **kwargs):
+    def text(self, x, y, text, size=9.5, color=INK, weight='normal', **kwargs):
         return self.figure.text(x/PAGE_WIDTH, 1-y/PAGE_HEIGHT, str(text),
                                 fontsize=size, color=color, weight=weight,
                                 family='DejaVu Sans', va='top', **kwargs)
 
-    def paragraph(self, text, x=LEFT, width=RIGHT-LEFT, size=9, color=INK, weight='normal'):
-        lines = self.lines(text, width, size, weight)
-        for line in lines:
-            self.text(x, self.y, line, size, color, weight)
-            self.y += size * 1.4
-
-    def rect(self, x, y, width, height, color, edge='#d1d1d1'):
+    def rect(self, x, y, width, height, color, edge='#d1d9db'):
         self.figure.add_artist(Rectangle((x/PAGE_WIDTH, 1-(y+height)/PAGE_HEIGHT),
                                         width/PAGE_WIDTH, height/PAGE_HEIGHT,
                                         transform=self.figure.transFigure,
                                         facecolor=color, edgecolor=edge, linewidth=.7, zorder=-1))
 
+    def rule(self, y):
+        self.figure.add_artist(Line2D([LEFT/PAGE_WIDTH, RIGHT/PAGE_WIDTH], [1-y/PAGE_HEIGHT]*2,
+                                      transform=self.figure.transFigure, color='#c3ced1', linewidth=.7))
+
     def new_page(self, title=None):
         self.finish_page()
-        self.page_number += 1
+        continued = bool(title) and title.endswith(' (continued)')
+        if title and not continued:
+            self.section = title
         self.figure = Figure(figsize=(PAGE_WIDTH/72, PAGE_HEIGHT/72), dpi=72, facecolor='white')
-        self.text(LEFT, 46, 'UR MOTION STUDIO', 11, INK, 'bold')
-        self.text(LEFT, 64, self.subtitle, 7, MUTED)
-        self.y = 108
+        self.text(LEFT, 38, 'UR MOTION STUDIO', 10, INK, 'bold')
+        self.text(LEFT, 52, self.subtitle, 7.5, MUTED)
+        if self.source:
+            first, *rest = self.lines(self.source, 260, 7.5)
+            self.text(RIGHT, 52, first + ('…' if rest else ''), 7.5, MUTED, ha='right')
+        self.rule(66)
+        self.y = 88
         if title:
-            self.paragraph(title, size=25)
-            self.y += 15
+            self.paragraph(title, size=9 if continued else 20, color=MUTED if continued else INK)
+            self.y += 8 if continued else 3
+        self.top = self.y
 
     def finish_page(self):
-        if self.figure is None:
-            return
-        y = 786
-        for line in self.lines(self.note, RIGHT-LEFT, 5.4):
-            self.text(LEFT, y, line, 5.4, MUTED)
-            y += 7
-        self.text(PAGE_WIDTH/2, 822, str(self.page_number), 7, INK, ha='center')
-        with RENDER_LOCK:
-            self.pdf.savefig(self.figure, dpi=144)
-            self.figure.clear()
-        self.figure = None
+        if self.figure is not None:
+            self.pages.append(self.figure)
+            self.figure = None
 
-    def reserve(self, height, heading='Detailed findings (continued)'):
-        if self.y + height > BOTTOM:
-            self.new_page(heading)
+    def close(self):
+        """Write every page; footers wait until here because they state the page count."""
+        self.finish_page()
+        note = self.lines(self.note, RIGHT-LEFT, 7)
+        for number, self.figure in enumerate(self.pages, 1):
+            self.rule(768)
+            for index, line in enumerate(note):
+                self.text(LEFT, 784+index*9.5, line, 7, MUTED)
+            self.text(LEFT, 816, 'Generated ' + self.generated, 7.5, MUTED)
+            self.text(RIGHT, 816, f'Page {number} of {len(self.pages)}', 7.5, INK, ha='right')
+            with RENDER_LOCK:
+                self.pdf.savefig(self.figure, dpi=144)
+                self.figure.clear()
+        self.pages, self.figure = [], None
+
+    def paragraph(self, text, x=LEFT, width=RIGHT-LEFT, size=9.5, color=INK, weight='normal'):
+        leading = size * (1.6 if size >= 13 else 1.45)
+        for line in self.lines(text, width, size, weight):
+            if self.y + leading > BOTTOM:
+                self.new_page(self.section + ' (continued)')
+            self.text(x, self.y, line, size, color, weight)
+            self.y += leading
+
+    def heading(self, title, size=13):
+        if self.y + 90 > BOTTOM:
+            self.new_page(self.section + ' (continued)')
+        elif self.y > self.top:
+            self.y += 10
+        self.paragraph(title, size=size, weight='bold')
+        self.y += 1
+
+    def bullet(self, text, marker='•', size=9.5, indent=16):
+        if self.y + size*1.45 > BOTTOM:
+            self.new_page(self.section + ' (continued)')
+        self.text(LEFT+2, self.y, marker, size)
+        self.paragraph(text, LEFT+indent, RIGHT-LEFT-indent, size)
+        self.y += 4
 
     def bar(self, title):
-        self.rect(LEFT, self.y, RIGHT-LEFT, 22, BAR)
-        self.text(LEFT+8, self.y+5, title, 9, 'white', 'bold')
-        self.y += 22
+        self.rect(LEFT, self.y, RIGHT-LEFT, 20, BAR, BAR)
+        self.text(LEFT+8, self.y+5.5, title, 8.5, 'white', 'bold')
+        self.y += 20
 
-    def card(self, title, paragraphs):
-        parts = [(self.lines(text, RIGHT-LEFT-24, size), size, color, weight)
-                 for text, size, color, weight in paragraphs]
-        height = 22 + 14 + sum(len(lines)*size*1.4 + 7 for lines, size, _, _ in parts)
-        self.reserve(height+12)
-        top = self.y
-        self.rect(LEFT, top, RIGHT-LEFT, height, 'white')
+    def rows(self, title, rows, label_width=110):
+        """Two-column table; a value is text or a list of (text, color, weight) paragraphs."""
+        if not rows:
+            return
+        wrapped = []
+        for label, value in rows:
+            parts = value if isinstance(value, (list, tuple)) else [(value, INK, 'normal')]
+            wrapped.append((self.lines(label, label_width-16, 8.5, 'bold'),
+                            [(line, color, weight) for text, color, weight in parts
+                             for line in self.lines(text, RIGHT-LEFT-label_width-16, 9, weight)]))
+        # A title bar is never left alone at the foot of a page.
+        if self.y + 32 + min(max(map(len, wrapped[0])), 32)*13 > BOTTOM:
+            self.new_page(self.section + ' (continued)')
         self.bar(title)
-        self.y += 8
-        for lines, size, color, weight in parts:
-            for line in lines:
-                self.text(LEFT+12, self.y, line, size, color, weight)
-                self.y += size*1.4
-            self.y += 7
-        self.y = top+height+14
-
-    def table(self, title, rows, label_width=200):
-        self.reserve(70)
-        self.bar(title)
-        for index, (label, value) in enumerate(rows):
-            left = self.lines(label, label_width-16, 8.4, 'bold')
-            right = self.lines(value, RIGHT-LEFT-label_width-16, 8.4)
-            height = max(len(left), len(right))*11.8+14
-            if self.y+height > BOTTOM:
-                self.new_page()
-                self.bar(title+' (continued)')
-            self.rect(LEFT, self.y, RIGHT-LEFT, height, '#ececec' if index%2 == 0 else 'white')
-            for line_index, line in enumerate(left):
-                self.text(LEFT+8, self.y+7+line_index*11.8, line, 8.4, INK, 'bold')
-            for line_index, line in enumerate(right):
-                self.text(LEFT+label_width+8, self.y+7+line_index*11.8, line, 8.4, MUTED)
-            self.y += height
+        for index, (left, right) in enumerate(wrapped):
+            count = max(len(left), len(right))
+            offset = 0
+            while offset < count:
+                room = int((BOTTOM-self.y-12) // 13)
+                remaining = count-offset
+                # Keep ordinary rows together; split oversized evidence safely.
+                if room < 1 or (offset == 0 and remaining <= 32 and remaining > room):
+                    self.new_page(self.section + ' (continued)')
+                    self.bar(title + ' (continued)')
+                    room = int((BOTTOM-self.y-12) // 13)
+                take = min(room, remaining)
+                height = take*13+12
+                self.rect(LEFT, self.y, RIGHT-LEFT, height, '#f0f4f5' if index % 2 == 0 else 'white')
+                for n, line in enumerate(left[offset:offset+take]):
+                    self.text(LEFT+8, self.y+6+n*13, line, 8.5, INK, 'bold')
+                for n, (line, color, weight) in enumerate(right[offset:offset+take]):
+                    self.text(LEFT+label_width+8, self.y+6+n*13, line, 9, color, weight)
+                self.y += height
+                offset += take
         self.y += 14
 
 
-def _observations(report, facts):
-    payloads = facts.named('set_payload', 'set_target_payload')
-    tcps = facts.named('set_tcp')
-    motions = facts.named('movej', 'movel', 'movep')
-    blends = [call for call in motions if re.search(r'\br\s*=', call[2])]
-    def first(calls):
-        if not calls:
-            return 'No matching call statement is available in the supplied program source.'
-        number, name, arguments = calls[0]
-        return f'First source call at script line {number}: {name}({arguments}).'
-    return [
-        ('Initial Payload Mass, CoG and Inertia', first(payloads)),
-        ('Dynamic payload changes', f'{len(payloads)} payload call statements appear in the source. '
-         'This count does not establish which calls executed or whether the physical payload is correct.'),
-        ('Initial TCP', first(tcps)),
-        ('Dynamic TCP changes', f'{len(tcps)} TCP call statements appear in the source. '
-         'Expression values and runtime changes require program review.'),
-        ('Acceleration limits', 'The following charts show recorded target acceleration. Actual '
-         'acceleration is recorded when available, otherwise derived from measured velocity. Application-specific acceleration limits '
-         'are not established by the recording; no compliance verdict is inferred.'),
-        ('Blend radius overlap', f'{len(blends)} motion call statements include a blend-radius argument. '
-         'Dynamic waypoints and expression evaluation are not resolved; geometric overlap is not assessed.'),
-        ('Blended motion continuation', 'Control-flow, helper functions and runtime branches require '
-         'manual review. A command following a move in the source alone does not prove that blending was aborted.'),
+def _number(value, decimals):
+    text = f'{value:,.{decimals}f}'
+    if float(text.replace(',', '')) == 0:
+        text = text.lstrip('-')
+    return text.replace('-', '−')
+
+
+def _vector(text):
+    """Shorten a recorded numeric vector for reading; anything else is shown as recorded."""
+    try:
+        values = [float(part) for part in text.strip().lstrip('p').strip('[]').split(',')]
+    except ValueError:
+        return text
+    return '[' + ', '.join(f'{value:.4g}' for value in values).replace('-', '−') + ']'
+
+
+def _plural(count, noun):
+    return f'{count:,} {noun}' + ('' if count == 1 else 's')
+
+
+def _torque_basis(report, joint):
+    header = report.source_header('torque', joint)
+    if header is None:
+        return 'target'
+    return 'controller current as torque' if header.startswith('Actual current as torque') else ''
+
+
+def _identity(report):
+    """Recording identity rows; anything the file does not state is left out."""
+    meta = report.metadata
+    kind = meta.get('report_type', '')
+    rows = [('Recording', report.name),
+            ('Recording type', kind.replace('_', ' ').capitalize() if kind.isupper() else kind),
+            ('Recorded', meta.get('recorded_at', '').replace('T', ' ')),
+            ('Program', ' · '.join(filter(None, (
+                meta.get('program'), meta.get('program_state') and f"state when reported: {meta['program_state']}",
+                meta.get('installation') and f"installation: {meta['installation']}")))),
+            ('Robot', ' · '.join(filter(None, (
+                report.model, meta.get('serial') and f"serial {meta['serial']}",
+                meta.get('robot_address') and f"address {meta['robot_address']}")))),
+            ('Controller software', meta.get('software_version', '')),
+            ('Incident time', meta.get('incident_time') and meta['incident_time'] + ' (controller clock)')]
+    length = f'{_plural(report.sample_count, "sample")} over {report.duration:.3f} s'
+    if meta.get('sample_rate_hz'):
+        length += f" at {meta['sample_rate_hz']} Hz"
+    rows += [('Recording length', length),
+             ('Time axis', f'Seconds from the first sample (controller uptime {report.timestamps[0]:.3f} s)')]
+    payload = [meta['payload_kg'] + ' kg in the report summary'] if meta.get('payload_kg') else []
+    mass = report.columns.get('Payload mass [kg]')
+    mass = mass[np.isfinite(mass)] if mass is not None else ()
+    if len(mass):
+        low, high = float(mass.min()), float(mass.max())
+        payload.append(f'active setting {low:.2f} kg throughout the recording' if low == high
+                       else f'active setting between {low:.2f} and {high:.2f} kg during the recording')
+    if meta.get('center_of_gravity'):
+        payload.append(f"centre of gravity {_vector(meta['center_of_gravity'])} m")
+    rows += [('Payload', '; '.join(payload).capitalize()),
+             ('TCP offset', meta.get('tcp_offset') and _vector(meta['tcp_offset']) + ' (x, y, z in m; rotation vector in rad)'),
+             ('Notes', meta.get('notes', ''))]
+    return [(label, value) for label, value in rows if value]
+
+
+def _findings(report, statistics):
+    """Plain statements of recorded facts; nothing is interpreted as a cause."""
+    overview = recording_overview(report)
+    stops = overview['protective_stops']
+    found = []
+    if 'Safety mode' not in report.columns:
+        found.append('Safety mode is not recorded, so protective stops cannot be identified from this file.')
+    elif not stops:
+        found.append('No protective stop is recorded.')
+    else:
+        spans = []
+        for start, end in stops:
+            span = (f'from {start:.2f} s to the end of the recording' if end >= report.duration
+                    else f'from {start:.2f} s to {end:.2f} s')
+            line = script_line_at(report, report.timestamps[int(np.searchsorted(report.time, start))])
+            spans.append(span + (f' (recorded script line {line} when it began)' if line else ''))
+        found.append(('A protective stop is recorded ' if len(stops) == 1
+                      else f'{len(stops)} protective stops are recorded: ') + '; '.join(spans) + '.')
+    changes = state_changes(report)
+    for field in dict.fromkeys(change.field for change in changes):
+        steps = [change for change in changes if change.field == field]
+        if len(steps) == 1:
+            found.append(f'{field}: {steps[0].label} for the whole recording.')
+            continue
+        text = ' → '.join(f'{step.label} at ' + ('the start' if not step.elapsed else f'{step.elapsed:.2f} s')
+                          for step in steps[:9])
+        found.append(f'{field}: {text}' + (f', then {len(steps)-9} further changes.' if len(steps) > 9 else '.'))
+    for label, attribute, unit, factor, decimals in (
+            ('Highest joint speed', 'peak_velocity', ' °/s', DEGREES, 1),
+            ('Highest joint current', 'peak_current', ' A', 1., 2),
+            ('Largest tracking error (actual minus target position)', 'peak_tracking_error', '°', DEGREES, 3)):
+        peaks = [(row.joint, getattr(row, attribute)) for row in statistics if getattr(row, attribute)]
+        if peaks:
+            joint, peak = max(peaks, key=lambda item: abs(item[1].value))
+            found.append(f'{label}: {joint}, {_number(peak.value*factor, decimals)}{unit} at {peak.elapsed:.2f} s.')
+    scaling = overview['min_speed_scaling']
+    if scaling:
+        found.append('Speed scaling is 100 % for the whole recording.' if scaling.value >= 1 else
+                     f'Lowest speed scaling: {scaling.value*100:.0f} % at {scaling.elapsed:.2f} s.')
+    tool = []
+    if overview['tcp_path_m'] is not None:
+        tool.append(f"TCP path length {overview['tcp_path_m']:.2f} m")
+    if overview['peak_tcp_speed']:
+        tool.append(f"highest TCP speed {overview['peak_tcp_speed'].value:.2f} m/s at {overview['peak_tcp_speed'].elapsed:.2f} s")
+    if overview['peak_arm_current']:
+        tool.append(f"highest arm current {overview['peak_arm_current'].value:.2f} A at {overview['peak_arm_current'].elapsed:.2f} s")
+    if overview['min_main_voltage']:
+        tool.append(f"lowest main voltage {overview['min_main_voltage'].value:.2f} V at {overview['min_main_voltage'].elapsed:.2f} s")
+    if tool:
+        text = '; '.join(tool) + '.'
+        found.append(text[0].upper() + text[1:])
+    return found
+
+
+def _summary_page(doc, report, statistics):
+    doc.new_page('Flight Recording Report')
+    doc.rows('Recording', _identity(report), label_width=118)
+    doc.heading('What the recording shows')
+    for finding in _findings(report, statistics):
+        doc.bullet(finding)
+    doc.y += 4
+    doc.paragraph('Each statement is read directly from the recorded channels. Peaks are single samples; the joint '
+                  'statistics and charts on the following pages give their context.', size=8.5, color=MUTED)
+
+
+def _cell(value, decimals, factor=1., mark=''):
+    """(value, elapsed time) text for a number or a recorded peak; an absent channel stays None."""
+    if value is None:
+        return None
+    if isinstance(value, Peak):
+        return _number(value.value*factor, decimals)+mark, f'at {value.elapsed:.2f} s'
+    return _number(value*factor, decimals)+mark, ''
+
+
+def _qualifier(words):
+    """State a basis shared by every joint once; otherwise star the joints it applies to."""
+    named = list(dict.fromkeys(word for word in words if word))
+    if not named:
+        return '', ['']*len(words)
+    if len(named) == 1 and all(words):
+        return ' · ' + named[0], ['']*len(words)
+    return ' · * ' + ' or '.join(named), ['*' if word else '' for word in words]
+
+
+def _statistics_page(doc, report, statistics):
+    doc.new_page('Joint statistics')
+    doc.paragraph('Complete recording, one column per joint. A peak is the single recorded sample of largest '
+                  'magnitude, shown with its sign and the time at which it occurs.', size=9, color=MUTED)
+    doc.y += 10
+    derived, derived_marks = _qualifier(['derived from speed' if row.acceleration_derived else '' for row in statistics])
+    basis, basis_marks = _qualifier([_torque_basis(report, joint) for joint in range(len(JOINTS))])
+    table = [
+        ('Lowest position', 'degrees', [_cell(row.position_min, 1, DEGREES) for row in statistics]),
+        ('Highest position', 'degrees', [_cell(row.position_max, 1, DEGREES) for row in statistics]),
+        ('Range of motion', 'degrees', [_cell(row.travel, 1, DEGREES) for row in statistics]),
+        ('Peak speed', '°/s', [_cell(row.peak_velocity, 1, DEGREES) for row in statistics]),
+        ('Peak acceleration', '°/s²'+derived, [_cell(row.peak_acceleration, 0, DEGREES, mark)
+                                               for row, mark in zip(statistics, derived_marks)]),
+        ('Peak current', 'A', [_cell(row.peak_current, 2) for row in statistics]),
+        ('RMS current', 'A', [_cell(row.rms_current, 2) for row in statistics]),
+        ('Peak torque', 'Nm'+basis, [_cell(row.peak_torque, 1, mark=mark) for row, mark in zip(statistics, basis_marks)]),
+        ('Highest temperature', '°C', [_cell(row.max_temperature, 1) for row in statistics]),
+        ('Lowest voltage', 'V', [_cell(row.min_voltage, 2) for row in statistics]),
+        ('Largest tracking error', 'degrees · actual − target position', [_cell(row.peak_tracking_error, 3, DEGREES) for row in statistics]),
     ]
+    shown = [row for row in table if any(row[2])]
+    label_width = 128
+    column = (RIGHT-LEFT-label_width)/len(JOINTS)
+    if shown:
+        doc.rect(LEFT, doc.y, RIGHT-LEFT, 20, BAR, BAR)
+        doc.text(LEFT+8, doc.y+5.5, 'Measurement', 8.5, 'white', 'bold')
+        for index, name in enumerate(JOINTS, 1):
+            doc.text(LEFT+label_width+index*column-7, doc.y+5.5, name, 8.5, 'white', 'bold', ha='right')
+        doc.y += 20
+    for index, (label, unit, cells) in enumerate(shown):
+        doc.rect(LEFT, doc.y, RIGHT-LEFT, 30, '#f0f4f5' if index % 2 == 0 else 'white')
+        doc.text(LEFT+8, doc.y+6, label, 8.5, INK, 'bold')
+        doc.text(LEFT+8, doc.y+17.5, unit, 7, MUTED)
+        for position, cell in enumerate(cells, 1):
+            x = LEFT+label_width+position*column-7
+            if cell is None:
+                doc.text(x, doc.y+6, '—', 8.5, MUTED, ha='right')
+                continue
+            doc.text(x, doc.y+6, cell[0], 8.5, INK, ha='right')
+            doc.text(x, doc.y+17.5, cell[1], 7, MUTED, ha='right')
+        doc.y += 30
+    doc.y += 12
+    notes = []
+    if any(cell is None for row in shown for cell in row[2]):
+        notes.append('— means the channel is not recorded for that joint.')
+    missing = [row[0] for row in table if row not in shown]
+    if missing:
+        notes.append(('Not recorded in this file: ' if shown else 'No joint channel is recorded in this file: ')
+                     + ', '.join(missing) + '.')
+    notes.append('Position, speed and acceleration are converted from the recorded radians to degrees.')
+    for note in notes:
+        doc.paragraph(note, size=8.5, color=MUTED)
+        doc.y += 3
 
 
-def _summary_page(doc, report, facts):
-    doc.new_page('Program Check Report')
-    doc.paragraph('Selected flight · '+report.name, size=10, color=MUTED)
-    doc.y += 14
-    doc.card('Reporting scope', [(NOTE, 8.5, INK, 'normal')])
-    counts = Counter(call[1] for call in facts.calls)
-    summary = (f"Program: {report.metadata.get('program', 'Not recorded')}\n"
-               f"Source: {report.name}\n"
-               f"Robot: {report.model or 'Unknown'} · Serial: {report.metadata.get('serial', 'Not recorded')}\n"
-               f"Software: {report.metadata.get('software_version', 'Not recorded')} · "
-               f"Program state: {report.metadata.get('program_state', 'Not recorded')}\n"
-               f"Incident: {report.metadata.get('incident_time', 'Not recorded')}\n"
-               f"Recorded payload: {report.metadata.get('payload_kg', 'Not recorded')} kg\n"
-               f"Recorded TCP offset [m, rad]: {report.metadata.get('tcp_offset', 'Not recorded')}\n"
-               f"{report.sample_count:,} samples · {report.duration:.3f} s · "
-               f"{report.metadata.get('sample_rate_hz', 'Unknown')} Hz nominal\n"
-               f"{facts.line_count:,} script lines; {counts['movej']} MoveJ, {counts['movel']} MoveL, "
-               f"{counts['movep']} MoveP call statements.")
-    doc.card('Report Summary', [('Overall result: Not assessed', 10, '#b27619', 'bold'),
-                                (summary, 8.5, INK, 'normal')])
-    caps = '\n'.join(f'{source} · script line {line}' for line, source in facts.urcaps) or 'No URCap source declarations found in the selected program.'
-    doc.card('URCaps Used in This Program', [(caps, 8.5, INK, 'normal')])
-    doc.table('Compliance Status', [
-        ('Not assessed', 'No automated compliance certification is performed.'),
-        ('Recorded', 'Numeric values are taken from the selected flight recording.'),
-        ('Derived', 'Missing actual acceleration is derived from velocity; summary statistics are calculated.')])
+def _traces(report, metric, joint, factor):
+    """Every recorded series of one chart panel as (label, colour, line style, values)."""
+    traces = []
+    for target in (False, True):
+        values = report.series(metric, joint, target)
+        if not np.isfinite(values).any():
+            continue
+        label = 'Target'
+        if not target:
+            basis = ('derived from speed' if metric == 'acceleration' and report.source_header(metric, joint) is None
+                     else _torque_basis(report, joint) if metric == 'torque' else '')
+            label = f'Actual ({basis})' if basis else 'Actual'
+        traces.append((label, TARGET if target else ACTUAL, (0, (4, 2.5)) if target else '-', values*factor))
+    if metric == 'current':
+        for key, label, style in (('current_upper', 'Recorded upper limit', '-'),
+                                  ('current_lower', 'Recorded lower limit', ':')):
+            values = report.series(key, joint)
+            if np.isfinite(values).any():
+                traces.append((label, STOP, style, values))
+    return traces
 
 
-def _chart_page(doc, report, joint, summary):
-    doc.new_page(f'Joint {joint} · {JOINTS[joint]}')
-    doc.paragraph('Detailed findings · complete recording', size=10, color=MUTED)
-    doc.y += 5
-    doc.paragraph(f'{report.name} | {report.sample_count:,} samples | {report.duration:.3f} s', size=8, color=MUTED)
-    top, plot_height, step = 215.0, 96.0, 130.0
-    for index, metric in enumerate(('position', 'velocity', 'acceleration', 'current')):
-        chart_top = top+index*step
-        axes = doc.figure.add_axes([86/PAGE_WIDTH, 1-(chart_top+plot_height)/PAGE_HEIGHT,
-                                    (RIGHT-94)/PAGE_WIDTH, plot_height/PAGE_HEIGHT])
-        is_derived = metric == 'acceleration' and f'Actual acceleration j{joint} [rad/s^2]' not in report.columns
-        actual_label = 'Actual (derived)' if is_derived else 'Actual'
-        any_values = False
-        for target, color, label in [(False, ACTUAL, actual_label), (True, TARGET, 'Target')]:
-            values = report.series(metric, joint, target)
-            segments = list(report.valid_segments(values))
-            for segment_index, segment in enumerate(segments):
-                axes.plot(report.timestamps[segment], values[segment], color=color,
-                          linewidth=.65, label=label if segment_index == 0 else None,
-                          marker='.' if segment.stop-segment.start == 1 else None)
-                any_values = True
-        if metric == 'current':
-            for envelope, style in [('current_upper', '-'), ('current_lower', '--')]:
-                values = report.series(envelope, joint)
-                for segment_index, segment in enumerate(report.valid_segments(values)):
-                    axes.plot(report.timestamps[segment], values[segment], color='#c34f59',
-                              linewidth=.65, linestyle=style,
-                              label=envelope.replace('_', ' ').title() if segment_index == 0 else None)
-                    any_values = True
-        if not any_values:
-            axes.text(.5, .5, 'No recorded channel', transform=axes.transAxes,
-                      ha='center', color=MUTED, fontsize=8)
-        else:
-            axes.legend(loc='upper right', fontsize=6, frameon=False, ncol=2)
-        axes.set_title(metric.title(), loc='left', fontsize=9, color=INK, pad=5)
-        axes.set_ylabel(UNITS[metric], fontsize=7, color=INK)
-        axes.set_xlabel('Recording timestamp [s] · controller uptime', fontsize=6, color=MUTED, labelpad=2)
-        axes.tick_params(labelsize=6, colors=MUTED, length=2)
+def _chart_page(doc, report, joint, stops):
+    """Full-recording traces for one joint; False when the joint has no recorded channel."""
+    panels = [(title, unit, _traces(report, metric, joint, factor)) for metric, title, unit, factor in PANELS]
+    missing = [title.lower() for title, _unit, traces in panels if not traces]
+    panels = [panel for panel in panels if panel[2]]
+    if not panels:
+        return False
+    doc.new_page(f'{JOINTS[joint]} · joint {joint}')
+    doc.paragraph(f'Complete recording, {report.duration:.3f} s. Time is in seconds from the first sample '
+                  f'(controller uptime {report.timestamps[0]:.3f} s). Solid: actual. Dashed: target.'
+                  + (' Shaded: recorded protective stop.' if stops else '')
+                  + (f' Not recorded for this joint: {", ".join(missing)}.' if missing else ''),
+                  size=8.5, color=MUTED)
+    top, gap, inset = doc.y+24, 38, 36
+    height = min(125., (BOTTOM-22-top-gap*(len(panels)-1))/len(panels))
+    for index, (title, unit, traces) in enumerate(panels):
+        chart_top = top+index*(height+gap)
+        axes = doc.figure.add_axes([(LEFT+inset)/PAGE_WIDTH, 1-(chart_top+height)/PAGE_HEIGHT,
+                                    (RIGHT-LEFT-inset)/PAGE_WIDTH, height/PAGE_HEIGHT])
+        handles = []
+        for label, color, style, values in traces:
+            # One line per recorded segment: gaps and missing samples are never bridged.
+            for segment in report.valid_segments(values):
+                line, = axes.plot(report.time[segment], values[segment], color=color, linewidth=.9, linestyle=style,
+                                  marker='.' if segment.stop-segment.start == 1 else None, label=label)
+            handles.append(line)
+        for start, end in stops:
+            axes.axvspan(start, end, facecolor=to_rgba(STOP, .13), edgecolor=to_rgba(STOP, .55), linewidth=.5)
+        if stops and index == 0:
+            handles.append(Patch(facecolor=to_rgba(STOP, .13), edgecolor=to_rgba(STOP, .55), linewidth=.5,
+                                 label='Protective stop'))
+        axes.legend(handles=handles, loc='lower right', bbox_to_anchor=(1, 1), borderaxespad=.25,
+                    fontsize=7.5, frameon=False, ncol=len(handles), labelcolor=INK, handlelength=2.4)
+        axes.set_title(f'{title} [{unit}]', loc='left', fontsize=9.5, color=INK, fontweight='bold', pad=6)
+        axes.tick_params(labelsize=7.5, colors=MUTED, length=2.5)
         axes.ticklabel_format(axis='x', style='plain', useOffset=False)
-        axes.grid(True, color='#dfe5e6', linewidth=.5)
-        for spine in axes.spines.values():
-            spine.set_color('#cbd4d6')
+        axes.grid(True, color='#e3e9ea', linewidth=.5)
+        axes.set_axisbelow(True)
+        for name, spine in axes.spines.items():
+            spine.set_visible(name in ('left', 'bottom'))
+            spine.set_color('#b9c5c8')
         if report.sample_count > 1:
-            axes.set_xlim(float(report.timestamps[0]), float(report.timestamps[-1]))
-    def value(number):
-        return 'Unavailable' if number is None else f'{number:.4g}'
-    doc.y = 739
-    doc.paragraph(f"Position range: {value(summary['position_min'])} to {value(summary['position_max'])} rad · "
-                  f"Peak |speed|: {value(summary['peak_speed'])} rad/s · RMS current: {value(summary['rms_current'])} A",
-                  size=6.5, color=MUTED)
-    acceleration_basis = ('recorded' if f'Actual acceleration j{joint} [rad/s^2]' in report.columns
-                          else 'finite differences of measured velocity')
-    doc.paragraph(f'Gaps are preserved. Actual acceleration: {acceleration_basis}. No inferred current limits.',
-                  size=6.5, color=MUTED)
+            axes.set_xlim(0., report.duration)
+    axes.set_xlabel('Elapsed time [s]', fontsize=8, color=INK, labelpad=3)
+    return True
+
+
+def _notes_page(doc, report, statistics, uncharted):
+    facts = program_facts(report.script)
+    doc.new_page('Program context and notes' if report.script else 'Notes')
+    if report.script:
+        counts = Counter(call[1] for call in facts.calls)
+        blends = sum(bool(re.search(r'\br\s*=', call[2])) for call in facts.named('movej', 'movel', 'movep'))
+        def calls(*names):
+            found = facts.named(*names)
+            if not found:
+                return 'None found'
+            number, name, arguments = found[0]
+            return f'{_plural(len(found), "call statement")}; first at script line {number}: {name}({arguments})'
+        rows = [('Script', _plural(facts.line_count, 'line')),
+                ('Move statements', f"{counts['movej']} MoveJ, {counts['movel']} MoveL, {counts['movep']} MoveP; "
+                                    f'{blends} with a blend radius'),
+                ('Payload statements', calls('set_payload', 'set_target_payload')),
+                ('TCP statements', calls('set_tcp'))]
+        if facts.urcaps:
+            rows.append(('URCap sources', '\n'.join(f'{source} (script line {line})' for line, source in facts.urcaps)))
+        doc.rows('Program context · counted from the recorded script', rows, label_width=118)
+        doc.paragraph('These are counts of statements in the script saved with the recording, including branches and '
+                      'helper functions. They do not show which statements ran or whether the payload and TCP match '
+                      'the real tool. Use a Program Check report to review the program itself.', size=8.5, color=MUTED)
+    doc.heading('How to read this report')
+    notes = ['Time is in seconds from the first sample. Controller uptime is not a wall-clock time'
+             + ('; the incident time on page 1 is the controller\'s label for the whole recording and is not used '
+                'to date individual samples.' if report.metadata.get('incident_time') else '.'),
+             'Joint position, speed and acceleration are converted from the recorded radians to degrees. Current (A), '
+             'torque (Nm), temperature (°C) and voltage (V) are shown as recorded.']
+    derived = report.metadata.get('acceleration_note', '')
+    if any(row.acceleration_derived and row.peak_acceleration for row in statistics):
+        notes.append((derived if 'derived' in derived else 'Actual acceleration is derived from recorded speed '
+                      '(finite differences)') + '. It is a calculated value, not a measurement.')
+    bases = {_torque_basis(report, joint) for joint, row in enumerate(statistics) if row.peak_torque}
+    if 'target' in bases:
+        notes.append('Torque is the controller\'s target joint torque. Actual torque is not recorded and is not '
+                     'estimated from current.')
+    if 'controller current as torque' in bases:
+        notes.append('Actual torque is the controller\'s own conversion of motor current to torque, not a torque sensor reading.')
+    notes += ['Missing or invalid samples stay as gaps: lines are not drawn across them and the statistics use '
+              'recorded samples only.',
+              'No limit is applied and no pass/fail verdict is given. A current peak or a protective stop on its own '
+              'does not show a collision or a component fault.']
+    if report.metadata.get('model_basis'):
+        notes.append(f"Robot model {report.model}: {report.metadata['model_basis'][0].lower()}{report.metadata['model_basis'][1:]}.")
+    for note in notes:
+        doc.bullet(note, size=9)
+    doc.heading('Data quality')
+    quality = [warning for warning in report.warnings if warning != derived + '.']
+    if uncharted:
+        quality.append('No channel is recorded for ' + ', '.join(uncharted) + '; '
+                       + ('this joint has' if len(uncharted) == 1 else 'these joints have') + ' no chart page.')
+    for warning in quality or ['The file was read without warnings.']:
+        doc.bullet(warning, size=9)
 
 
 def export_flight_pdf(report, path):
@@ -310,53 +576,21 @@ def export_flight_pdf(report, path):
     if report.sample_count == 0:
         raise ValueError('Cannot export a flight with no timestamped samples.')
     destination = Path(path)
-    facts = program_facts(report.script)
-    observations = _observations(report, facts)
-    summaries = measurement_summary(report)
+    statistics = joint_statistics(report)
+    stops = protective_stops(report)
     handle, temporary_name = tempfile.mkstemp(prefix='.flight-report-', suffix='.pdf', dir=destination.parent)
     os.close(handle)
     temporary = Path(temporary_name)
     try:
-        with PdfPages(temporary, metadata={'Title': f'Flight Report - {report.name}',
+        with PdfPages(temporary, metadata={'Title': f'Flight Recording Report - {report.name}',
                                           'Author': 'UR Motion Studio',
-                                          'Subject': 'Full-record measurements and source program observations'}) as pdf:
-            doc = _Report(pdf, report)
-            _summary_page(doc, report, facts)
-            doc.new_page()
-            checklist = [(title, detail) for title, detail in observations]
-            doc.table('Checklist Details', checklist, label_width=190)
-            doc.new_page('Detailed findings')
-            doc.paragraph('Static source observations. These statements do not certify execution, physical setup or compliance.',
-                          size=9, color=MUTED)
-            doc.y += 14
-            # Source setup topics; acceleration and blending scope are retained in
-            # the checklist and recommendation page, avoiding invented verdicts.
-            for title, detail in observations[:4]:
-                doc.card(title, [('Status: Source observation', 8.5, MUTED, 'bold'),
-                                 (detail, 8.5, INK, 'normal')])
-            for joint, summary in enumerate(summaries):
-                _chart_page(doc, report, joint, summary)
-            doc.new_page('Recommended Action Summary')
-            actions = [
-                ('1. Correlate the recorded event with the program',
-                 'Use controller-uptime timestamps and source script lines. Incident wall-clock time is metadata; '
-                 'it is not treated as an exact conversion for every sample.'),
-                ('2. Validate the configured payload and TCP',
-                 'Compare the source calls and recorded metadata with the actual tool and load. '
-                 'A call count does not establish physical correctness.'),
-                ('3. Review acceleration and blended motions',
-                 'Evaluate limits, dynamic waypoints and control flow in the application context. '
-                 'No unsupported acceleration-limit, blend-overlap or continuation verdict is generated.'),
-                ('4. Keep measured and derived data distinct',
-                 'Where actual acceleration is absent, it is calculated from recorded velocity within valid segments. '
-                 'RMS current and peak speed use finite samples across the entire selected flight. '
-                 'Robot geometry is nominal; factory calibration is not applied.'),
-            ]
-            for title, detail in actions:
-                doc.card(title, [(detail, 8.5, INK, 'normal')])
-            warnings = '\n'.join(report.warnings) or 'No parser warnings for this recording.'
-            doc.card('Data quality and coverage', [(warnings, 8.5, MUTED, 'normal')])
-            doc.finish_page()
+                                          'Subject': 'Recorded joint measurements for the complete flight recording'}) as pdf:
+            doc = _Report(pdf, report.name)
+            _summary_page(doc, report, statistics)
+            _statistics_page(doc, report, statistics)
+            uncharted = [name for joint, name in enumerate(JOINTS) if not _chart_page(doc, report, joint, stops)]
+            _notes_page(doc, report, statistics, uncharted)
+            doc.close()
         os.replace(temporary, destination)
     except BaseException:
         temporary.unlink(missing_ok=True)

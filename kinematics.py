@@ -39,8 +39,13 @@ def pose_matrix(pose):
     return t
 
 def mounting_matrix(base_angle=0., tilt_angle=0.):
-    """Mounting tilt about X and base rotation about Z, in radians."""
-    return pose_matrix((0, 0, 0, tilt_angle, 0, 0)) @ pose_matrix((0, 0, 0, 0, 0, base_angle))
+    """Robot base to world for PolyScope's mounting (installation WorldtoMarshal), in radians.
+
+    PolyScope derives the program's set_gravity() from these two angles; world up expressed
+    in the base frame is (sin t·sin b, -sin t·cos b, cos t). Checked against set_gravity in
+    recordings mounted at base 0°/tilt 0°, 270°/45° and 180°/45°.
+    """
+    return pose_matrix((0, 0, 0, -tilt_angle, 0, 0)) @ pose_matrix((0, 0, 0, 0, 0, -base_angle))
 
 def forward_kinematics(model, joints, mounting=None):
     q = np.asarray(joints, dtype=float)

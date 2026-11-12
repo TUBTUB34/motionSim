@@ -62,10 +62,15 @@ class ChartThemeTests(unittest.TestCase):
             charts = FlightCharts(Figure())
             charts.draw(flight(), focus='Position')
             axis = charts.axes[0]
-            self.assertEqual(axis.get_facecolor(), to_rgba(theme.BACKGROUND))
+            self.assertEqual(axis.get_facecolor(), to_rgba(theme.FIELD))
             self.assertEqual(axis.lines[0].get_color(), theme.ACTUAL)
             self.assertEqual(axis.lines[1].get_color(), theme.TARGET)
-            self.assertEqual(to_rgba(axis.get_legend().get_texts()[0].get_color()), to_rgba(theme.INK))
+            self.assertEqual(charts.legend, [('Actual Position', theme.ACTUAL, False), ('Target Position', theme.TARGET, False)])
+            dark = dict(theme.PALETTES['dark'])
+        with palette('dark'):
+            charts.refresh_theme()
+            self.assertEqual(axis.get_facecolor(), to_rgba(dark['FIELD']))
+            self.assertEqual([color for _label, color, _dashed in charts.legend], [dark['ACCENT'], dark['TARGET']])
 
 
 @unittest.skipUnless(os.environ.get('MOTIONSIM_UI_TESTS') == '1', 'requires native display')

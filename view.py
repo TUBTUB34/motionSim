@@ -52,6 +52,12 @@ class RobotView(tk.Canvas):
         self.sample = None
         self.stream_state = "Live joint geometry"
         self.installation = None
+        # Optional overlays: a TCP path (N×3, robot-base metres) and a target pose (six joint radians).
+        self.trail = None
+        self.ghost_joints = None
+        self.backdrop_image = None
+        self.backdrop_key = None
+        self.backdrop_item = self.create_image(0, 0, anchor="nw", tags="backdrop")
         self.yaw, self.elevation, self.zoom = -.8, .45, 1.35
         self.camera_anchor = None
         self.camera_distance = None
@@ -274,6 +280,36 @@ class RobotView(tk.Canvas):
                         self.shaded_faces((corners @ rotation.T+origin)[None, :, :],
                                           (rotation @ normal)[None, :], color)
 
+    def draw_backdrop(self):
+        """Soft vertical falloff behind the scene; rebuilt only on resize or theme change."""
+        key = (self.w, self.h, theme.MODE)
+        if key != self.backdrop_key:
+            top, bottom = (tuple(int(color[i:i+2], 16) for i in (1, 3, 5)) for color in (theme.PANEL, theme.BACKGROUND))
+            column = Image.new('RGB', (1, 64))
+            column.putdata([tuple(round(a + (b - a) * row / 63) for a, b in zip(top, bottom)) for row in range(64)])
+            self.backdrop_image = ImageTk.PhotoImage(column.resize((self.w, self.h), Image.Resampling.BILINEAR), master=self)
+            self.itemconfigure(self.backdrop_item, image=self.backdrop_image)
+            self.backdrop_key = key
+        self.tag_lower("backdrop")
+
+    def draw_grid(self, reach):
+        """Floor grid that fades toward its edge, with a stronger line every fifth cell."""
+        line, floor = (np.array([int(color[i:i+2], 16) for i in (1, 3, 5)]) for color in (theme.BORDER, theme.BACKGROUND))
+        for index, step in enumerate(np.linspace(-reach, reach, 21)):
+            strength = (1 - .75 * abs(step) / reach) * (1. if index % 5 == 0 else .55)
+            color = '#%02x%02x%02x' % tuple((floor + (line - floor) * strength).astype(int))
+            self.line3([(step, -reach, 0), (step, reach, 0)], color)
+            self.line3([(-reach, step, 0), (reach, step, 0)], color)
+
+    def draw_shadow(self, points, reach):
+        """Flat contact shadow of the arm's centre line on the floor plane."""
+        ground = np.array(points)
+        ground[:, 2] = 0
+        xy, depth = self.project(ground)
+        width = max(3., self.focal * .055 * reach / float(depth.mean()))
+        self.create_line(*xy.ravel(), fill='#04070b' if theme.MODE == 'dark' else '#c3cfd9', width=width,
+                         capstyle='round', joinstyle='round', tags="scene")
+
     def frame_axes(self, transform, size=.1, labels=False):
         if not self.visibility["axes"]:
             return
@@ -321,10 +357,9 @@ class RobotView(tk.Canvas):
             self.center += self.pan_offset
         self.light = self.eye_direction*.35 - self.right*.45 + self.up*.82
         self.light /= np.linalg.norm(self.light)
+        self.draw_backdrop()
         if self.visibility["grid"]:
-            for step in np.linspace(-reach, reach, 13):
-                self.line3([(step, -reach, 0), (step, reach, 0)], theme.BORDER)
-                self.line3([(-reach, step, 0), (reach, step, 0)], theme.BORDER)
+            self.draw_grid(reach)
         self.frame_axes(np.eye(4), .22*reach, labels=True)
         if self.sample is None:
             self.itemconfigure("mesh", state="hidden")
@@ -332,6 +367,8 @@ class RobotView(tk.Canvas):
                              fill=theme.INK, font=("TkDefaultFont", 13), tags="scene")
             return
         points = np.array([f[:3, 3] for f in frames])
+        if self.visibility["grid"] and abs(mount[2, 2] - 1) < 1e-6 and self.view_frame != "Live TCP":
+            self.draw_shadow(points, reach)
         self.faces = []
         size = min(.075, reach * .045)
         self.robot_mesh(frames)
@@ -344,6 +381,14 @@ class RobotView(tk.Canvas):
             self.cylinder(points[-1], tool_mount[:3, 3], size*.3, "#667988")
             self.tool_mesh(tool_mount)
         self.draw_mesh()
+        if self.trail is not None and len(self.trail) > 1:
+            self.line3(np.asarray(self.trail) @ mount[:3, :3].T + mount[:3, 3],
+                       '#16765d' if theme.MODE == 'light' else '#63e2bb', 2)
+        if self.ghost_joints is not None:
+            ghost = np.array([frame[:3, 3] for frame in forward_kinematics(self.model, self.ghost_joints, mount)])
+            self.line3(ghost, theme.TARGET, 2, (5, 3))
+            for x, y in self.project(ghost)[0]:
+                self.create_oval(x-3, y-3, x+3, y+3, outline=theme.TARGET, width=1, tags="scene")
         if self.tool != "None" and self.visibility["tool_tcp"]:
             color = '#8a5700' if theme.MODE == 'light' else '#ffcf80'
             self.frame_axes(preview_tcp, .055*reach)

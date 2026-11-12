@@ -40,7 +40,7 @@ class WorkspaceUITests(unittest.TestCase):
                 self.assertEqual(self.app.active_page, name)
                 self.assertEqual(shell.active, name)
                 self.assertTrue(shell.buttons[name].winfo_viewable())
-                self.assertEqual(shell.buttons[name].cget('style'), 'Accent.TButton')
+                self.assertEqual(shell.buttons[name].cget('style'), 'NavActive.TButton')
                 self.assertEqual(self.windows(), [])
         for panel in (self.app.log_window, self.app.flight_window, self.app.program_check_window,
                       self.app.backup_page):

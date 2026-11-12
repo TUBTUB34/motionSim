@@ -80,10 +80,12 @@ class BackupPageTests(unittest.TestCase):
     def test_custom_contents_and_validation_happen_before_transfer(self):
         with patch('backup_view.BackupJob.start') as start:
             self.page.full.set(False)
-            self.page.programs.set(False)
-            self.page.apps.set(False)
+            for name in ('programs', 'apps', 'logs', 'flights'):
+                getattr(self.page, name).set(False)
             self.page.update_contents()
-            self.assertTrue(self.page.advanced_visible)
+            self.root.update()
+            self.assertTrue(self.page.items.winfo_ismapped())
+            self.assertIn('at least one', self.page.contents.get())
             self.page.make_backup()
             start.assert_not_called()
             self.assertIsNone(self.page.job)
@@ -91,6 +93,40 @@ class BackupPageTests(unittest.TestCase):
             self.page.make_backup()
             self.assertEqual(self.page.job.sources, [('/programs', 'directory')])
             self.assertFalse(self.page.job.full)
+
+    def test_each_item_can_be_backed_up_alone_or_together(self):
+        expected = {'programs': ['/programs'], 'apps': ['/apps', '/data/apps'],
+                    'logs': ['/root/log_history.txt', '/root/log_history.bak'], 'flights': ['/data/flights']}
+        self.page.full.set(False)
+        self.page.remote_flights.set('/data/flights')
+        for chosen in (('logs',), ('flights',), ('apps',), ('programs', 'logs', 'flights')):
+            with self.subTest(chosen=chosen), patch('backup_view.BackupJob.start'):
+                for name in expected:
+                    getattr(self.page, name).set(name in chosen)
+                self.page.update_contents()
+                self.page.make_backup()
+                self.assertEqual([path for path, _kind in self.page.job.sources],
+                                 [path for name in expected if name in chosen for path in expected[name]])
+                self.page.job.events.put(('backup_finished', 'Saved'))
+                self.poll()
+
+    def test_complete_backup_hides_item_choices_and_download_progress_is_determinate(self):
+        self.page.full.set(True)
+        self.page.update_contents()
+        self.root.update()
+        self.assertFalse(self.page.items.winfo_ismapped())
+        with patch('backup_view.BackupJob.start'):
+            self.page.make_backup()
+            self.assertTrue(self.page.job.full)
+            self.assertEqual(len(self.page.job.sources), 6)
+            self.page.job.events.put(('progress', .25))
+            self.page.job.events.put(('status', 'Downloading backup · 1.00 / 4.00 MiB'))
+            self.page.job.events.put(('status', 'Downloading backup · 2.00 / 4.00 MiB'))
+            self.poll()
+            self.assertEqual(str(self.page.progress.cget('mode')), 'determinate')
+            self.assertAlmostEqual(float(self.page.progress.cget('value')), 25.)
+            self.assertEqual(self.page.activity.get('1.0', 'end').count('Downloading backup'), 1)
+            self.assertIn('2.00', self.page.status.get())
 
     def test_empty_password_and_missing_folder_do_not_start_robot_operation(self):
         with patch('backup_view.BackupJob.start') as start:

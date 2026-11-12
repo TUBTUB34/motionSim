@@ -1,0 +1,130 @@
+[
+  {
+    "file": "flight-recording20261104_04_04_11-b283d301179c.zip",
+    "mounting_degrees": [
+      270.0,
+      45.0
+    ],
+    "matches": true
+  },
+  {
+    "file": "flight-recording20261104_04_10_12-24266cb9e5ae.zip",
+    "mounting_degrees": [
+      270.0,
+      45.0
+    ],
+    "matches": true
+  },
+  {
+    "file": "flight-recording20261104_04_11_26-582a0e446a9e.zip",
+    "mounting_degrees": [
+      270.0,
+      45.0
+    ],
+    "matches": true
+  },
+  {
+    "file": "flight-recording20261104_09_44_16-802934733ee3.zip",
+    "mounting_degrees": [
+      270.0,
+      45.0
+    ],
+    "matches": true
+  },
+  {
+    "file": "flight-recording20261104_13_22_42-869e083698e4.zip",
+    "mounting_degrees": [
+      270.0,
+      45.0
+    ],
+    "matches": true
+  },
+  {
+    "file": "flight-recording20261012_15_11_33-bb5ff541de93.zip",
+    "mounting_degrees": [
+      0.0,
+      0.0
+    ],
+    "matches": true
+  },
+  {
+    "file": "flight-recording20261013_18_06_08-7dc0b6a80b27.zip",
+    "mounting_degrees": [
+      0.0,
+      0.0
+    ],
+    "matches": true
+  },
+  {
+    "file": "flight-recording20261013_19_06_14-c0094e16fd13.zip",
+    "mounting_degrees": [
+      0.0,
+      0.0
+    ],
+    "matches": true
+  },
+  {
+    "file": "flight-recording20261013_19_12_20-15f93601b78d.zip",
+    "mounting_degrees": [
+      0.0,
+      0.0
+    ],
+    "matches": true
+  },
+  {
+    "file": "flight-recording20261029_21_59_21-d6206f3a981f.zip",
+    "mounting_degrees": [
+      0.0,
+      0.0
+    ],
+    "matches": true
+  },
+  {
+    "file": "flight-recording20261030_15_56_45-d9bf733b2dbe.zip",
+    "mounting_degrees": [
+      0.0,
+      0.0
+    ],
+    "matches": true
+  },
+  {
+    "file": "flight-recording20261105_20_54_19-fe206bae3992.zip",
+    "mounting_degrees": [
+      180.0,
+      45.0
+    ],
+    "matches": true
+  },
+  {
+    "file": "flight-recording20261105_20_54_49-4e4a2bd0926b.zip",
+    "mounting_degrees": [
+      180.0,
+      45.0
+    ],
+    "matches": true
+  },
+  {
+    "file": "flight-recording20261105_20_55_46-a513ed1bcbef.zip",
+    "mounting_degrees": [
+      180.0,
+      45.0
+    ],
+    "matches": true
+  },
+  {
+    "file": "flight-recording20261105_20_57_04-9b33236b4b78.zip",
+    "mounting_degrees": [
+      180.0,
+      45.0
+    ],
+    "matches": true
+  },
+  {
+    "file": "flight-recording20261105_23_00_49-05524b99c9d3.zip",
+    "mounting_degrees": [
+      180.0,
+      45.0
+    ],
+    "matches": true
+  }
+]

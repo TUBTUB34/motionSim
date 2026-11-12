@@ -1,5 +1,4 @@
 """Client Robot Status PDFs with an optional technical incident appendix."""
-from datetime import datetime, timezone
 from pathlib import Path
 import hashlib
 import os
@@ -10,8 +9,8 @@ from matplotlib.backends.backend_pdf import PdfPages
 
 from flight_charts import RENDER_LOCK
 from flight_data import JOINTS, load_flight
-from flight_pdf import LEFT, RIGHT, PAGE_WIDTH, PAGE_HEIGHT, INK, MUTED
-from program_check_pdf import _ProgramReport, deployment_follow_up
+from flight_pdf import _Report, LEFT, RIGHT, PAGE_WIDTH, PAGE_HEIGHT, INK, MUTED
+from program_check_pdf import deployment_follow_up, line_ranges
 
 NOTE = ('Local evidence-based review; hypotheses require verification. Controller detections do not alone prove '
         'physical contact or component failure. Not a safety validation.')
@@ -45,8 +44,11 @@ def _paragraphs(document, title, values, numbered=False):
         return
     document.heading(title)
     for number, value in enumerate(values, 1):
-        document.paragraph(f'{number}. {value}' if numbered else value)
-        document.y += 8
+        if numbered:
+            document.bullet(value, f'{number}.', indent=22)
+        else:
+            document.paragraph(value)
+        document.y += 4
 
 
 def _chart(document, evidence, incident_id):
@@ -69,15 +71,15 @@ def _chart(document, evidence, incident_id):
     except Exception as error:
         document.paragraph(f'Traces unavailable: {error}. The analyzed observations remain above.')
         return
-    top = max(document.y + 22, 225)
+    top = document.y + 30
     height = 122
     colors = ('#176b9c', '#ac4b16', '#3f7a42', '#8b4a8e', '#966d00', '#48596c')
     for row, (metric, label) in enumerate((('velocity', 'Actual velocity [rad/s]'),
                                           ('position', 'Actual − target position [rad]'),
                                           ('current', 'Actual − target current [A]'))):
-        y = top + row * (height + 40)
-        axes = document.figure.add_axes((LEFT/PAGE_WIDTH, 1-(y+height)/PAGE_HEIGHT,
-                                         (RIGHT-LEFT)/PAGE_WIDTH, height/PAGE_HEIGHT))
+        y = top + row * (height + 44)
+        axes = document.figure.add_axes(((LEFT+40)/PAGE_WIDTH, 1-(y+height)/PAGE_HEIGHT,
+                                         (RIGHT-LEFT-40)/PAGE_WIDTH, height/PAGE_HEIGHT))
         found = False
         for joint, name in enumerate(JOINTS):
             values = flight.series(metric, joint)
@@ -90,20 +92,25 @@ def _chart(document, evidence, incident_id):
                           marker='.' if len(flight.time[segment]) == 1 else None,
                           label=name if not labelled else None)
                 found = labelled = True
-        axes.set_title(label, fontsize=9, loc='left', color=INK)
-        axes.tick_params(labelsize=7, colors=INK)
-        axes.grid(True, alpha=.2)
+        axes.set_title(label, fontsize=9.5, loc='left', color=INK, fontweight='bold', pad=6)
+        axes.tick_params(labelsize=7.5, colors=MUTED, length=2.5)
+        axes.grid(True, color='#e3e9ea', linewidth=.5)
+        axes.set_axisbelow(True)
+        for name, spine in axes.spines.items():
+            spine.set_visible(name in ('left', 'bottom'))
+            spine.set_color('#b9c5c8')
         end = max(evidence.window_end, evidence.window_start + .001)
         axes.set_xlim(evidence.window_start, end)
         if evidence.marker_elapsed is not None:
             axes.axvline(evidence.marker_elapsed, color='#af3939', linestyle='--', linewidth=1)
         if found:
-            axes.legend(loc='upper right', fontsize=6, ncol=3, framealpha=.9)
+            axes.legend(loc='lower right', bbox_to_anchor=(1, 1), borderaxespad=.25, fontsize=7,
+                        ncol=6, frameon=False, labelcolor=INK, handlelength=1.6, columnspacing=1.1)
         else:
             axes.text(.5, .5, 'Required recorded channels are unavailable', ha='center', va='center',
                       transform=axes.transAxes, fontsize=9, color=MUTED)
         if row == 2:
-            axes.set_xlabel('Elapsed recording time [s] · gaps remain unconnected', fontsize=8)
+            axes.set_xlabel('Elapsed recording time [s] · gaps remain unconnected', fontsize=8, color=INK, labelpad=3)
 
 
 def _client_text(value, source):
@@ -112,6 +119,18 @@ def _client_text(value, source):
     if source:
         value = value.replace(str(source), 'Evidence folder')
     return value
+
+
+def _source_inventory(sources, root):
+    """One entry per file; its referenced log lines are listed together, not once per line."""
+    files = {}
+    for source in unique_text(sources):
+        path, separator, line = source.rpartition(':')
+        if separator and line.isdigit():
+            files.setdefault(path, []).append(int(line))
+        else:
+            files.setdefault(source, [])
+    return [_client_text(path, root) + (': lines ' + line_ranges(lines) if lines else '') for path, lines in files.items()]
 
 
 def _technical_appendix(document, report, check):
@@ -126,11 +145,14 @@ def _technical_appendix(document, report, check):
         document.heading(incident.title)
         document.rows('Evidence context', [('Recorded time', incident.time or 'Unavailable'),
                       ('Controller codes', ', '.join(incident.codes) or 'No associated log code'),
-                      ('Association', incident.confidence), ('Motion window', incident.window_reason)])
+                      ('Evidence link', incident.confidence), ('Motion window', incident.window_reason)])
         for title, values in incident_sections(incident):
             check()
-            _paragraphs(document, title, values, numbered=title == 'What to check next')
-        document.rows('Traceability', [(str(n), value) for n, value in enumerate(unique_text(incident.provenance), 1)], label_width=35)
+            _paragraphs(document, title, [_client_text(value, report.source) for value in values],
+                        numbered=title == 'What to check next')
+        document.y += 6
+        document.rows('Source records', [(str(n), _client_text(value, report.source))
+                                         for n, value in enumerate(unique_text(incident.provenance), 1)], label_width=35)
         for evidence in incident.charts:
             check()
             key = (evidence.flight_path, evidence.window_start, evidence.window_end, evidence.marker_elapsed)
@@ -138,8 +160,9 @@ def _technical_appendix(document, report, check):
                 _chart(document, evidence, incident.id)
                 plotted.add(key)
     document.new_page('Sources and method')
-    _paragraphs(document, 'Source inventory', report.sources)
-    _paragraphs(document, 'Collection and analysis details', report.coverage + report.warnings)
+    _paragraphs(document, 'Source inventory', _source_inventory(report.sources, report.source))
+    _paragraphs(document, 'Collection and analysis details',
+                [_client_text(value, report.source) for value in report.coverage + report.warnings])
 
 
 def export_diagnostic_pdf(report, destination, check_cancel=None, *, metadata=None, include_evidence=False):
@@ -158,28 +181,29 @@ def export_diagnostic_pdf(report, destination, check_cancel=None, *, metadata=No
             'Title': 'Robot Status', 'Author': metadata.get('prepared_by') or 'UR Motion Studio',
             'Subject': 'Recorded robot condition, joint assessments and program review priorities',
         }) as pdf:
-            document = _ProgramReport(pdf, '', subtitle='ROBOT STATUS REPORT', note=NOTE)
+            document = _Report(pdf, metadata.get('robot_label', '').strip() or metadata.get('client', '').strip(),
+                               subtitle='ROBOT STATUS REPORT', note=NOTE)
             document.new_page('Robot Status')
-            document.paragraph('Recorded condition and recommended next steps', size=14, color=MUTED)
-            document.y += 18
+            document.paragraph('Recorded condition and recommended next steps', size=11, color=MUTED)
+            document.y += 12
             context = []
             for label, key in (('Client', 'client'), ('Robot / asset', 'robot_label'), ('Prepared by', 'prepared_by')):
                 if metadata.get(key, '').strip():
                     context.append((label, metadata[key].strip()))
             context.extend(status.robot_details)
-            context.append(('Report generated', datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')))
             document.rows('Review details', context)
-            document.heading(status.overall_status)
+            document.heading('Overall assessment: ' + status.overall_status)
             for value in unique_text(status.assessment):
                 document.paragraph(_client_text(value, status.source))
-                document.y += 9
+                document.y += 6
             document.paragraph('This assessment describes the available records. It is not an inspection of the robot’s present mechanical condition or a safety approval.', size=9, color=MUTED)
 
             check()
             document.new_page('Joint condition')
             document.paragraph('Each joint is assessed separately. “Not assessed” and “Limited evidence” are gaps in the available records, not a pass or a prediction of remaining life.')
-            document.y += 15
-            document.rows('Assessment by joint', [(joint.joint, f'{joint.status}\n{joint.summary}') for joint in status.joints], label_width=82)
+            document.y += 12
+            document.rows('Assessment by joint', [(joint.joint, [(joint.status, INK, 'bold'), (joint.summary, INK, 'normal')])
+                                                  for joint in status.joints], label_width=82)
             document.paragraph('Recommendations below connect the observed concerns to practical checks. Full incident measurements can be included in the optional technical evidence appendix.', size=9, color=MUTED)
 
             check()
@@ -189,17 +213,18 @@ def export_diagnostic_pdf(report, destination, check_cancel=None, *, metadata=No
             for area in status.program_areas:
                 check()
                 document.heading(area.area)
-                document.rows('Program context', [('Program', area.program or 'Not identified'),
-                              ('Review priority', area.priority), ('Evidence association', area.association)], label_width=110)
+                document.paragraph(f'{area.program or "Program not identified"} · Review priority: {area.priority}',
+                                   size=9, weight='bold')
+                if area.association:
+                    document.paragraph('Evidence link: ' + area.association, size=9, color=MUTED)
+                document.y += 6
                 document.paragraph(area.summary)
-                document.y += 8
+                document.y += 6
                 if area.script_lines:
-                    from program_check_pdf import line_ranges
                     document.paragraph('Recorded script context: lines ' + line_ranges(area.script_lines) + '. These are execution references, not proof that the line caused the issue.', size=9, color=MUTED)
-                    document.y += 7
+                    document.y += 4
                 if area.incident_ids:
                     document.paragraph('Supporting cases: ' + ', '.join(unique_text(area.incident_ids)), size=9, color=MUTED)
-                    document.y += 7
 
             check()
             document.new_page('Recommended action plan')
@@ -213,21 +238,20 @@ def export_diagnostic_pdf(report, destination, check_cancel=None, *, metadata=No
                 if len(warnings) > 5:
                     document.paragraph(f'{len(warnings)-5} additional source warnings are retained in the application’s Coverage & sources view and optional technical appendix.', size=9, color=MUTED)
                     document.y += 8
-            _paragraphs(document, 'Evidence still needed', [_client_text(value, status.source) for value in status.limitations])
+            _paragraphs(document, 'Limits of this assessment', [_client_text(value, status.source) for value in status.limitations])
             if status.references:
                 document.heading('Technical references')
+                document.paragraph('UR technical guidance used to interpret the recorded controller messages.', size=9, color=MUTED)
+                document.y += 4
                 for number, reference in enumerate(status.references, 1):
-                    title = reference.get('title', 'UR technical guidance')
-                    if title == 'Diagnostic guidance source':
-                        title = 'UR technical guidance'
-                    document.paragraph(f'{number}. {title}', size=9, weight='bold')
-                    document.paragraph(reference.get('url', ''), size=8)
-                    document.y += 8
+                    title = reference.get('title', '')
+                    document.bullet(reference.get('url', '') if title in ('', 'Diagnostic guidance source')
+                                    else title + '\n' + reference.get('url', ''), f'{number}.', 8.5, 22)
             deployment_follow_up(document)
             if include_evidence:
                 check()
                 _technical_appendix(document, report, check)
-            document.finish_page()
+            document.close()
         check()
         os.replace(temporary, destination)
     finally:

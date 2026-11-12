@@ -19,6 +19,7 @@ import ui_theme as theme
 from ui_theme import ScrollableFrame, style_text, status_color
 from app_preferences import Preferences
 from address_book import SavedAddressCombobox, refresh_address_fields
+from live_recorder import LiveCapture
 
 PAYLOAD_NOTICE = "Payload info will not be loaded without an SSH password. Blank username uses root."
 DEFAULT_IP = "10.22.33.81"
@@ -60,6 +61,8 @@ class SimulatorApp:
         self.backup_page = None
         self.home_page = None
         self.checklist_page = None
+        self.live_page = None
+        self.live_capture = LiveCapture()
         self.simulator_popout = None
         self.report_tabs = None
         self.flight_tabs = None
@@ -74,7 +77,8 @@ class SimulatorApp:
                                  ('<Control-Key-3>', self.open_flights),
                                  ('<Control-Key-4>', self.open_program_check),
                                  ('<Control-Key-5>', self.open_backups),
-                                 ('<Control-Key-6>', self.open_checklist)):
+                                 ('<Control-Key-6>', self.open_checklist),
+                                 ('<Control-Key-7>', self.open_live)):
             root.bind_all(sequence, lambda event, action=action: self.workspace_shortcut(action), add='+')
         self.session = None
         self.settings = None
@@ -317,7 +321,8 @@ class SimulatorApp:
             self.root.bind('<Return>', self.submit)
 
     def show_page(self, name):
-        actions = {'home': self.open_home, 'simulator': self.show_workspace, 'flights': self.open_flight_page,
+        actions = {'home': self.open_home, 'simulator': self.show_workspace, 'live': self.open_live,
+                   'flights': self.open_flight_page,
                    'logs': self.open_logs, 'backups': self.open_backups, 'reports': self.open_reports,
                    'checklist': self.open_checklist}
         actions[name]()
@@ -351,6 +356,14 @@ class SimulatorApp:
             self.home_page.pack(fill='both', expand=True)
         self.home_page.refresh(force=True)
         self._select_page('home')
+
+    def open_live(self):
+        if self.live_page is None:
+            from live_view import LivePage
+            self.live_page = LivePage(self, self.shell.pages['live'])
+            self.live_page.pack(fill='both', expand=True)
+        self._select_page('live')
+        self.live_page.refresh(force=True)
 
     def open_checklist(self):
         if self.checklist_page is None:
@@ -611,6 +624,8 @@ class SimulatorApp:
         self.last_status_update = 0.
         self.show_view()
         self.session = RobotSession(self.settings)
+        self.live_capture.reset()
+        self.session.sink = self.live_capture.add
         self.session.start()
 
     def show_view(self):
@@ -761,6 +776,7 @@ class SimulatorApp:
         if self.session:
             self.session.stop()
             self.session = None
+        self.live_capture.stop_recording('The robot connection ended, so the recording was stopped. Save it to keep it.')
         self.status.set(message)
         if self.last_sample:
             self.update_telemetry(self.last_sample, False)
@@ -847,16 +863,31 @@ class SimulatorApp:
             self.shell.update_connection()
             if self.home_page is not None and self.active_page == 'home':
                 self.home_page.refresh()
+            if self.live_page is not None:
+                self.live_page.refresh()
             if self.simulator_popout is not None and self.simulator_popout.winfo_exists():
                 self.simulator_popout.sync_live()
             self.poll_id = self.root.after(33, self.poll)
+
+    def maximize(self):
+        """Fill the screen at launch; the window stays resizable and restorable."""
+        try:
+            self.root.state('zoomed')  # Windows and macOS
+        except tk.TclError:
+            self.root.attributes('-zoomed', True)  # X11 window managers
+
+    def toggle_fullscreen(self, _event=None):
+        self.root.attributes('-fullscreen', not self.root.attributes('-fullscreen'))
 
     def close(self):
         if self.closed:
             return
         if self.checklist_page is not None and not self.checklist_page.confirm_discard():
             return
+        if self.live_page is not None and not self.live_page.confirm_discard():
+            return
         self.closed = True
+        self.live_capture.discard_recording()
         if self.checklist_page is not None:
             self.checklist_page.shutdown()
         if self.simulator_popout is not None:
@@ -902,4 +933,6 @@ if __name__ == "__main__":
             finally:
                 app.close()
         else:
+            app.maximize()
+            root.bind('<F11>', app.toggle_fullscreen)
             root.mainloop()

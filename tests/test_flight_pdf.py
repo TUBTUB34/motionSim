@@ -7,8 +7,9 @@ from unittest.mock import patch
 import numpy as np
 
 from flight_data import FlightReport
-from flight_pdf import (default_pdf_name, export_flight_pdf, measurement_summary,
-                        program_facts)
+from flight_pdf import (_findings, _identity, default_pdf_name, export_flight_pdf,
+                        measurement_summary, program_facts)
+from flight_stats import joint_statistics
 
 
 def report_fixture():
@@ -21,6 +22,15 @@ def report_fixture():
     return FlightReport(Path('recording-test.zip'), 'recording-test.zip',
                         {'program': 'Actual program', 'serial': '12345'},
                         time+7200., time, columns, script='set_payload(2.5)\nset_tcp(p[0,0,0.2,0,0,0])\n')
+
+
+def page_text(path):
+    try:
+        import pymupdf
+    except ImportError:
+        raise unittest.SkipTest('Optional PyMuPDF is needed to read rendered page text')
+    with pymupdf.open(path) as pdf:
+        return [page.get_text() for page in pdf]
 
 
 class FlightPdfTests(unittest.TestCase):
@@ -56,8 +66,69 @@ class FlightPdfTests(unittest.TestCase):
             content = target.read_bytes()
             self.assertTrue(content.startswith(b'%PDF-'))
             self.assertTrue(content.rstrip().endswith(b'%%EOF'))
-            self.assertEqual(len(re.findall(rb'/Type\s*/Page\b', content)), 10)
+            # Summary, joint statistics, one chart page per joint, notes.
+            self.assertEqual(len(re.findall(rb'/Type\s*/Page\b', content)), 9)
             self.assertEqual(list(Path(directory).glob('.flight-report-*')), [])
+
+    def test_report_is_a_measurement_report_in_degrees_without_a_verdict(self):
+        report = report_fixture()
+        with tempfile.TemporaryDirectory() as directory:
+            pages = page_text(export_flight_pdf(report, Path(directory)/'flight.pdf'))
+        text = '\n'.join(pages)
+        self.assertIn('Flight Recording Report', pages[0])
+        self.assertIn('What the recording shows', pages[0])
+        self.assertIn('controller uptime 7200.000 s', pages[0])
+        for page_number, page in enumerate(pages, 1):
+            self.assertIn(f'Page {page_number} of 9', page)
+            self.assertIn('Generated ', page)
+        for forbidden in ('Program Check Report', 'Compliance', 'Overall result', 'Checklist', 'Not recorded\n', 'collision detected'):
+            self.assertNotIn(forbidden, text)
+        # 1 to 4 rad is 57.3 to 229.2 degrees: a range of 171.9.
+        for required in ('Joint statistics', '57.3', '229.2', '171.9', 'derived from speed', 'Base · joint 0',
+                         'Wrist 3 · joint 5', 'Position [°]', 'Speed [°/s]', 'Elapsed time [s]',
+                         'converted from the recorded radians to degrees', 'No limit is applied',
+                         'Program context', '1 call statement; first at script line 1: set_payload(2.5)'):
+            self.assertIn(required, text)
+        # Torque, temperature and voltage are absent from this recording: stated, never zero.
+        self.assertIn('Not recorded in this file: Peak torque, Highest temperature, Lowest voltage', ' '.join(text.split()))
+
+    def test_recording_without_script_or_summary_omits_empty_sections(self):
+        report = report_fixture()
+        report.script, report.metadata = '', {'report_type': 'Motion Studio live recording', 'notes': 'After retune'}
+        self.assertEqual([label for label, _value in _identity(report)],
+                         ['Recording', 'Recording type', 'Recording length', 'Time axis', 'Notes'])
+        with tempfile.TemporaryDirectory() as directory:
+            pages = page_text(export_flight_pdf(report, Path(directory)/'live.pdf'))
+        text = '\n'.join(pages)
+        self.assertIn('Motion Studio live recording', pages[0])
+        self.assertIn('After retune', pages[0])
+        for absent in ('Program context', 'Not recorded\n', 'Incident time', 'Payload', 'URCap'):
+            self.assertNotIn(absent, text)
+
+    def test_findings_state_recorded_stops_and_peaks_without_naming_a_cause(self):
+        report = report_fixture()
+        report.columns['Safety mode'] = np.array([1., 1., 1., 3., 3.])
+        report.columns['Speed scaling'] = np.array([1., 1., 1., 0., 0.])
+        found = _findings(report, joint_statistics(report))
+        self.assertIn('A protective stop is recorded from 3.00 s to the end of the recording.', found)
+        self.assertIn('Safety mode: Normal at the start → Protective stop at 3.00 s.', found)
+        self.assertIn('Highest joint speed: Base, −114.6 °/s at 3.00 s.', found)
+        self.assertIn('Highest joint current: Base, 4.00 A at 1.00 s.', found)
+        self.assertIn('Lowest speed scaling: 0 % at 3.00 s.', found)
+        self.assertFalse(any(word in ' '.join(found).lower() for word in ('collision', 'fault', 'limit', 'exceed')))
+        del report.columns['Safety mode']
+        self.assertIn('Safety mode is not recorded, so protective stops cannot be identified from this file.',
+                      _findings(report, joint_statistics(report)))
+
+    def test_joint_without_any_channel_has_no_chart_page_and_is_named(self):
+        time = np.array([0., .002])
+        report = FlightReport(Path('minimal.csv'), 'minimal.csv', {}, time+1., time,
+                              {'Actual position j0 [rad]': np.array([.1, .2])})
+        with tempfile.TemporaryDirectory() as directory:
+            pages = page_text(export_flight_pdf(report, Path(directory)/'minimal.pdf'))
+        self.assertEqual(len(pages), 4)
+        self.assertIn('Not recorded for this joint: speed, acceleration, current, torque', ' '.join(pages[2].split()))
+        self.assertIn('No channel is recorded for Shoulder, Elbow, Wrist 1, Wrist 2, Wrist 3', ' '.join(pages[3].split()))
 
     def test_failed_export_keeps_existing_destination(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -56,6 +56,23 @@ class FlightDataTests(unittest.TestCase):
         self.assertFalse(report.timestamps.flags.writeable)
         self.assertIs(load_flight(path), report)
 
+    def test_recorded_installation_supplies_mounting_and_bad_files_only_warn(self):
+        from tests.test_core import XML
+        import gzip
+        headers, rows = ["Timestamp [s]", "Actual position j0 [rad]"], [[1, .1], [1.002, .2]]
+        path = self.recording(headers, rows, context={
+            "summary.log": "Current Installation Name: cell\n",
+            "files/default.installation": b"not xml",
+            "files/cell.installation": gzip.compress(XML)})
+        report = load_flight(path)
+        self.assertIsNotNone(report.installation)
+        self.assertEqual(report.installation.mounting, (.3, 1.5707963267948966))  # cell, not the broken default
+        broken = self.recording(headers, rows, name="broken.zip", context={"files/default.installation": b"not xml"})
+        report = load_flight(broken)
+        self.assertIsNone(report.installation)
+        self.assertTrue(any("installation could not be read" in warning for warning in report.warnings))
+        self.assertIsNone(load_flight(self.recording(headers, rows, name="none.zip")).installation)
+
     def test_missing_and_malformed_measurements_preserve_gaps(self):
         path = self.recording(["Timestamp [s]", "Actual current j0 [A]"],
                               [[1, 2], [2, "bad"], [3], [4, "inf"], [5, 7]])

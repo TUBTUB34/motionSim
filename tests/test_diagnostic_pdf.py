@@ -61,6 +61,22 @@ class DiagnosticPdfTests(unittest.TestCase):
                             self.assertLessEqual(x1, page.rect.width)
                             self.assertFalse(y0 < 780 < y1)
 
+    def test_appendix_lists_each_source_file_once_without_the_local_folder(self):
+        import pymupdf
+        root = '/private/operator/customer-data'
+        report = DiagnosticReport(source=root, sources=[f'{root}/log_history.txt:{line}' for line in (4, 5, 6, 9)] + [f'{root}/flight.zip'],
+                                  incidents=[Incident(id='INC-001', title='Review', provenance=[f'{root}/log_history.txt:4'])])
+        with tempfile.TemporaryDirectory() as folder:
+            path = export_diagnostic_pdf(report, Path(folder)/'review.pdf', include_evidence=True)
+            with pymupdf.open(path) as pdf:
+                text = '\n'.join(page.get_text() for page in pdf)
+                self.assertIn('Evidence folder/log_history.txt: lines 4–6, 9', text)
+                self.assertIn('Evidence folder/flight.zip', text)
+                self.assertEqual(text.count('Evidence folder/log_history.txt'), 2, 'One inventory entry and one incident record')
+                self.assertNotIn('/private/operator', text)
+                for number, page in enumerate(pdf, 1):
+                    self.assertIn(f'Page {number} of {len(pdf)}', page.get_text())
+
     def test_cancelled_export_preserves_existing_report_and_removes_temporary(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder)/'review.pdf'
@@ -78,12 +94,12 @@ class DiagnosticPdfTests(unittest.TestCase):
 
     def test_plot_keeps_gap_and_explicit_marker_distinct(self):
         from matplotlib.backends.backend_pdf import PdfPages
-        from program_check_pdf import _ProgramReport
+        from flight_pdf import _Report
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder)/'flight.csv'
             path.write_text('Timestamp [s],Actual velocity j0 [rad/s]\n100,0\n101,1\n102,2\n120,1\n121,0\n')
             with PdfPages(Path(folder)/'chart.pdf') as pdf:
-                document = _ProgramReport(pdf, str(path))
+                document = _Report(pdf, path.name)
                 evidence = ChartEvidence(str(path), path.name, 2, 0, 21, 'Incident window')
                 _chart(document, evidence, 'INC-001')
                 lines = document.figure.axes[0].lines
@@ -92,7 +108,7 @@ class DiagnosticPdfTests(unittest.TestCase):
                 self.assertEqual(list(traces[0].get_xdata()), [0, 1, 2])
                 self.assertEqual(list(traces[1].get_xdata()), [20, 21])
                 self.assertEqual(list(lines[-1].get_xdata()), [2, 2])
-                document.finish_page()
+                document.close()
 
     def test_changed_source_cannot_silently_replace_analyzed_chart(self):
         import hashlib

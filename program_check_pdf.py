@@ -1,12 +1,10 @@
 """Readable, grouped Program Check PDFs; analysis values are never recalculated."""
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from pathlib import Path
 import os
 import re
 import tempfile
 from matplotlib.backends.backend_pdf import PdfPages
-from matplotlib.font_manager import FontProperties
 from flight_pdf import _Report, INK, MUTED, LEFT, RIGHT, BOTTOM
 from flight_charts import RENDER_LOCK
 from program_check import REFERENCES, CATEGORIES
@@ -81,88 +79,10 @@ def line_ranges(lines):
     return ', '.join(str(first) if first == last else f'{first}–{last}' for first, last in runs)
 
 
-class _ProgramReport(_Report):
-    """Larger text and bounded pagination, isolated from flight-report styling."""
-    section = 'Program review'
-
-    def lines(self, text, width, size=9, weight='normal'):
-        font = FontProperties(family='DejaVu Sans', size=size, weight=weight)
-        def fits(value):
-            return self.renderer.get_text_width_height_descent(value, font, False)[0] <= width
-        result = []
-        for paragraph in str(text).split('\n'):
-            current = ''
-            for word in paragraph.split():
-                if current and not fits(current + ' ' + word):
-                    result.append(current)
-                    current = ''
-                # Binary search keeps very long source paths inexpensive to wrap.
-                while not fits(word) and len(word) > 1:
-                    low, high = 1, len(word)
-                    while low < high:
-                        middle = (low+high+1)//2
-                        if fits(word[:middle]):
-                            low = middle
-                        else:
-                            high = middle-1
-                    result.append(word[:low])
-                    word = word[low:]
-                current = (current + ' ' + word).strip()
-            result.append(current)
-        return result
-
-    def new_page(self, title=None):
-        if title and not title.endswith(' (continued)'):
-            self.section = title
-        super().new_page(title)
-
-    def paragraph(self, text, x=LEFT, width=RIGHT-LEFT, size=10, color=INK, weight='normal'):
-        leading = size * (1.8 if size >= 15 else 1.45)
-        for line in self.lines(text, width, size, weight):
-            if self.y + leading > BOTTOM:
-                self.new_page(self.section + ' (continued)')
-            self.text(x, self.y, line, size, color, weight)
-            self.y += leading
-
-    def heading(self, title):
-        if self.y + 100 > BOTTOM:
-            self.new_page(self.section + ' (continued)')
-        self.paragraph(title, size=15, weight='bold')
-        self.y += 9
-
-    def rows(self, title, rows, label_width=110):
-        if not rows:
-            return
-        if self.y + 75 > BOTTOM:
-            self.new_page(self.section + ' (continued)')
-        self.bar(title)
-        for index, (label, value) in enumerate(rows):
-            left = self.lines(label, label_width-16, 9, 'bold')
-            right = self.lines(value, RIGHT-LEFT-label_width-16, 9.5)
-            count = max(len(left), len(right))
-            offset = 0
-            while offset < count:
-                room = int((BOTTOM-self.y-14) // 14)
-                remaining = count-offset
-                # Keep ordinary rows together; split oversized evidence safely.
-                if room < 1 or (offset == 0 and remaining <= 32 and remaining > room):
-                    self.new_page(self.section + ' (continued)')
-                    self.bar(title + ' (continued)')
-                    room = int((BOTTOM-self.y-14) // 14)
-                take = min(room, remaining)
-                height = take*14+14
-                self.rect(LEFT, self.y, RIGHT-LEFT, height, '#f0f4f5' if index % 2 == 0 else 'white')
-                for lines, x, size, weight in ((left, LEFT+8, 9, 'bold'),
-                                               (right, LEFT+label_width+8, 9.5, 'normal')):
-                    for n, line in enumerate(lines[offset:offset+take]):
-                        self.text(x, self.y+7+n*14, line, size, INK, weight)
-                self.y += height
-                offset += take
-        self.y += 16
-
-
 def _source_label(group):
-    return 'Lines ' + line_ranges(group.lines) if group.lines else 'Program context'
+    if not group.lines:
+        return 'Whole program'
+    return ('Script line ' if len(group.lines) == 1 else 'Script lines ') + line_ranges(group.lines)
 
 
 def deployment_follow_up(document):
@@ -172,7 +92,7 @@ def deployment_follow_up(document):
                      'safety_validation', 'inspection'}
     document.new_page('Physical installation follow-up')
     document.paragraph('Not assessed by this report. Source files and telemetry cannot verify these items. '
-                       'Record the inspection evidence and outstanding actions in the deployment checklist.', size=10)
+                       'Record the inspection evidence and outstanding actions in the deployment checklist.')
     document.y += 12
     rows = []
     for check in DEPLOYMENT_CHECKS:
@@ -180,10 +100,10 @@ def deployment_follow_up(document):
             continue
         sources = '; '.join(check.sources).replace('Installation Guide v1.3.3, PDF ', 'Guide ')
         sources = sources.replace('Deployment Workshop 2024, PDF ', 'Workshop ')
-        rows.append((check.title, check.guidance + '\nSource: ' + sources))
-    document.rows('Manual checks · all unassessed', rows, label_width=125)
+        rows.append((check.title, [(check.guidance, INK, 'normal'), ('Source: ' + sources, MUTED, 'normal')]))
+    document.rows('Manual checks · none assessed by this report', rows, label_width=125)
     document.paragraph('Guide: UR Installation Guide v1.3.3. Workshop: UR Application Deployment Workshop, May 2024. '
-                       'Page numbers refer to the supplied PDFs. Apply the current model-specific manual; these prompts are not a complete safety assessment.', size=8, color=MUTED)
+                       'Page numbers refer to the supplied PDFs. Apply the current model-specific manual; these prompts are not a complete safety assessment.', size=8.5, color=MUTED)
 
 
 def export_program_pdf(review, destination):
@@ -201,9 +121,9 @@ def export_program_pdf(review, destination):
                     definition_lines[' '.join(match.group(1).split())].add(finding.line)
 
     def basis(group):
-        refs = 'UR ' + ', '.join(f'[{n}]' for n in group.references)
+        refs = ('Reference ' if len(group.references) == 1 else 'References ') + ', '.join(f'[{n}]' for n in group.references)
         if group.estimated:
-            return 'Source estimate · ' + ', '.join(definitions[note] for note in group.assumptions) + ' · ' + refs
+            return 'Source estimate using ' + ', '.join(definitions[note] for note in group.assumptions) + ' · ' + refs
         return refs
 
     destination = Path(destination)
@@ -211,100 +131,110 @@ def export_program_pdf(review, destination):
     os.close(fd)
     try:
         with RENDER_LOCK, PdfPages(temporary, metadata={'Title': f'Program Check — {review.pair.name}', 'Author': 'UR Motion Studio'}) as pdf:
-            page = _ProgramReport(pdf, review.pair.name, subtitle='PROGRAM CHECK REPORT', note=NOTE)
-            page.new_page('Program review')
-            page.paragraph(review.metadata.get('name', review.pair.name), size=17, weight='bold')
-            page.y += 12
+            page = _Report(pdf, review.pair.name, subtitle='PROGRAM CHECK REPORT', note=NOTE)
+            page.new_page('Program Check Report')
+            page.paragraph(review.metadata.get('name', review.pair.name), size=14, weight='bold')
+            page.y += 4
             count = len(issues)
             page.paragraph(f'{count} issue group' + ('' if count == 1 else 's') + f' · {len(affected)} affected source lines',
-                           size=14, weight='bold', color='#9a4300' if issues else INK)
-            page.paragraph('Repeated results are combined below. Every affected line is retained; different values, limits and calculation bases remain separate.', size=10)
-            page.y += 14
-            page.rows('PROGRAM AT A GLANCE', [
+                           size=11, weight='bold', color='#9a4300' if issues else INK)
+            page.paragraph('Repeated results are combined below. Every affected line is retained; different values, limits and calculation bases remain separate.')
+            page.y += 12
+            page.rows('Program at a glance', [
                 ('Saved software', review.metadata.get('lastSavedIn', 'Unavailable')),
                 ('Guidance', review.profile),
                 ('Installation', review.metadata.get('reviewInstallation', 'Unavailable — installation settings omitted').replace('\\', '/').rsplit('/', 1)[-1]),
                 ('Source coverage', f'{review.script_lines:,} script lines; ' + ', '.join(f'{n} {name}' for name, n in review.counts.items() if name in ('movej', 'movel', 'movep', 'movec', 'optimovej', 'optimovel', 'speedj', 'speedl', 'servoj'))),
                 ('Needs verification', f'{sum(group.status == "Manual review" for group in remaining)} grouped checks need runtime evidence or additional information'),
-                ('Generated', datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')),
-            ], label_width=115)
+            ], label_width=118)
             page.heading('Start here')
             if issues:
                 page.paragraph('Review the grouped issues on the next pages. Each entry gives the comparison, affected script lines and any source-estimate assumptions.')
             else:
                 page.paragraph('No explicit source-value warnings were found. This does not establish compliance: check the unresolved items and source coverage below.')
-            page.y += 10
-            page.paragraph('Source estimates substitute saved initializers; initialization and runtime values are not proven. UR acceleration recommendations are starting points, not safety limits. Unknown values are not treated as zero or a pass.', size=10)
+            page.y += 8
+            page.paragraph('Where a value depends on a variable, the review uses the variable’s saved initial value and labels the result a source estimate; the value at run time is not proven. UR acceleration recommendations are starting points, not safety limits. Unknown values are not treated as zero or a pass.')
 
             if issues:
                 page.new_page('Issues to review')
                 for index, group in enumerate(issues, 1):
-                    example_text = ''
-                    examples = [f for f in group.findings if f.evidence]
-                    if examples:
-                        example = examples[0]
+                    parts = [(f'{index}. {group.category}', 12, INK, 'bold'), (group.detail, 10, INK, 'normal'),
+                             (_source_label(group), 9, INK, 'bold'), (basis(group), 8.5, MUTED, 'normal')]
+                    example = next((finding for finding in group.findings if finding.evidence), None)
+                    if example:
                         text = example.evidence
                         if len(text) > 240:
                             text = text[:240] + '…'
-                        example_text = f'Example at line {example.line}: {text}'
-                    parts = [(f'{index:02d}  {group.category}', 14), (group.detail, 11),
-                             (_source_label(group), 10), (basis(group), 9), (example_text, 9)]
-                    height = 30 + sum(len(page.lines(text, RIGHT-LEFT, size))*size*(1.8 if size >= 15 else 1.45) for text, size in parts if text)
+                        parts.append((f'Example, line {example.line}: {text}', 8.5, MUTED, 'normal'))
+                    height = 24 + sum(len(page.lines(text, RIGHT-LEFT, size, weight))*size*1.45+3 for text, size, _, weight in parts)
                     if page.y + height > BOTTOM and height < BOTTOM-185:
                         page.new_page('Issues to review (continued)')
-                    page.paragraph(f'{index:02d}  {group.category}', size=14, weight='bold')
-                    page.y += 7
-                    page.paragraph(group.detail, size=11)
-                    page.y += 7
-                    page.paragraph(_source_label(group), size=10, weight='bold')
-                    page.paragraph(basis(group), size=9, color=MUTED)
-                    if example_text:
-                        page.paragraph(example_text, size=9, color=MUTED)
-                    page.y += 16
+                    elif index > 1:
+                        page.rule(page.y)
+                        page.y += 12
+                    for text, size, color, weight in parts:
+                        page.paragraph(text, size=size, color=color, weight=weight)
+                        page.y += 3
+                    page.y += 9
 
-            page.new_page('Checks & source values')
-            page.paragraph('Issues already listed above are not repeated here. “Needs verification” means runtime evidence or a specification is missing. “Source value” records saved configuration, not physical correctness.', size=10)
-            page.y += 15
+            page.new_page('Checks and source values')
+            page.paragraph('Everything else the review read from the program, grouped by topic. Issues already listed are not repeated here.')
+            page.y += 6
+            for label, meaning in (('Needs verification', 'the source alone cannot decide; runtime evidence or a specification is missing.'),
+                                   ('Source value', 'what is saved in the program or installation, not proof that it is physically correct.'),
+                                   ('Within guideline', 'the saved value is inside the selected guidance; this is not a safety approval.')):
+                page.bullet(f'{label}: {meaning}', size=9)
+            page.y += 10
+            order = {'Manual review': 0, 'Source observation': 1}
             categories = list(dict.fromkeys([*CATEGORIES, *(group.category for group in remaining)]))
             for category in categories:
-                selected = [group for group in remaining if group.category == category]
-                if not selected:
-                    continue
-                rows = [(_source_label(group), STATUS.get(group.status, group.status) + '\n' + group.detail + '\n' + basis(group)) for group in selected]
-                page.rows(category.upper(), rows)
+                selected = sorted((group for group in remaining if group.category == category),
+                                  key=lambda group: order.get(group.status, 2))
+                page.rows(category, [(STATUS.get(group.status, group.status),
+                                      [(group.detail, INK, 'normal'),
+                                       (_source_label(group) + ' · ' + basis(group), MUTED, 'normal')])
+                                     for group in selected], label_width=120)
 
             deployment_follow_up(page)
             page.new_page('Source notes')
             page.heading('How to interpret the review')
-            page.paragraph('This is a static source review; no URScript is executed. Counts include definitions and branches, not execution frequency. Source values do not establish measured speeds or accelerations. Blends depend on controller planning; a geometric warning does not prove a skipped waypoint. Validate physical payload, centre of gravity, inertia and TCP, including each workpiece or tool change.')
-            page.y += 12
+            for note in ('This is a static review of the saved program; no URScript is executed.',
+                         'Counts include definitions and branches, not how often a statement runs.',
+                         'Source values do not establish measured speeds or accelerations.',
+                         'Blends depend on controller planning; a geometric warning does not prove a skipped waypoint.',
+                         'Validate the physical payload, centre of gravity, inertia and TCP on the robot, including each workpiece or tool change.'):
+                page.bullet(note)
             if definitions:
-                page.paragraph('D references identify saved initializer substitutions. They are conditional estimates, not proof that those values were initialized or unchanged when a move ran.')
+                page.y += 6
+                page.paragraph('Results labelled “Source estimate using D…” were calculated from the saved initial values listed here. They are conditional estimates, not proof that those values were set or unchanged when a move ran.')
                 page.y += 10
-                page.rows('INITIALIZER EVIDENCE', [
-                    (label, note + ('\nUsed at script lines ' + line_ranges(definition_lines[note])
-                                    if definition_lines[note] else ''))
+                page.rows('Saved initial values used for estimates', [
+                    (label, [(note, INK, 'normal')] + ([('Used at script line' + ('' if len(definition_lines[note]) == 1 else 's') + ' '
+                                                        + line_ranges(definition_lines[note]), MUTED, 'normal')]
+                                                      if definition_lines[note] else []))
                     for note, label in definitions.items()], label_width=42)
             page.heading('Reviewed source files')
             if review.metadata.get('reviewInstallationNote'):
                 page.paragraph(review.metadata['reviewInstallationNote'], size=9)
-                page.y += 10
+                page.y += 8
             for identity, digest in review.hashes.items():
-                page.paragraph(identity, size=9)
+                # File or archive name only: the operator's local folder is not published.
+                path, separator, member = identity.partition(' :: ')
+                page.paragraph(Path(path).name + separator + member, size=9)
                 page.paragraph('SHA-256: ' + digest, size=8, color=MUTED)
-                page.y += 12
+                page.y += 8
             used_refs = sorted({n for group in groups for n in group.references})
             page.heading('UR references')
             for number in used_refs:
                 if not 1 <= number <= len(REFERENCES):
                     continue
                 title, url = REFERENCES[number-1]
-                if page.y + 65 > BOTTOM:
-                    page.new_page('UR references (continued)')
+                if page.y + 50 > BOTTOM:
+                    page.new_page('Source notes (continued)')
                 page.paragraph(f'[{number}] {title}', size=9, weight='bold')
                 page.paragraph(url, size=8, color=MUTED)
-                page.y += 10
-            page.finish_page()
+                page.y += 8
+            page.close()
         os.replace(temporary, destination)
     except BaseException:
         Path(temporary).unlink(missing_ok=True)

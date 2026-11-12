@@ -11,6 +11,7 @@ def workspace_summary(app):
     """Describe only loaded evidence; a connected robot is not an assessment."""
     summaries = {}
     for name, attribute, result_attribute in (
+        ('Live monitor', 'live_page', None),
         ('Logs', 'log_window', 'data'),
         ('Flight recording', 'flight_window', 'report'),
         ('Flight downloads', 'flight_retrieval_window', None),
@@ -61,8 +62,9 @@ class HomePage(ttk.Frame):
         tasks.grid(row=1, column=0, sticky='nsew', padx=(0, 28))
         self.task_buttons = {}
         sections = (
-            ('Inspect the robot', 'Follow live telemetry or investigate saved events and motion.', (
+            ('Inspect the robot', 'Watch and record live telemetry, or investigate saved events and motion.', (
                 ('Live simulator', app.edit_connection_page),
+                ('Live monitor & recording', app.open_live),
                 ('Logs & incidents', app.open_logs),
                 ('Flight analysis', app.open_flights))),
             ('Review and report', 'Use program sources for static checks; use recorded evidence for Robot Status.', (

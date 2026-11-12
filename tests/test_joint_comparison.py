@@ -44,8 +44,8 @@ class JointComparisonTests(unittest.TestCase):
         charts.draw(recording(), focus='Position', compare_joints=[0, 2, 5])
         lines = charts.axes[0].lines[:-1]
         self.assertEqual(len(lines), 6)
-        self.assertEqual([text.get_text() for text in charts.axes[0].get_legend().get_texts()],
-                         ['Base', 'Elbow', 'Wrist 3'])
+        self.assertEqual([entry[0] for entry in charts.legend],
+                         ['Base', 'Elbow', 'Wrist 3', 'Solid: actual · dashed: target'])
         for index, joint in enumerate((0, 2, 5)):
             actual, target = lines[index*2:index*2+2]
             self.assertEqual(actual.get_color(), joint_colors()[joint])
@@ -70,8 +70,9 @@ class JointComparisonTests(unittest.TestCase):
             self.assertEqual(line.get_color(), joint_colors()[joint])
             self.assertEqual(line.get_linestyle(), '--')
             self.assertTrue(np.isnan(line.get_ydata()[2]))
-            self.assertEqual([text.get_text() for text in axis.get_legend().get_texts()], ['Target'])
+            self.assertIn('Target', axis.get_title(loc='left'))
             self.assertEqual(axis.get_ylim(), charts.axes[0].get_ylim())
+        self.assertEqual([entry[0] for entry in charts.legend], ['Base', 'Elbow', 'Wrist 3'])
         charts.axes[0].set_xlim(10.01, 10.03)
         self.assertEqual(charts.axes[-1].get_xlim(), (10.01, 10.03))
         charts.draw(report, focus='Torque', compare_joints=[0, 5], series='Target', separate_joints=True)
@@ -178,7 +179,7 @@ class JointComparisonUITests(unittest.TestCase):
         self.assertFalse(w.compare_joints[2].get())
         w.view_mode.set('One joint')
         w.change_mode()
-        self.assertTrue(w.layout_combo.instate(['disabled']))
+        self.assertEqual(w.compare_bar.winfo_manager(), '')  # comparison controls leave with the mode
 
     def test_all_readings_scroll_and_compact_controls_stay_accessible(self):
         w = self.window
@@ -196,7 +197,8 @@ class JointComparisonUITests(unittest.TestCase):
             self.root.update()
             label = w.charts.axes[-1].xaxis.label.get_window_extent(w.canvas.get_renderer())
             self.assertGreaterEqual(label.y0, 0)
-            for control in (w.mode_combo, w.focus_combo, w.series_combo, w.layout_combo, w.scale_combo, w.play_button, w.scrubber, w.export_button):
+            compare = (w.series_combo, w.layout_combo, w.scale_combo) if mode == 'Compare joints' else ()
+            for control in (w.mode_combo, *w.metric_tabs.values(), *compare, w.play_button, w.scrubber, w.export_button):
                 with self.subTest(mode=mode, control=control):
                     self.assertLessEqual(control.winfo_rootx()+control.winfo_width(), w.winfo_rootx()+w.winfo_width())
                     self.assertLessEqual(control.winfo_rooty()+control.winfo_height(), w.winfo_rooty()+w.winfo_height())

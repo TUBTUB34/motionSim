@@ -68,13 +68,16 @@ class ProgramPlaybackUITests(unittest.TestCase):
         self.assertFalse(source.timeline.playing)
         self.assertIsNone(self.app.recorded_source)
 
-    def test_tcp_mounting_default_switch_and_reference_persistence(self):
+    def test_world_mounting_default_switch_and_reference_persistence(self):
         source = self.source()
         source.show_simulator()
         panel = self.app.recorded_panel
         self.root.geometry('980x620')
         self.root.update()
-        self.assertEqual(panel.mounting.get(), 'TCP mounting')
+        self.assertEqual(panel.mounting.get(), 'World (mounting)')
+        self.assertEqual(panel.robot.view_frame, 'World (mounting)')
+        panel.mounting.set('TCP mounting')
+        panel.change_mounting()
         self.assertEqual(panel.robot.view_frame, 'Live TCP')
         reference = panel.robot.tcp_view_reference
         self.assertIsNotNone(reference)

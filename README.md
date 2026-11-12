@@ -5,13 +5,33 @@ Charts open inside the application; no browser, web server or internet connectio
 is needed to view them. The simulator's motion, camera, overlays, tooling and RTDE
 behavior are retained.
 
-Start from **Home** for task shortcuts and a summary of loaded evidence or ongoing work.
-Use the persistent left navigation for **Simulator**, **Flight Reports**,
-**Logs**, **Backups**, **Reports** and **Checklist**. Switching pages preserves the selected
-files, results, filters and ongoing transfers. Reports has separate **Program
-Checker** and **Robot Status** tabs; Flight Reports has analysis and robot
-retrieval tabs. **Separate simulator** opens an optional second view for working
-beside flight charts, sharing the existing recording/playhead or live connection.
+The window opens maximized; **F11** switches full screen. Start from **Home** for task
+shortcuts and a summary of loaded evidence or ongoing work. The navigation bar across
+the top holds **Simulator**, **Live monitor**, **Flight reports**, **Logs**, **Reports**,
+**Backups**, **Checklist** and **Help**; the status bar at the bottom shows the robot
+connection and the Dark mode switch. Switching pages preserves the selected files,
+results, filters, recordings and ongoing transfers. Reports has separate **Program
+Checker** and **Robot Status** tabs; Flight reports has analysis and robot retrieval tabs.
+The visual direction follows the reference screenshots in `assets/Screenshots of what i want/`.
+See [the 2026-11-12 upgrade notes](docs/upgrade-2026-11-12.md).
+
+## Live monitor and recording
+
+Connect to the robot, then open **Live monitor** (Ctrl+7). Rolling charts show the
+selected signals (position, velocity, current, torque, temperature) for the ticked
+joints, actual solid and target dashed, with a 3D view, robot/safety/program state,
+speed scaling and a per-joint table. **Window** sets 10-120 s; **Freeze** holds the
+charts while data keeps arriving. Protective stops in the stream are shaded.
+
+**● Record** writes every streamed sample to a temporary file (memory does not grow)
+and keeps recording while you use other pages. **■ Stop**, add a note, then **Save
+recording…** writes a flight-report ZIP (`files/realtimedata.csv`, `metadata.json`,
+`summary.log`) into the flight working folder by default. **Open in Flight reports**
+charts, replays or exports it like any recording from the robot. Only channels the
+controller streams are written; nothing is zero-filled. A dropped connection stops the
+recording and keeps it for saving; closing the app with an unsaved recording asks first.
+Recordings stop automatically at the flight-report limit of 250,000 samples.
+The page only reads RTDE; it sends no commands, scripts or inputs.
 
 ## Saved IP addresses and appearance
 
@@ -22,7 +42,7 @@ automatically. IPv4 and IPv6 are supported; duplicates appear only once. The fir
 saved address is shown when the app starts again. Choose **Forget** on the Connection
 screen to remove the selected address from the list; this does not disconnect a robot.
 
-Use **Dark mode** at the bottom of the left navigation to switch between dark and
+Use **Dark mode** in the status bar at the bottom of the window to switch between dark and
 light appearance. The choice is saved immediately and restored on restart. Open
 pages, charts, playback position and ongoing work remain available when you switch.
 PDF reports keep their print palette.
@@ -118,7 +138,7 @@ Cancellation closes the connection. No robot credentials are stored on disk.
 
 ## Robot backups
 
-Open **Backups** in the left navigation for a combined robot-data archive.
+Open **Backups** in the navigation bar for a combined robot-data archive.
 Enter a **Project name**, choose a local folder, keep **Full robot backup**
 selected and choose **Create backup**. Progress, activity and **Cancel** stay on
 this page; switching pages retains the transfer. Opening Backups never starts
@@ -141,10 +161,11 @@ suffix when that name already exists. Cancelling the folder chooser creates no
 robot archive. After the complete download is verified and flushed to disk, the
 app removes only its temporary TAR and directory from the robot.
 
-For a smaller archive, turn off **Full robot backup** and select **Programs**
-(`/programs`), **Apps** (`/data/apps`), or both in **Advanced**. At least one must
-be selected. Full backup includes all available sources independently of these
-checkboxes. Advanced also holds the remote log and flight-folder paths.
+For a smaller archive, choose **Selected items only** and tick any combination of
+**Programs** (`/programs`), **Apps** (`/apps` and `/data/apps`), **Logs** (the current log
+and its `.bak`) and **Flight reports** (the flight folder). At least one must be ticked.
+**Complete backup** includes all available sources. **Robot paths…** holds the remote log
+and flight-folder paths. Download progress shows a percentage.
 This works without loading logs or connecting the simulator. The app runs
 `tar -P -cf backup.tar` with the selected available directories, using a unique private temporary
 directory on the robot so an existing backup is not overwritten. The uncompressed
@@ -245,10 +266,15 @@ remain unchanged by the desktop theme.
 
 ## Flight reports, graphs and recorded playback
 
-Open **Flight reports & playback** on the connection screen (or **Flight reports**
-in the live viewer). No robot connection is required. Use **Choose folder…** beside
-**Working folder** to list the recording ZIPs and real-time CSVs in that directory,
-including verified downloads in its robot subfolders. **Reload folder** discovers
+Open **Flight reports**. No robot connection is required. The layout follows the
+reference screenshots: the replayed robot, **Protective stop evidence** (choose a stop to
+jump there and see the recorded values around it), **Joint values** and **Recording
+details** on the left; reading tabs, legend chips, **State band**, **Chart** and **X axis**
+selectors, chart cards and the **Synchronized script** on the right. Stops are shaded,
+and their onset is boxed and labelled. ← → pan, + − zoom around the playhead, **Reset
+zoom** restores the recording and **Degrees** converts angles. **Target overlay** and
+**TCP trail** draw on the robot. **Folder…** lists the recording ZIPs and real-time CSVs in
+a directory, including verified downloads in its robot subfolders; **Reload** discovers
 new files. Select `assets/flightreports/` to browse the supplied recordings.
 Use **Open…** for another recording ZIP or a real-time CSV. The flight selector
 above the graphs switches all charts, metadata, script context and playback
@@ -294,17 +320,13 @@ calibration is not applied. If TCP channels are missing, any nominal flange
 pose is explicitly labeled as derived; unknown arm models are not guessed.
 No flight path or unrecorded current-limit envelope is generated.
 
-**Export PDF…** saves a vector PDF for the selected flight, covering the entire
-recording and all six joints regardless of graph zoom or selected joint. It
-adapts the supplied A4 Program Check template: summary, checklist, source
-observations, full-record charts, and action summary. Static script call counts
-are evidence, not proof that branches executed or an automated compliance
-verdict. Dynamic blend overlap and application-specific acceleration limits
-require review. The report uses Motion Studio identification rather than
-presenting the output as a manufacturer-issued assessment.
-The PDF retains its position/velocity/acceleration/current chart template;
-additional measurements and joint overlays are available in the interactive
-workspace and can be saved as images with the chart toolbar.
+**Export PDF…** saves a **Flight Recording Report** covering the entire recording and
+all six joints regardless of chart zoom or selected joint: recording identity, a
+plain-language summary of what was recorded (stops, state changes, peaks), a joint
+statistics table, one chart page per joint (position, speed, acceleration, current,
+torque; angles in degrees) and data-quality notes. It reports measurements only: no
+limits are inferred and no pass/fail verdict is given. Program Check and Robot Status
+PDFs share the same page frame. Audit notes: `reports/report-audit-2026-11-12/`.
 
 ### How to use the application
 
@@ -316,8 +338,8 @@ flight playback, joint comparison, robot flight retrieval, exports, shortcuts
 and troubleshooting. Search matches both topic names and instructions; Escape
 closes the guide without closing the current workspace.
 **Ctrl+0** opens Home, **Ctrl+1** returns to the simulator/connection window, **Ctrl+2** opens logs,
-**Ctrl+3** opens flights, **Ctrl+4** opens Program Check, **Ctrl+5** opens Backups
-and **Ctrl+6** opens Checklist. Workspace shortcuts
+**Ctrl+3** opens flights, **Ctrl+4** opens Program Check, **Ctrl+5** opens Backups,
+**Ctrl+6** opens Checklist and **Ctrl+7** opens Live monitor; **F11** toggles full screen. Workspace shortcuts
 wait until any modal confirmation has closed. Dialogs offer **Copy details**;
 **Logs & graphs → Status details…** keeps long transfer errors readable and copyable.
 
@@ -328,7 +350,7 @@ Parsing and PDF generation run in background workers; recently loaded flights
 are cached. Limits are 256 MiB per telemetry file, 250,000 samples, 256 columns,
 and 4 MiB per context file, with visible errors instead of silent truncation.
 Recording ZIPs are user data and are not bundled into the Windows executable;
-select their folder with **Choose folder…** or use **Open…** for a single file.
+select their folder with **Folder…** or use **Open…** for a single file.
 
 ### Retrieve reports from a connected robot
 
@@ -442,7 +464,8 @@ RTDE does not supply the corresponding source text. Fast-changing lines can be
 missed between samples; this is a monitor, not an execution trace or debugger.
 
 Status readouts refresh at 5 Hz while the receiver continuously drains the
-30 Hz stream into a single latest snapshot. Stationary poses skip mesh work;
+stream (125 Hz requested; the controller may supply less) into a single latest snapshot
+and the Live monitor buffer. Stationary poses skip mesh work;
 hidden simulator tabs retain the newest pose without rendering every sample.
 Disconnected/stale readouts are explicitly marked as last received values.
 
@@ -525,8 +548,8 @@ coordinates. Orbit/zoom and Reset camera preserve the locked reference. The
 selected mode persists when reconnecting; a new connection captures a fresh TCP reference.
 
 Enable RTDE on the controller and make TCP port **30004** reachable.
-The client negotiates RTDE v2 and requests joint, TCP and supported status outputs
-at 30 Hz. It does not send motion commands, URScript or RTDE inputs.
+The client negotiates RTDE v2 and requests joint, TCP, target and supported status
+outputs at 125 Hz. It does not send motion commands, URScript or RTDE inputs.
 The display waits for actual joint samples before drawing an arm.
 
 SCP uses SSH port **22** and the supplied credentials. SSH must be enabled and the
@@ -706,11 +729,11 @@ for [motion version 2](https://www.universal-robots.com/manuals/EN/HTML/SW5_22/C
 when explaining why static overlap does not prove a skipped waypoint. It never
 executes a program or certifies deployment safety.
 
-**Export measurements** in Flight reports remains the separate recorded-telemetry
-PDF. The flight workspace now defaults to one full-width Position graph; choose
-**All readings** for the stacked measurements, or **Compare joints** to overlay
-one measurement across selected joints. **Sample details** and **Recording & script**
-hold the detailed readouts. **Open simulator** animates the recorded robot at full
+**Export PDF…** in Flight reports remains the separate recorded-telemetry
+PDF. The flight workspace defaults to one Position chart; choose the **All readings**
+tab for the stacked measurements, or **Chart → Compare joints** to overlay one
+measurement across selected joints. **Joint values** and **Recording details** hold the
+detailed readouts. **Full-size playback** animates the recorded robot at full
 size in the main window, with shared play/pause, speed and scrubbing controls.
 In the **Simulator** tab, **Motion source → Live robot / Flight report** switches
 between the two views. Live telemetry continues independently; switching back to
@@ -724,7 +747,12 @@ own graph with a shared time axis; **Combined** overlays them again.
 Choose **Scale → Per joint** to see each joint’s variation, or **Shared** to
 compare values using identical vertical scales.
 The selection, measurement, actual/target choice and playback time are preserved.
-Recorded playback defaults to **TCP mounting**. Its **Align view to** selector
-switches between TCP mounting and Robot base. TCP alignment captures a fixed
-reference when selected (or at the first valid sample), so the reference does
-not move while playback runs. This changes only the visualization.
+Recorded playback defaults to **World (mounting)**: the robot is tilted and rotated by
+the mounting saved in the recording's installation (`files/*.installation`), or, for a
+live recording, the installation pulled when connecting. Live views already use the
+pulled installation. The mounting follows PolyScope's convention; it was checked
+against the `set_gravity()` PolyScope wrote into 16 real programs, mounted at 0°/0°,
+270°/45° and 180°/45°. **Align view to** also offers **TCP mounting**, which captures a
+fixed TCP reference when selected (or at the first valid sample), and **Robot base**,
+which shows the base upright. Recordings without an installation are shown upright.
+This changes only the visualization.

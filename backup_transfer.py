@@ -22,27 +22,48 @@ class BackupDestination:
     filename: str = 'backup.tar'
 
 
+CONTENTS = ('programs', 'apps', 'logs', 'flights')
+
+
 class BackupJob(LogJob):
-    def __init__(self, sources=('/programs', '/data/apps'), *, full=False, flight_directory='/root/flightreports', **kwargs):
+    """Archive robot data. ``contents`` picks any of CONTENTS; ``full`` means all.
+
+    ``sources`` remains for callers that select the two program folders by path.
+    """
+    def __init__(self, sources=('/programs', '/data/apps'), *, full=False, contents=None,
+                 flight_directory='/root/flightreports', **kwargs):
         super().__init__(**kwargs)
         self.full = full
-        selected = tuple(sources)
-        if not full and (not selected or any(path not in ('/programs', '/data/apps') for path in selected)):
-            raise ValueError('Select programs, apps, or both for the backup.')
-        self.sources = [(path, 'directory') for path in dict.fromkeys(selected)]
         if full:
-            if not flight_directory.startswith('/') or any(c in flight_directory for c in '\x00\r\n'):
-                raise ValueError('Enter an absolute robot flight-report folder.')
-            flight_directory = posixpath.normpath(flight_directory)
-            if not PurePosixPath(flight_directory).name:
-                raise ValueError('Choose the flight-report folder, not the robot filesystem root.')
-            logs = PurePosixPath(self.connection.path)
-            if logs.suffix == '.bak':
-                logs = logs.with_suffix('.txt')
-            self.sources = [('/programs', 'directory'), ('/apps', 'directory'),
-                            ('/data/apps', 'directory'), (str(logs), 'file'),
-                            (str(logs.with_suffix('.bak')), 'file'),
-                            (str(PurePosixPath(flight_directory)), 'directory')]
+            contents = CONTENTS
+        self.by_content = contents is not None
+        if not self.by_content:
+            selected = tuple(sources)
+            if not selected or any(path not in ('/programs', '/data/apps') for path in selected):
+                raise ValueError('Select programs, apps, or both for the backup.')
+            self.sources = [(path, 'directory') for path in dict.fromkeys(selected)]
+        else:
+            contents = set(contents)
+            if not contents or not contents <= set(CONTENTS):
+                raise ValueError('Select at least one of programs, apps, logs or flight reports.')
+            self.sources = []
+            if 'programs' in contents:
+                self.sources.append(('/programs', 'directory'))
+            if 'apps' in contents:
+                self.sources += [('/apps', 'directory'), ('/data/apps', 'directory')]
+            if 'logs' in contents:
+                # The rotated .bak and the current .txt together are one history.
+                logs = PurePosixPath(self.connection.path)
+                if logs.suffix == '.bak':
+                    logs = logs.with_suffix('.txt')
+                self.sources += [(str(logs), 'file'), (str(logs.with_suffix('.bak')), 'file')]
+            if 'flights' in contents:
+                if not flight_directory.startswith('/') or any(c in flight_directory for c in '\x00\r\n'):
+                    raise ValueError('Enter an absolute robot flight-report folder.')
+                flight_directory = posixpath.normpath(flight_directory)
+                if not PurePosixPath(flight_directory).name:
+                    raise ValueError('Choose the flight-report folder, not the robot filesystem root.')
+                self.sources.append((str(PurePosixPath(flight_directory)), 'directory'))
         self.remote_dir = f'/tmp/ur-backup-{uuid4().hex}'
         self.remote_path = self.remote_dir + '/backup.tar'
         self.skipped_sources = []
@@ -77,7 +98,7 @@ class BackupJob(LogJob):
             if path not in sources:
                 sources.append(path)
         if not sources:
-            raise OSError('No backup sources found; all requested paths are missing.' if self.full else
+            raise OSError('No backup sources found; all requested paths are missing.' if self.by_content else
                           'No backup folders found: /programs and /data/apps are missing.')
         return sources
 
@@ -117,6 +138,7 @@ class BackupJob(LogJob):
             if now - last_report >= .2 or total == size:
                 rate = total / max(now - started, .001) / 1048576
                 eta = (size - total) / max(rate * 1048576, 1)
+                self.events.put(('progress', total / size))
                 self.events.put(('status', f'Downloading backup · {total / 1048576:.2f} / '
                                  f'{size / 1048576:.2f} MiB · {rate:.2f} MiB/s · {eta:.0f}s remaining'))
                 last_report = now
@@ -172,7 +194,7 @@ class BackupJob(LogJob):
                 message += f' · Check robot archive at {self.remote_path} (may be incomplete if creation was interrupted).'
         finally:
             if self.skipped_sources:
-                message += (' · Skipped missing sources: ' if self.full else ' · Skipped missing folders: ') + ', '.join(self.skipped_sources)
+                message += (' · Skipped missing sources: ' if self.by_content else ' · Skipped missing folders: ') + ', '.join(self.skipped_sources)
             if self.connection:
                 message = message.replace(self.connection.password, '[redacted]')
             if self.client:

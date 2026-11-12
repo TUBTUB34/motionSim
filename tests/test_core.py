@@ -199,6 +199,14 @@ class KinematicsTests(unittest.TestCase):
             np.testing.assert_allclose(b, m @ a)
         np.testing.assert_allclose(m[:3,:3] @ [0,0,1], [0,0,-1], atol=1e-12)
 
+    def test_mounting_matches_polyscope_set_gravity(self):
+        # set_gravity() values PolyScope wrote into real programs for these mountings.
+        for base, tilt, gravity in ((0, 0, (0, 0, 9.82)), (270, 45, (-6.9437886, 0, 6.9437886)),
+                                    (180, 45, (0, 6.9437886, 6.9437886))):
+            with self.subTest(base=base, tilt=tilt):
+                up = mounting_matrix(math.radians(base), math.radians(tilt))[:3, :3].T @ [0, 0, 1]
+                np.testing.assert_allclose(up, np.array(gravity) / np.linalg.norm(gravity), atol=1e-9)
+
     def test_display_frame_alignment(self):
         mount = mounting_matrix(math.pi, math.pi/4)
         pose = [.3, -.2, .7, .4, -.5, 1.2]

@@ -87,6 +87,39 @@ def _build_theme(root, style):
             ('Button.padding', {'sticky': 'nsew', 'children': [('Button.label', {'sticky': 'nsew'})]})]})])
         style.configure(name, padding=(12, 6), borderwidth=0, anchor='center', background=BACKGROUND, foreground=INK)
         style.map(name, foreground=[('disabled', DISABLED)], background=[('!disabled', BACKGROUND)])
+    # Top navigation: text tabs on the bar; the current page carries an accent underline.
+    def tab(fill, underline=None, outline=None):
+        scale, size = 3, (40, 46)
+        im = Image.new('RGBA', (size[0]*scale, size[1]*scale), fill)
+        draw = ImageDraw.Draw(im)
+        if outline:
+            draw.rounded_rectangle((scale, 6*scale, (size[0]-1)*scale, (size[1]-7)*scale), radius=3*scale,
+                                   outline=outline, width=scale)
+        if underline:
+            draw.rectangle((6*scale, (size[1]-3)*scale, (size[0]-6)*scale, size[1]*scale), fill=underline)
+        photo = ImageTk.PhotoImage(im.resize(size, Image.Resampling.LANCZOS), master=root)
+        images.append(photo)
+        return photo
+
+    element('Studio.nav', tab(PANEL), ('pressed', tab(PRESSED)), ('focus', tab(PANEL, outline=ACCENT)),
+            ('active', tab(HOVER)), border=8)
+    element('Studio.navactive', tab(PANEL, ACCENT), ('focus', tab(PANEL, ACCENT, ACCENT)), border=8)
+    for name, background, color in (('Nav.TButton', 'Studio.nav', MUTED), ('NavActive.TButton', 'Studio.navactive', INK)):
+        style.layout(name, [(background, {'sticky': 'nsew', 'children': [
+            ('Button.padding', {'sticky': 'nsew', 'children': [('Button.label', {'sticky': 'nsew'})]})]})])
+        style.configure(name, padding=(13, 13), borderwidth=0, anchor='center', background=PANEL,
+                        foreground=color, font=(family, 11, 'bold'))
+        style.map(name, foreground=[('active', INK)], background=[('!disabled', PANEL)])
+    # Card tabs choose the charted reading; the current one carries the accent stripe.
+    element('Studio.cardtab', surface(PANEL, BORDER), ('disabled', disabled), ('pressed', surface(PRESSED, ACCENT)),
+            ('focus', surface(PANEL, ACCENT)), ('active', surface(HOVER, MUTED)))
+    element('Studio.cardtabactive', surface(FIELD, ACCENT, stripe=True), ('focus', surface(FIELD, INK, stripe=True)))
+    for name, background, color in (('Tab.TButton', 'Studio.cardtab', MUTED), ('TabActive.TButton', 'Studio.cardtabactive', INK)):
+        style.layout(name, [(background, {'sticky': 'nsew', 'children': [
+            ('Button.padding', {'sticky': 'nsew', 'children': [('Button.label', {'sticky': 'nsew'})]})]})])
+        style.configure(name, padding=(11, 7), borderwidth=0, anchor='center', background=BACKGROUND,
+                        foreground=color, font=(family, 9, 'bold'))
+        style.map(name, foreground=[('disabled', DISABLED), ('active', INK)], background=[('!disabled', BACKGROUND)])
     element('Studio.field', surface(FIELD, BORDER), ('disabled', disabled),
             ('invalid', surface(FIELD, DANGER)), ('focus', surface(FIELD, ACCENT)),
             ('active', surface(FIELD, MUTED)))
@@ -131,6 +164,8 @@ def _build_theme(root, style):
                     lightcolor=MUTED, darkcolor=MUTED, sliderlength=18, sliderthickness=10)
     style.map('TScale', background=[('disabled', BORDER), ('active', ACCENT)],
               bordercolor=[('focus', ACCENT)])
+    style.configure('Panel.TCheckbutton', background=PANEL)
+    style.map('Panel.TCheckbutton', background=[('active', HOVER)])
     for name in ('TFrame', 'TLabel'):
         style.configure(name, background=BACKGROUND)
     for name in ('Panel.TFrame', 'Toolbar.TFrame'):
@@ -389,6 +424,44 @@ def status_color(text):
     if any(word in value for word in ('loading', 'finding', 'fetching', 'exporting', 'connecting')):
         return ACCENT
     return MUTED
+
+
+def flow(frame, gap=6):
+    """Place a frame's children left to right, wrapping onto new rows as its width changes.
+
+    Call the returned function after adding or removing children; it re-arranges once Tk is idle.
+    """
+    def arrange(event=None):
+        width = event.width if event is not None else frame.winfo_width()
+        x = y = row_height = 0
+        for child in frame.winfo_children():
+            need, height = child.winfo_reqwidth(), child.winfo_reqheight()
+            if x and x + need > width:
+                x, y, row_height = 0, y + row_height + gap, 0
+            child.place(x=x, y=y)
+            x += need + gap
+            row_height = max(row_height, height)
+        if int(frame.cget('height')) != y + row_height:
+            frame.configure(height=y + row_height)
+    pending = []
+
+    def run():
+        pending.clear()
+        arrange()
+
+    def schedule():
+        if not pending:
+            pending.append(frame.after_idle(run))
+
+    def cancel(event):
+        # A queued call to a destroyed frame would fail as an unknown Tcl command.
+        if event.widget is frame and pending:
+            frame.after_cancel(pending.pop())
+
+    frame.bind('<Configure>', lambda event: arrange(event) if event.widget is frame else None, add='+')
+    frame.bind('<Destroy>', cancel, add='+')
+    schedule()
+    return schedule
 
 
 class ScrollableFrame(ttk.Frame):

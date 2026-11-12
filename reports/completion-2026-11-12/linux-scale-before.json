@@ -1,0 +1,28 @@
+{
+  "platform": "linux",
+  "native_scale": 1.3339898243886428,
+  "scale": 1.3339898243886428,
+  "dpi": 96.04726735598227,
+  "font": {
+    "family": "DejaVu Sans",
+    "size": 10,
+    "weight": "normal",
+    "slant": "roman",
+    "underline": 0,
+    "overstrike": 0
+  },
+  "font_metrics": {
+    "ascent": 13,
+    "descent": 4,
+    "linespace": 17,
+    "fixed": 0
+  },
+  "home_tab": [
+    73,
+    46
+  ],
+  "window": [
+    1280,
+    800
+  ]
+}

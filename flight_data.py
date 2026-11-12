@@ -15,6 +15,7 @@ import zipfile
 
 import numpy as np
 
+from installation import InstallationData, decode_installation
 from kinematics import MODELS
 
 TELEMETRY_MEMBER = "files/realtimedata.csv"
@@ -40,6 +41,8 @@ class FlightReport:
     model: str | None = None
     script: str = ""
     break_before: np.ndarray | None = None
+    # Saved mounting, TCP and payload from the recording's installation, when present.
+    installation: InstallationData | None = None
     _derived: dict = field(default_factory=dict, repr=False)
 
     @property
@@ -75,6 +78,9 @@ class FlightReport:
         prefix = "Target" if target else "Actual"
         if metric == "torque":
             candidates = [f"{prefix} moment j{joint} [Nm]", f"{prefix} torque j{joint} [Nm]"]
+            if not target:
+                # RTDE's controller-reported conversion, stored by live recordings.
+                candidates.append(f"Actual current as torque j{joint} [Nm]")
         elif metric in ("temperature", "voltage", "control_mode"):
             suffix = {"temperature": f"temperature j{joint} [C]",
                       "voltage": f"voltage j{joint} [V]", "control_mode": f"control mode j{joint}"}[metric]
@@ -144,6 +150,35 @@ def _read_context(archive, name):
     if info.file_size > MAX_CONTEXT_BYTES:
         raise ValueError(f"Flight context member exceeds 4 MiB: {name}")
     return archive.read(info).decode("utf-8", errors="replace")
+
+
+def _installation(archive, summary, archive_metadata, warnings):
+    """Mounting, TCP and payload saved with the recording; absence is not an error."""
+    names = [name for name in archive.namelist() if name.startswith("files/") and name.endswith(".installation")]
+    current = re.search(r"^Current Installation Name:\s*(.+?)\s*$", summary, re.MULTILINE)
+    preferred = f"files/{current.group(1)}.installation" if current else None
+    name = preferred if preferred in names else names[0] if len(names) == 1 else None
+    if name is not None:
+        info = archive.getinfo(name)
+        try:
+            if info.file_size > MAX_CONTEXT_BYTES:
+                raise ValueError("installation exceeds 4 MiB")
+            data = decode_installation(archive.read(info))
+        except Exception as error:  # A malformed installation must not hide the telemetry.
+            warnings.append(f"Recorded installation could not be read ({error}); mounting shown as upright.")
+            return None
+        return data
+    saved = archive_metadata.get("installation")
+    if not isinstance(saved, dict):
+        return None
+    def vector(key, size):
+        value = saved.get(key)
+        if isinstance(value, list) and len(value) == size and all(isinstance(v, (int, float)) and np.isfinite(v) for v in value):
+            return tuple(float(v) for v in value)
+        return None
+    mass = saved.get("payloadMass")
+    return InstallationData(tcp=vector("tcp", 6), payload_mass=float(mass) if isinstance(mass, (int, float)) else None,
+                            payload_cog=vector("payloadCog", 3), mounting=vector("mounting", 2))
 
 
 def _metadata(summary):
@@ -250,6 +285,7 @@ def _load_cached(path_string, _modified, _size):
     path = Path(path_string)
     summary = script = config = ""
     archive_metadata = {}
+    installation = None
     if path.suffix.lower() == ".zip":
         try:
             with zipfile.ZipFile(path) as archive:
@@ -273,6 +309,7 @@ def _load_cached(path_string, _modified, _size):
                     except (ValueError, TypeError):
                         warnings.append("Archive metadata.json is malformed; telemetry remains available.")
                         archive_metadata = {}
+                installation = _installation(archive, summary, archive_metadata, warnings)
         except (zipfile.BadZipFile, RuntimeError) as error:
             raise ValueError(f"Cannot read flight ZIP: {error}") from error
     elif path.suffix.lower() == ".csv":
@@ -283,10 +320,16 @@ def _load_cached(path_string, _modified, _size):
     metadata = _metadata(summary)
     metadata["report_id"] = str(archive_metadata.get("reportId", path.stem))
     metadata["report_type"] = str(archive_metadata.get("reportType", "Recorded telemetry"))
+    for key, label in (("recordedAt", "recorded_at"), ("robotAddress", "robot_address"), ("notes", "notes")):
+        if archive_metadata.get(key):
+            metadata[label] = str(archive_metadata[key])
     model = _model_from_dh(config)
     if model:
         metadata["model"] = model
         metadata["model_basis"] = "Recorded nominal DH dimensions; factory calibration not applied"
+    elif archive_metadata.get("model") in MODELS:
+        model = metadata["model"] = archive_metadata["model"]
+        metadata["model_basis"] = "Model selected when the recording was made; nominal geometry"
     else:
         warnings.append("Robot model is unknown; nominal arm geometry cannot be inferred safely.")
     elapsed = timestamps - timestamps[0]
@@ -311,4 +354,4 @@ def _load_cached(path_string, _modified, _size):
     for values in (*columns.values(), timestamps, elapsed, breaks):
         values.flags.writeable = False
     return FlightReport(path, path.name, metadata, timestamps, elapsed, columns,
-                        tuple(warnings), model, script, break_before=breaks)
+                        tuple(warnings), model, script, break_before=breaks, installation=installation)

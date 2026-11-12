@@ -46,6 +46,8 @@ class BackupPage(WorkspacePanel):
         self.full = tk.BooleanVar(value=True)
         self.programs = tk.BooleanVar(value=True)
         self.apps = tk.BooleanVar(value=True)
+        self.logs = tk.BooleanVar(value=True)
+        self.flights = tk.BooleanVar(value=True)
         self.status = tk.StringVar(value='Choose a destination, then create a backup.')
         self.contents = tk.StringVar()
         self.advanced_visible = False
@@ -76,46 +78,60 @@ class BackupPage(WorkspacePanel):
         self.shared_connection = ttk.Label(controls, wraplength=800, style='Muted.TLabel')
         self.shared_connection.grid(row=0, column=0, columnspan=3, sticky='w', pady=(0, 16))
         self.shared_connection.grid_remove()
-        ttk.Label(controls, text='Save in folder').grid(row=2, column=0, sticky='w', padx=(0, 14))
+        ttk.Label(controls, text='WHAT TO BACK UP', style='Section.TLabel').grid(row=2, column=0, columnspan=3, sticky='w')
+        scope = ttk.Frame(controls)
+        scope.grid(row=3, column=0, columnspan=3, sticky='w', pady=(6, 4))
+        self.full_control = ttk.Radiobutton(scope, text='Complete backup', variable=self.full, value=True, command=self.update_contents)
+        self.full_control.pack(side='left')
+        self.partial_control = ttk.Radiobutton(scope, text='Selected items only', variable=self.full, value=False, command=self.update_contents)
+        self.partial_control.pack(side='left', padx=(24, 0))
+        self.items = ttk.Frame(controls)
+        self.items.grid(row=4, column=0, columnspan=3, sticky='ew')
+        self.item_controls, self.item_details = [], {}
+        for column, (name, caption) in enumerate((('programs', 'Programs'), ('apps', 'Apps'),
+                                                  ('logs', 'Logs'), ('flights', 'Flight reports'))):
+            self.items.columnconfigure(column, weight=1, uniform='items')
+            control = ttk.Checkbutton(self.items, text=caption, variable=getattr(self, name), command=self.update_contents)
+            control.grid(row=0, column=column, sticky='w')
+            self.item_controls.append(control)
+            detail = self.item_details[name] = ttk.Label(self.items, style='Muted.TLabel', wraplength=200, justify='left')
+            detail.grid(row=1, column=column, sticky='nw', padx=(25, 12))
+        self.items.bind('<Configure>', lambda event: [label.configure(wraplength=max(120, event.width // 4 - 40))
+                                                      for label in self.item_details.values()])
+        self.contents_label = ttk.Label(controls, textvariable=self.contents, style='Muted.TLabel', wraplength=820)
+        self.contents_label.grid(row=5, column=0, columnspan=3, sticky='w', pady=(4, 0))
+        ttk.Label(controls, text='SAVE AS', style='Section.TLabel').grid(row=6, column=0, columnspan=3, sticky='w', pady=(16, 6))
+        ttk.Label(controls, text='Project name').grid(row=7, column=0, sticky='w', padx=(0, 14))
+        project_entry = ttk.Entry(controls, textvariable=self.project_name)
+        project_entry.grid(row=7, column=1, columnspan=2, sticky='ew')
+        self.entries.append(project_entry)
+        ttk.Label(controls, text='Save in folder').grid(row=8, column=0, sticky='w', padx=(0, 14), pady=(8, 0))
         destination = ttk.Entry(controls, textvariable=self.directory)
-        destination.grid(row=2, column=1, sticky='ew')
+        destination.grid(row=8, column=1, sticky='ew', pady=(8, 0))
         self.entries.append(destination)
         self.folder_button = ttk.Button(controls, text='Choose folder…', command=self.choose_folder)
-        self.folder_button.grid(row=2, column=2, padx=(10, 0))
-        self.full_control = ttk.Checkbutton(controls, text='Full robot backup', variable=self.full, command=self.update_contents)
-        self.full_control.grid(row=3, column=0, columnspan=3, sticky='w', pady=(16, 6))
-        ttk.Label(controls, textvariable=self.contents, style='Muted.TLabel', wraplength=820).grid(row=4, column=0, columnspan=3, sticky='w')
-        action = ttk.Frame(controls)
-        ttk.Label(controls, text='Project name').grid(row=5, column=0, sticky='w', pady=(14, 0))
-        project_entry = ttk.Entry(controls, textvariable=self.project_name)
-        project_entry.grid(row=5, column=1, columnspan=2, sticky='ew', pady=(14, 0))
-        self.entries.append(project_entry)
+        self.folder_button.grid(row=8, column=2, padx=(10, 0), pady=(8, 0))
         self.filename_preview = ttk.Label(controls, style='Muted.TLabel', wraplength=700)
-        self.filename_preview.grid(row=6, column=1, columnspan=2, sticky='w', pady=(4, 0))
+        self.filename_preview.grid(row=9, column=1, columnspan=2, sticky='w', pady=(4, 0))
         self.project_name.trace_add('write', self.update_filename)
         self.update_filename()
-        action.grid(row=7, column=0, columnspan=3, sticky='ew', pady=(18, 0))
+        action = ttk.Frame(controls)
+        action.grid(row=10, column=0, columnspan=3, sticky='ew', pady=(16, 0))
         self.start_button = ttk.Button(action, text='Create backup', style='Accent.TButton', command=self.make_backup)
         self.start_button.pack(side='left')
         self.cancel_button = ttk.Button(action, text='Cancel', command=self.cancel, state='disabled')
         self.cancel_button.pack(side='left', padx=10)
-        self.advanced_button = ttk.Button(action, text='Advanced…', command=self.toggle_advanced)
+        self.advanced_button = ttk.Button(action, text='Robot paths…', command=self.toggle_advanced)
         self.advanced_button.pack(side='right')
         self.advanced = ttk.Frame(controls)
-        self.advanced.grid(row=8, column=0, columnspan=3, sticky='ew', pady=(14, 0))
+        self.advanced.grid(row=11, column=0, columnspan=3, sticky='ew', pady=(14, 0))
         self.advanced.columnconfigure(1, weight=1)
         for row, (caption, variable) in enumerate((('Remote log file', self.remote_log), ('Remote flight folder', self.remote_flights))):
             ttk.Label(self.advanced, text=caption).grid(row=row, column=0, sticky='w', padx=(0, 14))
             entry = ttk.Entry(self.advanced, textvariable=variable)
             entry.grid(row=row, column=1, sticky='ew', pady=3)
             self.entries.append(entry)
-        subset = ttk.Frame(self.advanced)
-        subset.grid(row=2, column=0, columnspan=2, sticky='w')
-        ttk.Label(subset, text='When full backup is off:').pack(side='left', padx=(0, 12))
-        self.programs_control = ttk.Checkbutton(subset, text='Programs', variable=self.programs, command=self.update_contents)
-        self.programs_control.pack(side='left')
-        self.apps_control = ttk.Checkbutton(subset, text='Apps', variable=self.apps, command=self.update_contents)
-        self.apps_control.pack(side='left', padx=10)
+            variable.trace_add('write', lambda *_: self.update_contents())
         self.advanced.grid_remove()
         history = ttk.Frame(self, padding=(20, 0, 20, 12))
         history.grid(row=2, column=0, sticky='nsew')
@@ -170,11 +186,28 @@ class BackupPage(WorkspacePanel):
             value = getattr(settings, name, '') if settings is not None else variable.get() if variable else ''
             getattr(self, name).set(value or ('root' if name == 'username' else ''))
 
+    def selected_contents(self):
+        return tuple(name for name in ('programs', 'apps', 'logs', 'flights') if getattr(self, name).get())
+
     def update_contents(self):
-        self.contents.set('Programs, apps, current and rotated logs, and flight reports in one TAR data archive. Missing sources are reported. This is not a controller image or the UR Support File.'
-                          if self.full.get() else 'Selected folders only: ' + ', '.join(name for name, var in [('Programs', self.programs), ('Apps', self.apps)] if var.get()))
-        if not self.full.get() and not self.advanced_visible:
-            self.toggle_advanced()
+        log = self.remote_log.get().strip() or '/root/log_history.txt'
+        details = {'programs': '/programs · programs, scripts and installations',
+                   'apps': '/apps and /data/apps · URCaps and their data',
+                   'logs': f'{log} and its .bak · one combined log history',
+                   'flights': f'{self.remote_flights.get().strip() or "/root/flightreports"} · flight recordings'}
+        for name, label in self.item_details.items():
+            label.configure(text=details[name])
+        if self.full.get():
+            self.items.grid_remove()
+            self.contents.set('Programs, apps, both log files and all flight reports in one TAR data archive. '
+                              'Missing sources are skipped and reported. This is not a controller image or the UR Support File.')
+        else:
+            self.items.grid()
+            names = [control.cget('text') for control, name in zip(self.item_controls, ('programs', 'apps', 'logs', 'flights'))
+                     if getattr(self, name).get()]
+            self.contents.set('Includes: ' + ', '.join(names) + '. Missing sources are skipped and reported.'
+                              if names else 'Tick at least one item to back up.')
+        self.contents_label.configure(style='Muted.TLabel' if self.full.get() or self.selected_contents() else 'Warning.TLabel')
 
     def select_full_backup(self):
         if self.job is None:
@@ -184,7 +217,7 @@ class BackupPage(WorkspacePanel):
     def toggle_advanced(self):
         self.advanced_visible = not self.advanced_visible
         (self.advanced.grid if self.advanced_visible else self.advanced.grid_remove)()
-        self.advanced_button.configure(text='Hide advanced' if self.advanced_visible else 'Advanced…')
+        self.advanced_button.configure(text='Hide robot paths' if self.advanced_visible else 'Robot paths…')
 
     def choose_folder(self):
         path = filedialog.askdirectory(parent=self, title='Save robot backups in folder', mustexist=True)
@@ -193,14 +226,13 @@ class BackupPage(WorkspacePanel):
 
     def _busy(self, value):
         for widget in [*self.entries, self.folder_button, self.start_button, self.full_control,
-                       self.programs_control, self.apps_control, self.connection_button]:
+                       self.partial_control, *self.item_controls, self.connection_button]:
             widget.configure(state='disabled' if value else 'normal')
         self.cancel_button.configure(state='normal' if value else 'disabled')
+        self.progress.stop()
+        self.progress.configure(mode='indeterminate' if value else 'determinate', value=0)
         if value:
             self.progress.start(15)
-        else:
-            self.progress.stop()
-            self.progress.configure(value=0)
 
     def _record(self, text):
         self.status.set(str(text))
@@ -223,8 +255,8 @@ class BackupPage(WorkspacePanel):
             destination = Path(self.directory.get()).expanduser()
             if not destination.is_dir():
                 raise ValueError('Choose an existing local destination folder.')
-            sources = tuple(path for path, variable in [('/programs', self.programs), ('/data/apps', self.apps)] if variable.get())
-            job = BackupJob(connection=connection, sources=sources, full=self.full.get(), flight_directory=self.remote_flights.get().strip())
+            job = BackupJob(connection=connection, full=self.full.get(), contents=self.selected_contents(),
+                            flight_directory=self.remote_flights.get().strip())
         except ValueError as error:
             self.status.set(str(error))
             return
@@ -272,8 +304,15 @@ class BackupPage(WorkspacePanel):
                     self.job = None
                     self._busy(False)
                     break
+                elif kind == 'progress':
+                    self.progress.stop()
+                    self.progress.configure(mode='determinate', value=value * 100)
                 elif kind == 'status' and not job.stopped.is_set():
-                    self._record(value)
+                    # Download progress repeats several times a second; log each stage once.
+                    if value.startswith('Downloading backup') and self.status.get().startswith('Downloading backup'):
+                        self.status.set(value)
+                    else:
+                        self._record(value)
         if not self.closed:
             self.after_id = self.after(100, self.poll)
 

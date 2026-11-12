@@ -69,7 +69,7 @@ def check(app):
         assert len(flights.charts.axes) == 6, 'Bundled separate joint graphs failed'
         flights.show_simulator()
         app.root.update()
-        assert app.recorded_panel.mounting.get() == 'TCP mounting'
+        assert app.recorded_panel.mounting.get() == 'World (mounting)'
         assert app.recorded_source is flights, 'Bundled main-window recorded playback failed'
         assert 'model unavailable' in app.recorded_panel.note.get().lower()
         from program_check import CATEGORIES, discover_programs, review_program
@@ -114,6 +114,30 @@ def check(app):
         assert len(app.diagnostic_window.robot_status.joints) == 6, 'Bundled Robot Status must assess all six joints'
         app.open_backups()
         assert app.backup_page.job is None, 'Opening Backups must not start a robot operation'
+        from backup_transfer import BackupJob
+        from log_transfer import LogConnection
+        selected = BackupJob(connection=LogConnection('192.0.2.1', 'root', 'smoke'), contents=('logs', 'flights'))
+        assert [path for path, _kind in selected.sources] == [
+            '/root/log_history.txt', '/root/log_history.bak', '/root/flightreports'], 'Backup item selection failed'
+        # A live recording must round-trip into the flight workspace without a robot.
+        from types import MappingProxyType
+        from live_recorder import LiveCapture
+        capture = LiveCapture(window_seconds=1.)
+        def live(tick):
+            joints = tuple(.1 * tick + j for j in range(6))
+            values = {'timestamp': 5. + tick * .008, 'actual_q': joints, 'actual_TCP_pose': (.3, -.2, .5, 0, 3.14, 0),
+                      'safety_mode': 1, 'actual_current': (1.,) * 6}
+            return RobotSample(values['timestamp'], joints, values['actual_TCP_pose'], time.monotonic(), MappingProxyType(values))
+        capture.add(live(0))
+        recording = capture.start_recording()
+        for tick in range(1, 6):
+            capture.add(live(tick))
+        capture.stop_recording()
+        live_report = load_flight(recording.save(Path(folder) / 'live.zip', model='UR10e', notes='smoke'))
+        capture.discard_recording()
+        assert live_report.sample_count == 5 and live_report.model == 'UR10e', 'Bundled live recording failed'
+        app.open_live()
+        assert app.live_page.record_button.instate(['disabled']), 'Offline Live monitor must not record'
         app.open_diagnostics()
         assert app.diagnostic_window.report is diagnostic, 'Page navigation lost the generated status report'
         app.root.update()

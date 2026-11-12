@@ -17,8 +17,11 @@ class RobotSample:
     telemetry: Mapping = field(default_factory=lambda: MappingProxyType({}))
 
 class RTDEClient:
-    def __init__(self, host, port=30004, timeout=3., socket_factory=socket.create_connection, telemetry=True):
+    def __init__(self, host, port=30004, timeout=3., socket_factory=socket.create_connection, telemetry=True,
+                 frequency=125.):
         self.host, self.port, self.timeout = host, port, timeout
+        # The controller clamps the requested output rate to what it supports.
+        self.frequency = frequency
         self.socket_factory = socket_factory
         self.sock = None
         self.recipe_id = None
@@ -81,7 +84,7 @@ class RTDEClient:
         # Remove only explicitly unsupported optional fields, then renegotiate.
         while True:
             names = ",".join(f.name for f in self.fields).encode("ascii")
-            response = self._request(79, struct.pack("!d", 30.) + names)
+            response = self._request(79, struct.pack("!d", self.frequency) + names)
             if not response:
                 raise ConnectionError("Empty RTDE output recipe response.")
             try:

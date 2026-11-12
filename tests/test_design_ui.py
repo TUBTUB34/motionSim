@@ -130,7 +130,7 @@ class CompactDesignTests(unittest.TestCase):
         with patch('flight_view.FlightWindow._discover'):
             self.app.open_flights()
         self.settle()
-        names = {'How to', 'Export measurements…', 'Separate simulator', 'Open simulator'}
+        names = {'How to', 'Export PDF…', 'Full-size playback', 'Reset zoom'}
         buttons = [w for w in self.descendants(self.app.flight_window)
                    if isinstance(w, ttk.Button) and w.cget('text') in names]
         self.assertEqual(len(buttons), len(names))

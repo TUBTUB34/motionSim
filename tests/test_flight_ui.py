@@ -45,7 +45,7 @@ class FlightChartTests(unittest.TestCase):
         report = flight()
         report.columns['Script control line'] = np.array([20., 21., 20., 80., np.nan])
         charts = FlightCharts(Figure())
-        charts.draw(report, focus='Position')
+        charts.draw(report, focus='Position', x_reference='Script line')
         axis = charts.axes[0]
         np.testing.assert_array_equal(axis.lines[0].get_xdata(), report.timestamps)
         formatter = axis.xaxis.get_major_formatter()
@@ -108,7 +108,30 @@ class FlightChartTests(unittest.TestCase):
         report.break_before[2] = True
         charts = FlightCharts(Figure())
         charts.draw(report, focus='Position')
-        self.assertEqual(len(charts.axes[0].patches), 2)
+        shaded = [patch for patch in charts.axes[0].patches if patch.get_gid() == 'stop-shade']
+        self.assertEqual(len(shaded), 2)
+
+    def test_time_axis_state_band_stop_marker_and_degrees(self):
+        report = flight()
+        report.columns['Safety mode'] = np.array([1., 1., 3., 3., 3.])
+        charts = FlightCharts(Figure())
+        charts.draw(report, focus='Position', state_band='Safety mode', degrees=True)
+        axis = charts.axes[0]
+        self.assertEqual(axis.get_xlabel(), 'Recording timestamp [s]')
+        np.testing.assert_allclose(axis.lines[0].get_ydata(), np.degrees(report.series('position', 1)))
+        self.assertEqual(axis.yaxis.get_major_formatter()(1.5, 0), '1.5 °')
+        onset = [patch for patch in axis.patches if patch.get_gid() == 'stop-onset']
+        self.assertEqual(len(onset), 1)
+        self.assertAlmostEqual(onset[0].get_x() + .10, 10.02)
+        self.assertEqual([text.get_text() for text in axis.texts], ['Protective Stop', 'Normal', 'Protective stop'])
+        self.assertEqual(charts.legend[0][0], 'Actual Position')
+        self.assertEqual(charts.legend[1][0], 'Target Position')
+        charts.draw(report, focus='Position', x_reference='Elapsed time')
+        self.assertEqual(charts.axes[0].xaxis.get_major_formatter()(10.02, 0), '0.02')
+        self.assertEqual(charts.axes[0].texts[0].get_text(), 'Protective Stop')
+        self.assertEqual(len(charts.axes[0].texts), 1)
+        charts.draw(report, compare_joints=(0, 2), focus='Current')
+        self.assertEqual([entry[0] for entry in charts.legend], ['Base', 'Elbow', 'Solid: actual · dashed: target'])
 
 
 @unittest.skipUnless(os.environ.get('MOTIONSIM_UI_TESTS') == '1', 'requires local graphical display')
@@ -130,16 +153,17 @@ class FlightWindowTests(unittest.TestCase):
         self.window.shutdown()
         self.root.destroy()
 
-    def test_scrolling_preserves_image_and_fixed_script_line_context(self):
+    def test_scrolling_preserves_image_and_pinned_script_panel(self):
         report = flight()
         report.columns['Script control line'] = np.array([20., 21., 20., 80., np.nan])
+        report.script = '\n'.join(f'statement_{number}()' for number in range(1, 91))
         window = self.window
         window.set_report(report)
         window.focus.set('All readings')
         window.redraw_charts()
         window.geometry('1000x720')
         self.root.update()
-        axis_y = window.line_axis.winfo_rooty()
+        script_y = window.script.winfo_rooty()
         photo = window.canvas._tkphoto
         with patch.object(window.canvas, 'draw', wraps=window.canvas.draw) as draw:
             for _ in range(4):
@@ -148,13 +172,64 @@ class FlightWindowTests(unittest.TestCase):
             self.assertEqual(draw.call_count, 0)
         self.assertIs(window.canvas._tkphoto, photo)
         self.assertGreater(window.chart_viewport.yview()[0], 0)
-        self.assertEqual(window.line_axis.winfo_rooty(), axis_y)
-        self.assertLess(axis_y + window.line_axis.winfo_height(), window.winfo_rooty()+window.winfo_height())
+        self.assertEqual(window.script.winfo_rooty(), script_y)
+        self.assertLess(script_y + window.script.winfo_height(), window.winfo_rooty()+window.winfo_height())
         self.assertEqual(window.canvas.get_tk_widget().cget('background'), '#090e14')
         window.seek(.03)
         self.assertEqual(window.script_position.get(), 'Script line 80')
+        self.assertEqual(window.script.tag_ranges('current')[0].string, '80.0')
+        self.assertIn('statement_80()', window.script.get('80.0', '81.0'))
+        self.root.update()
+        self.assertIsNotNone(window.script.bbox('80.0'))  # the highlighted line is scrolled into view
         window.seek(.04)
         self.assertEqual(window.script_position.get(), 'Script line unavailable')
+        self.assertEqual(window.script.tag_ranges('current'), ())
+
+    def test_stop_evidence_metric_tabs_zoom_and_overlays(self):
+        report = flight()
+        report.columns['Safety mode'] = np.array([1., 1., 3., 3., 3.])
+        for axis, value in zip('xyz', (.3, -.2, .5)):
+            report.columns[f'Actual TCP pose {axis} [m]'] = np.linspace(value, value + .01, 5)
+        window = self.window
+        window.set_report(report)
+        self.assertEqual(window.evidence_title.cget('text'), 'Protective stop evidence')
+        self.assertEqual(window.evidence_combo.cget('values')[0], 'Protective stop · 0.020 s')
+        self.assertEqual(window.sample_text.get(), 'Sample 1 of 5 · 10.000 s')
+        window.timeline.play()
+        window.evidence_combo.current(0)
+        window.select_evidence()
+        self.assertFalse(window.timeline.playing)
+        self.assertAlmostEqual(window.timeline.elapsed, .02)
+        self.assertIn('Highest current', window.evidence_text.get())
+        self.assertIn('do not establish its cause', window.evidence_text.get())
+        window.select_metric('Current')
+        self.assertEqual(window.focus.get(), 'Current')
+        self.assertEqual(window.metric_tabs['Current'].cget('style'), 'TabActive.TButton')
+        self.assertEqual([entry[0] for entry in window.charts.legend], ['Actual Current'])
+        window.zoom_view(.5)
+        low, high = window.charts.axes[0].get_xlim()
+        self.assertAlmostEqual(high - low, .02)
+        self.assertLessEqual(low, 10.02)
+        self.assertGreaterEqual(high, 10.02)
+        window.shift_view(1)
+        self.assertAlmostEqual(window.charts.axes[0].get_xlim()[1], 10.035)  # a quarter of the visible span
+        window.reset_zoom()
+        self.assertEqual(window.charts.axes[0].get_xlim(), (10., 10.04))
+        window.select_state_band('Safety mode')  # toggles the default band off
+        self.assertEqual(window.state_band.get(), '')
+        window.target_overlay.set(True)
+        window.trail_mode.set('Whole recording')
+        window.update_overlays()
+        self.assertEqual(len(window.robot.ghost_joints), 6)
+        self.assertEqual(len(window.robot.trail), 5)
+        window.chart_mode.set('Compare joints')
+        window.select_chart_mode()
+        self.assertEqual(window.view_mode.get(), 'Compare joints')
+        self.assertTrue(window.metric_tabs['All readings'].instate(['disabled']))
+        window.chart_mode.set('Joint · Elbow')
+        window.select_chart_mode()
+        self.assertEqual(window.joint.get(), 'Elbow')
+        self.assertIn('Elbow', window.charts.axes[0].get_title(loc='left'))
 
     def test_folder_switch_replaces_listing_and_ignores_stale_events(self):
         window = self.window
