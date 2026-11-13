@@ -3,12 +3,13 @@ import math
 import queue
 import time
 import tkinter as tk
+from dataclasses import replace
 from tkinter import ttk
 import ui_dialogs as messagebox
 from tkinter.scrolledtext import ScrolledText
 
 from connection import make_settings
-from kinematics import MODELS, VIEW_FRAMES
+from kinematics import MODELS, VIEW_FRAMES, identify_models
 from session import RobotSession
 from view import RobotView, DISPLAY_OPTIONS
 from tooling import TOOLS, TCP_SOURCES
@@ -84,6 +85,7 @@ class SimulatorApp:
         self.settings = None
         self.installation_data = None
         self.last_sample = None
+        self.model_checked = False
         self.last_status_update = 0.
         self.program_text = tk.StringVar(value="Waiting for program telemetry…")
         from ui_theme import apply_theme
@@ -468,6 +470,10 @@ class SimulatorApp:
         self.source_selector.bind('<<ComboboxSelected>>', self.select_simulator_source)
         ttk.Button(bar, text='Choose flight report…', command=self.open_flights).pack(side='right')
         ttk.Button(bar, text='Separate simulator', command=self.open_simulator_window).pack(side='right', padx=8)
+        from mounting_view import MountingControls, installation_shown
+        self.mounting_controls = MountingControls(self.simulator_tab, lambda: installation_shown(
+            self, self.simulator_source.get(), self.recorded_source))
+        self.mounting_controls.pack(fill='x')
 
     def select_simulator_source(self, _event=None):
         if self.simulator_source.get() == 'Flight report':
@@ -487,10 +493,12 @@ class SimulatorApp:
             self.live_simulator.pack(fill='both', expand=True)
             if hasattr(self, 'viewer') and self.viewer.winfo_exists():
                 self.viewer.redraw()
+        self.mounting_controls.mounting_changed()
 
     def update_recorded_playback(self, source):
         if self.recorded_source is source and self.recorded_panel is not None and self.recorded_panel.winfo_exists():
             self.recorded_panel.sync()
+            self.mounting_controls.mounting_changed()
         if self.simulator_popout is not None and self.simulator_popout.winfo_exists():
             self.simulator_popout.sync_recorded(source)
 
@@ -616,6 +624,7 @@ class SimulatorApp:
         self.installation.set(self.settings.installation)
         self.directory.set(self.settings.directory)
         self.installation_data = self.last_sample = None
+        self.model_checked = False
         self.status.set("Connecting to RTDE…")
         self.details.set("Installation will load after RTDE connects." if self.settings.can_load_payload else PAYLOAD_NOTICE)
         self.joints.set("Waiting for joints…")
@@ -635,8 +644,9 @@ class SimulatorApp:
         self._select_page('simulator')
         bar = ttk.Frame(self.simulator_host, padding=(18, 12), style='Toolbar.TFrame')
         bar.pack(fill="x")
-        ttk.Label(bar, text=f"{self.settings.model}  ·  {self.settings.ip}",
-                  style='Title.Panel.TLabel').pack(side="left")
+        self.title_label = ttk.Label(bar, text=f"{self.settings.model}  ·  {self.settings.ip}",
+                                     style='Title.Panel.TLabel')
+        self.title_label.pack(side="left")
         ttk.Button(bar, text="Edit connection", command=self.edit_connection).pack(side="right", padx=6)
         self.connect_button = ttk.Button(bar, text="Disconnect", command=self.toggle_connection)
         self.connect_button.pack(side="right")
@@ -793,6 +803,21 @@ class SimulatorApp:
         self.disconnect()
         self.show_setup()
 
+    def check_model(self, sample):
+        """Set the robot model from live geometry once a pose identifies it; otherwise keep the selection."""
+        offset = sample.telemetry.get('tcp_offset')
+        matches = identify_models(sample.joints, sample.tcp_pose, offset) if offset is not None else ()
+        if not matches:
+            return
+        self.model_checked = True
+        selected = self.settings.model
+        if selected not in matches:
+            self.settings = replace(self.settings, model=matches[0])
+            self.model.set(matches[0])
+            self.viewer.set_model(matches[0])
+            self.title_label.configure(
+                text=f"{matches[0]}  ·  {self.settings.ip}  ·  model set from live data (was {selected})")
+
     def describe_installation(self, data):
         lines = []
         if data.tcp is not None:
@@ -830,6 +855,7 @@ class SimulatorApp:
                 elif kind == "installation":
                     self.installation_data = data
                     self.details.set(self.describe_installation(data))
+                    self.mounting_controls.mounting_changed()
                     if self.last_sample:
                         self.viewer.update_robot(self.last_sample, data,
                             render=self.active_page == 'simulator' and self.simulator_source.get() == 'Live robot')
@@ -845,6 +871,8 @@ class SimulatorApp:
                 sample = session.sample()
                 if sample and sample is not self.last_sample:
                     self.last_sample = sample
+                    if not self.model_checked:
+                        self.check_model(sample)
                     self.viewer.update_robot(sample, self.installation_data,
                                              render=self.active_page == 'simulator' and self.tabs.select() == str(self.simulator_tab)
                                              and self.simulator_source.get() == 'Live robot')
@@ -919,7 +947,7 @@ if __name__ == "__main__":
     smoke = '--smoke-test' in sys.argv
     # A packaged smoke run must never replace the user's saved addresses/theme.
     with TemporaryDirectory(prefix='ur-smoke-settings-') if smoke else nullcontext() as folder:
-        root = tk.Tk()
+        root = theme.make_root()
         app = SimulatorApp(root, preferences_path=Path(folder) / 'preferences.json' if smoke else None)
         if smoke:
             try:

@@ -10,7 +10,7 @@ from unittest.mock import Mock
 import numpy as np
 from connection import make_settings
 from installation import decode_installation, numbers, MAX_FILE_SIZE
-from kinematics import forward_kinematics, mounting_matrix, pose_matrix, view_base_transform
+from kinematics import MODELS, forward_kinematics, identify_models, mounting_matrix, pose_matrix, view_base_transform
 from rtde_client import RTDEClient, RobotSample
 from session import RobotSession
 
@@ -198,6 +198,18 @@ class KinematicsTests(unittest.TestCase):
         for a,b in zip(base, mounted):
             np.testing.assert_allclose(b, m @ a)
         np.testing.assert_allclose(m[:3,:3] @ [0,0,1], [0,0,-1], atol=1e-12)
+
+    def test_live_geometry_identifies_each_model_through_calibration_error(self):
+        joints, offset = (.7, -1.2, 1.4, -.9, 1.1, .3), (.01, -.02, .15, 0, .4, 0)
+        for model in MODELS:
+            with self.subTest(model=model):
+                tcp = forward_kinematics(model, joints)[-1] @ pose_matrix(offset)
+                pose = (*(tcp[:3, 3] + [.003, -.002, .001]), 0, 0, 0)
+                matches = identify_models(joints, pose, offset)
+                self.assertIn(model, matches)
+                self.assertTrue(all(MODELS[other] == MODELS[model] for other in matches))
+        self.assertEqual(identify_models(joints, (.3, .2, .1, 0, 0, 0), offset), ())
+        self.assertEqual(identify_models((0,) * 6, (0,) * 6, (0,) * 6), ())
 
     def test_mounting_matches_polyscope_set_gravity(self):
         # set_gravity() values PolyScope wrote into real programs for these mountings.

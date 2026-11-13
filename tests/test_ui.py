@@ -15,7 +15,8 @@ from tests.test_core import XML, packet
 
 class MockRobot:
     """Small loopback RTDE server with real framing and continuously changing joints."""
-    def __init__(self):
+    def __init__(self, model=None):
+        self.model = model  # Report the TCP where this model's nominal geometry puts it.
         self.listener = socket.socket()
         self.listener.bind(("127.0.0.1", 0))
         self.listener.listen()
@@ -62,8 +63,12 @@ class MockRobot:
                         tick += 1
                         values = (tick*.025, math.sin(tick*.02)*.4,-1.2,1.6,-1.8,-1.57,0,
                                   -.7,-.25,.7,0,0,0)
+                        pose = values[7:]
+                        if self.model:
+                            from kinematics import forward_kinematics
+                            pose = (*forward_kinematics(self.model, values[1:7])[-1][:3, 3], 0, 0, 0)
                         sock.sendall(data_packet(fields, {"timestamp": values[0], "actual_q": values[1:7],
-                            "actual_TCP_pose": values[7:], "script_control_line": 42, "runtime_state": 2,
+                            "actual_TCP_pose": pose, "script_control_line": 42, "runtime_state": 2,
                             "safety_mode": 1, "safety_status": 1, "robot_mode": 7, "payload": 2.5}))
                 except (OSError, ConnectionError):
                     pass
@@ -206,6 +211,41 @@ class UITests(unittest.TestCase):
                 self.pump_until(lambda: app.last_sample is not None and "without both" in app.details.get())
                 self.assertIsNone(app.installation_data)
                 self.assertEqual([kind for kind, _ in robot.messages], [86,79,83]*3)
+                self.assertEqual(errors, [])
+        finally:
+            app.close()
+            robot.close()
+
+    def test_connect_sets_the_model_the_robot_geometry_shows(self):
+        import tkinter as tk
+        from main import SimulatorApp
+        robot = MockRobot(model="UR10e")
+        class Transfer:
+            def fetch(self, *_args):
+                raise OSError("no installation in this test")
+            def close(self):
+                pass
+        self.root = tk.Tk()
+        app = SimulatorApp(self.root)
+        errors = []
+        self.root.report_callback_exception = lambda *args: errors.append(args)
+        try:
+            with patch("main.RobotSession", lambda settings: RobotSession(
+                    settings, lambda host: RTDEClient(host, port=robot.port), Transfer)):
+                app.ip.set("127.0.0.1")
+                app.model.set("UR15")
+                app.submit()
+                self.pump_until(lambda: app.settings.model == "UR10e")
+                self.assertEqual(app.viewer.model, "UR10e")
+                self.assertEqual(app.model.get(), "UR10e")
+                self.assertIn("UR10e", app.title_label.cget("text"))
+                self.assertIn("was UR15", app.title_label.cget("text"))
+                self.assertGreater(app.viewer.rendered_triangles, 100)
+                app.edit_connection()
+                app.model.set("UR12e")
+                app.submit()
+                self.pump_until(lambda: app.model_checked)
+                self.assertEqual(app.settings.model, "UR12e")
                 self.assertEqual(errors, [])
         finally:
             app.close()

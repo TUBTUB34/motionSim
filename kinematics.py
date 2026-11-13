@@ -63,6 +63,22 @@ def forward_kinematics(model, joints, mounting=None):
     return frames
 
 
+def identify_models(joints, tcp_pose, tcp_offset):
+    """Models whose nominal geometry puts the TCP where the robot reports it; () when the pose does not decide.
+
+    Factory calibration leaves the right model within a few millimetres (at most 3.9 mm in 16
+    recordings from UR10e and UR15 arms) and every other size at least 15 mm away. Models with
+    identical dimensions (UR5e/UR7e, UR10e/UR12e) cannot be told apart and are returned together.
+    """
+    tool = pose_matrix(tcp_offset)
+    errors = {model: float(np.linalg.norm((forward_kinematics(model, joints)[-1] @ tool)[:3, 3] - tcp_pose[:3]))
+              for model in MODELS}
+    best = min(errors, key=errors.get)
+    matches = tuple(model for model in MODELS if MODELS[model] == MODELS[best])
+    others = min(error for model, error in errors.items() if model not in matches)
+    return matches if errors[best] <= .008 and others >= errors[best] + .008 else ()
+
+
 VIEW_FRAMES = ("World (mounting)", "Robot base", "Live TCP")
 
 

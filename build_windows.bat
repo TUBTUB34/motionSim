@@ -14,7 +14,8 @@ for /f %%G in ('.venv-build\Scripts\python -c "import uuid; print(uuid.uuid4().h
 if not defined MOTIONSIM_BUILD_ID goto :failed
 .venv-build\Scripts\python -m PyInstaller --noconfirm --workpath "build\runs\%MOTIONSIM_BUILD_ID%" MotionStudio.spec
 if errorlevel 1 goto :failed
-start /wait "" dist\URMotionStudio.exe --smoke-test
+rem Smoke-test on a hidden desktop so its windows do not take over the screen.
+.venv-build\Scripts\python scripts\run_hidden.py dist\URMotionStudio.exe --smoke-test
 if errorlevel 1 goto :failed
 echo Ready: dist\URMotionStudio.exe
 popd

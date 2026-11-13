@@ -17,7 +17,7 @@ class RobotSample:
     telemetry: Mapping = field(default_factory=lambda: MappingProxyType({}))
 
 class RTDEClient:
-    def __init__(self, host, port=30004, timeout=3., socket_factory=socket.create_connection, telemetry=True,
+    def __init__(self, host, port=30004, timeout=10., socket_factory=socket.create_connection, telemetry=True,
                  frequency=125.):
         self.host, self.port, self.timeout = host, port, timeout
         # The controller clamps the requested output rate to what it supports.

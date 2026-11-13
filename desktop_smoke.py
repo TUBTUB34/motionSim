@@ -165,5 +165,9 @@ def check(app):
         app.root.update()
         viewer.update_robot(RobotSample(1, (0, -1, 1, 0, 0, 0), (.3, -.2, .7, 0, 0, 0), time.monotonic()), None)
         assert viewer.rendered_triangles > 100, 'Bundled robot assets or renderer failed'
+        app.mounting_controls.step(1, 45)
+        assert viewer.find_withtag('mounting'), 'Bundled mounting adjustment failed'
+        app.mounting_controls.reset.invoke()
+        assert not viewer.find_withtag('mounting'), 'Saved mounting was not restored'
         assert app.set_theme('dark'), 'Dark mode failed with loaded workspaces'
         assert app.flight_window.report is report, 'Theme change lost recorded evidence'

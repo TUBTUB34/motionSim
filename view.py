@@ -21,6 +21,25 @@ DISPLAY_OPTIONS = {
     "info": "Viewport information",
 }
 
+def mounting_override(widget):
+    """Mounting adjusted in the app (base, tilt in radians), or None to use each installation's saved angles."""
+    return getattr(widget._root(), '_studio_mounting', None)
+
+
+def set_mounting_override(widget, angles):
+    """Draw every robot view with one mounting; None returns each view to its installation. Display only."""
+    root = widget._root()
+    root._studio_mounting = None if angles is None else tuple(angles)
+
+    def walk(item):
+        changed = getattr(item, 'mounting_changed', None)
+        if changed is not None:
+            changed()
+        for child in item.winfo_children():
+            walk(child)
+    walk(root)
+
+
 @lru_cache(maxsize=256)
 def cylinder_geometry(length, radius, end_radius, bevel, segments=40):
     """Cache local mesh topology; joint motion only changes its rigid transform."""
@@ -81,6 +100,19 @@ class RobotView(tk.Canvas):
 
     def refresh_theme(self):
         self.configure(background=theme.PANEL)
+        self.redraw()
+
+    def mounting_changed(self):
+        if self.view_frame == 'World (mounting)':
+            self.camera_anchor = None
+            self.pan_offset[:] = 0
+        self.redraw()
+
+    def set_model(self, model):
+        self.model = model
+        self.robot_links = load_robot_mesh(model)
+        self.camera_anchor = None
+        self.pan_offset[:] = 0
         self.redraw()
 
     def set_view_frame(self, frame):
@@ -335,7 +367,9 @@ class RobotView(tk.Canvas):
         frames = None
         data = self.installation
         if self.sample is not None:
-            mount = mounting_matrix(*data.mounting) if data and data.mounting is not None else np.eye(4)
+            adjusted = mounting_override(self)
+            angles = adjusted or (data.mounting if data else None)
+            mount = mounting_matrix(*angles) if angles is not None else np.eye(4)
             reference = self.tcp_view_reference if self.view_frame == "Live TCP" else self.sample.tcp_pose
             mount = view_base_transform(self.view_frame, mount, reference)
             frames = forward_kinematics(self.model, self.sample.joints, mount)
@@ -414,6 +448,10 @@ class RobotView(tk.Canvas):
             x, y = xy[0]
             self.create_oval(x-5, y-5, x+5, y+5, fill=color, outline="", tags="scene")
             self.text3(cog, f"  CoG · {data.payload_mass:g} kg", color)
+        if adjusted and self.view_frame == "World (mounting)":
+            self.create_text(18, 40 if self.visibility["info"] else 18, anchor="nw", fill=theme.WARNING,
+                             text="Mounting adjusted · base {:g}°, tilt {:g}°".format(*np.degrees(adjusted).round(2)),
+                             tags=("scene", "mounting"))
         if not self.visibility["info"]:
             return
         self.create_text(18, 18, text=f"{self.model} · {model_family(self.model)}   •   {self.stream_state}   •   {self.view_frame}",

@@ -1,10 +1,11 @@
 """Native design-system behavior checks; use MOTIONSIM_UI_TESTS=1."""
 import os
+import sys
 import tkinter as tk
 from tkinter import ttk
 import unittest
 
-from ui_theme import apply_theme, style_text, style_toolbar, ScrollableFrame, FIELD, INK
+from ui_theme import apply_theme, make_root, style_text, style_toolbar, ScrollableFrame, FIELD, INK
 from ui_dialogs import askyesno, MessageDialog
 
 
@@ -17,6 +18,14 @@ class ThemeTests(unittest.TestCase):
 
     def tearDown(self):
         self.root.destroy()
+
+    @unittest.skipUnless(sys.platform == 'win32', 'Windows display scaling')
+    def test_windows_root_keeps_96_dpi_text_at_any_display_scale(self):
+        root = make_root()
+        try:
+            self.assertAlmostEqual(root.tk.call('tk', 'scaling'), 96 / 72, places=2)
+        finally:
+            root.destroy()
 
     def test_reapply_keeps_images_alive_and_compact_controls_accessible(self):
         button = ttk.Button(self.root, text='Connect to robot')

@@ -107,6 +107,9 @@ class SimulatorPopout(tk.Toplevel):
         selector.bind('<<ComboboxSelected>>', self.change_source)
         ttk.Button(bar, text='Flight reports', command=app.open_flights).pack(side='right')
         ttk.Button(bar, text='Reset camera', command=self.reset_camera).pack(side='right', padx=8)
+        from mounting_view import MountingControls, installation_shown
+        self.mounting_controls = MountingControls(self, lambda: installation_shown(app, self.source_mode.get(), self.source))
+        self.mounting_controls.pack(fill='x')
         self.holder = ttk.Frame(self)
         self.holder.pack(fill='both', expand=True)
         self.live = ttk.Frame(self.holder)
@@ -123,6 +126,7 @@ class SimulatorPopout(tk.Toplevel):
                 self.recorded = RecordedPlayback(self.holder, self.source)
             self.recorded.pack(fill='both', expand=True)
             self.recorded.sync()
+            self.mounting_controls.mounting_changed()
         else:
             if self.recorded is not None:
                 self.recorded.pack_forget()
@@ -132,10 +136,13 @@ class SimulatorPopout(tk.Toplevel):
     def sync_recorded(self, source):
         if self.source_mode.get() == 'Flight report' and self.source is source and self.recorded is not None:
             self.recorded.sync()
+            self.mounting_controls.mounting_changed()
 
     def sync_live(self, force=False):
         if self.source_mode.get() != 'Live robot':
             return
+        if force:
+            self.mounting_controls.mounting_changed()
         app = self.app
         if app.settings is None:
             self.caption.set('Connect a robot in the Simulator page to view live movement.')

@@ -198,6 +198,11 @@ On **Windows**, install 64-bit (x64) Python 3.14 with Tcl/Tk, then run:
 build_windows.bat
 ```
 
+UI tests and the smoke test open real windows and take keyboard focus. To keep the
+screen usable, run them on a hidden desktop: `py scripts\run_hidden.py <command>` on
+Windows (the build script does this for its smoke test), or `xvfb-run -a <command>`
+on Linux.
+
 Use a local Windows project folder for builds and tests; loading Python libraries
 through a WSL/network share can be much slower.
 
@@ -206,6 +211,9 @@ Tk, chart libraries and robot assets. Copy it to a Windows PC; the target does
 not need Python or a browser. First launch/first simulator rendering can take
 longer while libraries unpack and the renderer compiles. Keep the generated
 executable outside the source tree when distributing it. Builds are unsigned.
+On Windows the app is DPI-aware and draws one-to-one in screen pixels, so on a scaled
+display (for example 175 %) it is as sharp and compact as under WSL instead of being
+stretched by Windows.
 The build runs an offline smoke check of the packaged log and flight workspaces,
 PDF export, retrieval controls, transfer helper and robot renderer. You can repeat
 it with `URMotionStudio.exe --smoke-test` (exit code 0
@@ -476,7 +484,10 @@ for automated verification; tests use synthetic packets and a loopback robot.
 
 ## Connect
 
-1. Enter the robot IP (default **10.22.33.81**) and select the exact model.
+1. Enter the robot IP (default **10.22.33.81**) and select the model. After connecting,
+   the app sets the model itself when the reported joint angles, TCP position and TCP
+   offset fit exactly one size (UR5e/UR7e and UR10e/UR12e share dimensions, so within
+   those pairs your selection is kept). The installation file does not name the model.
 2. Optionally enter an SSH password to retrieve its installation; the username defaults to **root**.
    Empty fields show their defaults as hints. Leave them blank to use those values,
    or type to override them. There is no default password.
@@ -589,6 +600,14 @@ installation TCP calculated from nominal flange kinematics. The amber marker
 shows the saved payload center of gravity and mass. Mounting orients the entire
 arm and its markers; when unavailable, the view uses robot base coordinates.
 Mounting is an orientation, not a surveyed world position.
+
+If the saved mounting is wrong, correct it with the **Mounting** row in the Simulator
+tab or the separate simulator. As in PolyScope's Installation → Mounting, **− 45°** and
+**+ 45°** turn the base rotation and the tilt, and each angle can also be typed in
+degrees. The adjusted mounting replaces the saved one in every robot view (Simulator,
+separate simulator, Live monitor and Flight reports) until **Use saved** is chosen or
+the app closes; each adjusted view is labelled in amber. It changes the display only
+and is not written to the robot, the installation or a recording.
 
 The viewport uses Universal Robots' official model-specific visual geometry:
 CB-Series for UR3/UR5/UR10, e-Series for UR3e/UR5e/UR10e/UR16e, and UR Series

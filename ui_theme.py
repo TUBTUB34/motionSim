@@ -3,6 +3,7 @@
 The application uses dark, dense panels with fine borders and blue interaction
 accents. PDF export deliberately keeps its separate print palette.
 """
+import sys
 import tkinter as tk
 from tkinter import font, ttk
 from PIL import Image, ImageDraw, ImageTk
@@ -223,6 +224,25 @@ def _configure_defaults(root):
     root.option_add('*TCombobox*Listbox.selectForeground', INK)
     root.option_add('*Menu.tearOff', False)
     root.configure(background=BACKGROUND)
+
+
+def make_root():
+    """Create the Tk root drawn one-to-one in screen pixels on every platform.
+
+    Windows otherwise stretches the whole window by the display scale (1.75× larger and
+    blurred at 175 %), because the process is not DPI-aware. The layout is sized in
+    pixels, so text also stays at 96 DPI instead of growing out of its controls.
+    """
+    if sys.platform != 'win32':
+        return tk.Tk()
+    import ctypes
+    try:
+        ctypes.windll.user32.SetProcessDpiAwarenessContext(ctypes.c_void_p(-4))  # per monitor, version 2
+    except (AttributeError, OSError):
+        pass  # Before Windows 10 1703: Windows keeps stretching the window.
+    root = tk.Tk()
+    root.tk.call('tk', 'scaling', 96 / 72)
+    return root
 
 
 def register_theme_callback(widget, callback):
