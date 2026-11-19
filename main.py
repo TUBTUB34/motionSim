@@ -10,7 +10,7 @@ from tkinter.scrolledtext import ScrolledText
 
 from connection import make_settings
 from kinematics import MODELS, VIEW_FRAMES, identify_models
-from session import RobotSession
+from session import RATES, RobotSession, reconnect_reason
 from view import RobotView, DISPLAY_OPTIONS
 from tooling import TOOLS, TCP_SOURCES
 from status_view import StatusView
@@ -21,6 +21,8 @@ from ui_theme import ScrollableFrame, style_text, status_color
 from app_preferences import Preferences
 from address_book import SavedAddressCombobox, refresh_address_fields
 from live_recorder import LiveCapture
+from rtde_client import DATA_TIMEOUT, STALE_AFTER
+from ssh_trust import host_key_prompt
 
 PAYLOAD_NOTICE = "Payload info will not be loaded without an SSH password. Blank username uses root."
 DEFAULT_IP = "10.22.33.81"
@@ -87,6 +89,7 @@ class SimulatorApp:
         self.last_sample = None
         self.model_checked = False
         self.last_status_update = 0.
+        self.fps_mark, self.stream_fps = (time.monotonic(), 0), None
         self.program_text = tk.StringVar(value="Waiting for program telemetry…")
         from ui_theme import apply_theme
         apply_theme(root, self.preferences.theme)
@@ -631,6 +634,7 @@ class SimulatorApp:
         self.tcp_text.set("")
         self.program_text.set("Waiting for program telemetry…")
         self.last_status_update = 0.
+        self.fps_mark, self.stream_fps = (time.monotonic(), 0), None
         self.show_view()
         self.session = RobotSession(self.settings)
         self.live_capture.reset()
@@ -850,6 +854,9 @@ class SimulatorApp:
                         self.details.set("Downloading installation via SCP…")
                 elif kind == "error":
                     self.disconnect("Connection lost / failed: " + data)
+                elif kind == "reconnected":
+                    # A new stream restarts the frame count; the recording carries on.
+                    self.fps_mark, self.stream_fps = (time.monotonic(), self.live_capture.received), None
                 elif kind == "installation_error":
                     self.details.set(data + "\n\nShowing robot base coordinates; saved TCP and payload unavailable.")
                 elif kind == "installation":
@@ -862,11 +869,11 @@ class SimulatorApp:
                     if self.simulator_popout is not None:
                         self.simulator_popout.sync_live(force=True)
                 elif kind == "host_key":
-                    data.accepted = messagebox.askyesno("Verify robot SSH host",
-                        f"SSH connection to {data.hostname}.\n\nHost fingerprint:\n{data.fingerprint}\n\n"
-                        "Verify this fingerprint with your robot administrator. Trust it for this connection?",
-                        parent=self.root)
-                    data.answered.set()
+                    try:
+                        data.accepted = messagebox.askyesno(*host_key_prompt(data, "Installation download"),
+                                                            parent=self.root, default="no")
+                    finally:
+                        data.answered.set()
             if self.session is session:
                 sample = session.sample()
                 if sample and sample is not self.last_sample:
@@ -880,13 +887,14 @@ class SimulatorApp:
                     self.joints.set("\n".join(f"{name:9} {math.degrees(q):8.2f}°" for name, q in zip(names, sample.joints)))
                     self.tcp_text.set("\n".join(f"{name:2}  {v: .5f}" for name, v in zip(("X", "Y", "Z", "RX", "RY", "RZ"), sample.tcp_pose)))
                 if sample:
-                    age = time.monotonic() - sample.received_at
-                    if time.monotonic() - self.last_status_update >= .2:
-                        self.update_telemetry(sample, age < 1)
-                        self.last_status_update = time.monotonic()
-                    self.viewer.set_stream_state("Live joint geometry" if age < 1 else "Stale · Last received pose")
-                    self.status.set(f"Live · RTDE · data age {age*1000:.0f} ms" if age < 1
-                                    else f"Stale data · No update for {age:.1f} s · Last pose retained")
+                    now = time.monotonic()
+                    age = now - sample.received_at
+                    fresh = age < STALE_AFTER
+                    if now - self.last_status_update >= .2:
+                        self.update_telemetry(sample, fresh)
+                        self.last_status_update = now
+                    self.viewer.set_stream_state("Live joint geometry" if fresh else "Slow link · Last received pose")
+                    self.status.set(self.stream_status(age, now))
         if not self.closed:
             self.shell.update_connection()
             if self.home_page is not None and self.active_page == 'home':
@@ -896,6 +904,31 @@ class SimulatorApp:
             if self.simulator_popout is not None and self.simulator_popout.winfo_exists():
                 self.simulator_popout.sync_live()
             self.poll_id = self.root.after(33, self.poll)
+
+    def stream_status(self, age, now):
+        """Received frames per second, measured over about one second of wall-clock time."""
+        count = self.live_capture.received
+        mark_time, mark_count = self.fps_mark
+        if count < mark_count:
+            self.fps_mark, self.stream_fps = (now, count), None
+        elif now - mark_time >= 1.:
+            self.stream_fps = (count - mark_count) / (now - mark_time)
+            self.fps_mark = (now, count)
+        session = self.session
+        reason = reconnect_reason(session)
+        if reason:
+            return (f"Reconnecting · The robot closed the data stream ({reason}) · "
+                    f"Retrying for up to {DATA_TIMEOUT:.0f} s · Recording continues after the gap")
+        if age < STALE_AFTER:
+            text = "Live · RTDE · " + ("measuring fps…" if self.stream_fps is None else f"{self.stream_fps:.0f} fps")
+            reconnects = getattr(session, "reconnects", 0)
+            if isinstance(reconnects, int) and reconnects:
+                text += f" · Stream reopened {reconnects}×"
+                if session.rate < RATES[0]:
+                    text += f" · {session.rate:.0f} Hz requested, this link dropped 125 Hz"
+            return text
+        return (f"Slow link · No update for {age:.0f} s · Still connected, waiting for the robot "
+                f"(gives up after {DATA_TIMEOUT:.0f} s) · Last pose retained")
 
     def maximize(self):
         """Fill the screen at launch; the window stays resizable and restorable."""

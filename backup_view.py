@@ -13,6 +13,7 @@ from address_book import SavedAddressCombobox
 from workspace_panel import WorkspacePanel
 from ui_theme import style_text
 import ui_dialogs as messagebox
+from ssh_trust import host_key_prompt
 
 
 def backup_filename(project, date=None):
@@ -285,9 +286,7 @@ class BackupPage(WorkspacePanel):
                 if kind == 'host_key':
                     try:
                         value.accepted = not job.stopped.is_set() and messagebox.askyesno(
-                            'Verify robot SSH identity', f'{value.hostname}\n\n{value.fingerprint}\n\n' +
-                            ('Replace the previously saved SSH key with this verified identity?' if value.replacement else 'Trust this robot identity?'),
-                            parent=self, default='no')
+                            *host_key_prompt(value), parent=self, default='no')
                     finally:
                         value.answered.set()
                 elif kind == 'backup_destination':

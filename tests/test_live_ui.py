@@ -61,6 +61,8 @@ class LiveMonitorTests(unittest.TestCase):
         self.pump(lambda: page.capture.sample_rate() is not None)
         self.assertIn('Live · UR10e · 127.0.0.1', page.state.get())
         self.assertTrue(page.record_button.instate(['!disabled']))
+        # Save and Discard appear only once there is a finished recording.
+        self.assertFalse(page.save_button.winfo_manager())
         page.toggle_recording()
         recording = page.capture.recording
         self.app.open_logs()  # recording continues while another page is shown
@@ -68,7 +70,7 @@ class LiveMonitorTests(unittest.TestCase):
         self.app.open_live()
         page.toggle_recording()
         self.assertFalse(recording.active)
-        self.pump(lambda: page.save_button.instate(['!disabled']))
+        self.pump(lambda: page.save_button.instate(['!disabled']) and page.save_button.winfo_manager())
         target = Path(self.folder.name) / 'cell2-live.zip'
         page.notes.set('Cycle after gripper change')
         with patch('live_view.filedialog.asksaveasfilename', return_value=str(target)):
@@ -85,6 +87,30 @@ class LiveMonitorTests(unittest.TestCase):
         self.pump(lambda: self.app.flight_window.report is not None
                   and self.app.flight_window.report.path == target.resolve())
         self.assertEqual(self.app.active_page, 'flights')
+
+    def test_separate_joint_graphs_scroll_and_tcp_tiles(self):
+        self.app.open_live()
+        page = self.app.live_page
+        self.assertEqual(page.view.get(), 'All readings')
+        self.assertTrue(page.scale_check.instate(['disabled']))
+        page.select_view('TCP')
+        self.assertEqual(len(page.charts.axes), 2)
+        self.assertTrue(page.joint_group.flow_hidden and not page.tcp_group.flow_hidden)
+        page.select_view('All readings')
+        self.assertFalse(page.joint_group.flow_hidden)
+        page.shared_scale.set(True)
+        page.select_layout('Separate joints')
+        self.assertTrue(page.scale_check.instate(['!disabled']))
+        self.assertEqual(len(page.charts.axes), 5 * 6 + 2)
+        self.pump(lambda: page.canvas.draw_seconds > 0)
+        self.assertLess(page.chart_viewport.yview()[1], 1)
+        page.scroll_chart('moveto', 1)
+        self.pump(lambda: page.charts.axes[-1].get_visible())
+        # The loopback robot streams actual_TCP_speed, so both tiles show values.
+        self.pump(lambda: page.tiles['tcp_acceleration'].cget('text').endswith('m/s²'))
+        self.assertTrue(page.tiles['tcp_speed'].cget('text').endswith('m/s'))
+        # Older controllers omit it; the tiles must say so rather than show zero.
+        self.assertEqual(page._tcp_readouts({}), ('Unavailable', 'Unavailable'))
 
     def test_disconnect_stops_recording_and_unsaved_work_guards_close(self):
         self.app.open_live()

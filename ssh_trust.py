@@ -1,4 +1,4 @@
-"""Replace one explicitly approved robot identity in the user's SSH trust file."""
+"""Robot SSH trust: the shared host-key prompt, and saving approved identities to the trust file."""
 import os
 from pathlib import Path
 import tempfile
@@ -11,7 +11,21 @@ def known_hosts_path():
     return Path.home() / '.ssh' / 'known_hosts'
 
 
+def host_key_prompt(question, context=None):
+    """(title, message) for a HostKeyQuestion; accepted keys are saved for later connections."""
+    if question.replacement:
+        return ('Replace saved robot SSH key?', f'{question.fingerprint}\n\n'
+                'Remove the old key and save the new one? You will not be asked again for this robot.')
+    robot = f'{context}: {question.hostname}' if context else f'Robot: {question.hostname}'
+    return ('Verify robot SSH host', f'{robot}\n\n{question.fingerprint}\n\n'
+            'Verify this fingerprint with your robot administrator. Trust this robot? '
+            f'Its key is saved in {known_hosts_path()}, so you will not be asked again '
+            'unless the robot\'s key changes.')
+
+
 def replace_host_key(path, hostname, key):
+    if not isinstance(key, paramiko.PKey):
+        raise TypeError('Only a verified SSH public key can be saved to the trust file.')
     path = Path(path).resolve()
     original = path.read_bytes().decode('utf-8', errors='surrogateescape') if path.exists() else ''
     lines = []

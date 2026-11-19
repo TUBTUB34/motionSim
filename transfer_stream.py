@@ -8,6 +8,9 @@ queueing offsets (or retaining data) for an entire multi-gigabyte archive.
 READ_SIZE = 32 * 1024
 PIPELINE_REQUESTS = 32
 DOWNLOAD_IDLE_TIMEOUT = 60
+# Robot controllers on slow links can take many seconds to answer the SSH
+# banner, key exchange and login; only a much longer silence means "broken".
+SSH_TIMEOUT = 30
 STREAM_BUFFER_SIZE = 256 * 1024
 
 

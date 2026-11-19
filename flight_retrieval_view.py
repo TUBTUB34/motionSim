@@ -12,6 +12,7 @@ from connection import active_robot_settings, transfer_connection
 from workspace_panel import WorkspacePanel
 import ui_theme as theme
 from ui_theme import style_tree, status_color
+from ssh_trust import host_key_prompt
 
 
 def byte_text(value):
@@ -340,9 +341,7 @@ class RobotFlightWindow(WorkspacePanel):
     def _handle_event(self, kind, payload):
         if kind == 'host_key':
             try:
-                payload.accepted = messagebox.askyesno('Verify robot SSH host',
-                    f'Robot: {payload.hostname}\n\n{payload.fingerprint}\n\nTrust this robot identity?',
-                    parent=self, default='no')
+                payload.accepted = messagebox.askyesno(*host_key_prompt(payload), parent=self, default='no')
             finally:
                 payload.answered.set()
         elif kind == 'state':

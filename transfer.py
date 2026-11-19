@@ -7,25 +7,44 @@ import tempfile
 import paramiko
 from scp import SCPClient
 from installation import MAX_FILE_SIZE, decode_installation
-from transfer_stream import DOWNLOAD_IDLE_TIMEOUT, STREAM_BUFFER_SIZE
+from ssh_trust import known_hosts_path, replace_host_key
+from transfer_stream import DOWNLOAD_IDLE_TIMEOUT, SSH_TIMEOUT, STREAM_BUFFER_SIZE
 
 def host_fingerprint(key):
     return "SHA256:" + base64.b64encode(hashlib.sha256(key.asbytes()).digest()).decode().rstrip("=")
 
 class ConfirmHostKey(paramiko.MissingHostKeyPolicy):
-    def __init__(self, confirm):
+    """Ask once per new robot; ``save`` persists the approved key after a successful connect."""
+    def __init__(self, confirm, trust_path=None):
         self.confirm = confirm
+        self.trust_path = trust_path
+        self.accepted = None
 
     def missing_host_key(self, client, hostname, key):
         fingerprint = host_fingerprint(key)
         if not self.confirm(hostname, fingerprint):
             raise paramiko.SSHException("SSH host key was not accepted.")
-        # Trust only this connection. Do not persist keys or credentials.
         client.get_host_keys().add(hostname, key.get_name(), key)
+        self.accepted = (hostname, key)
+
+    def save(self):
+        """Remember the approved robot identity so later connections do not ask again.
+
+Credentials are never stored. A changed key is still reported on every
+connection until the user approves the replacement.
+"""
+        if self.accepted is None or self.trust_path is None:
+            return
+        try:
+            replace_host_key(self.trust_path, *self.accepted)
+        except OSError as error:
+            raise OSError(f"Could not save the robot SSH key to {self.trust_path}: {error}") from None
+        self.accepted = None
 
 class InstallationTransfer:
-    def __init__(self):
+    def __init__(self, trust_path=None):
         self.client = None
+        self.trust_path = Path(trust_path) if trust_path is not None else known_hosts_path()
 
     def close(self):
         client = self.client
@@ -36,21 +55,24 @@ class InstallationTransfer:
         client = paramiko.SSHClient()
         self.client = client
         try:
-            client.load_system_host_keys()
-            client.set_missing_host_key_policy(ConfirmHostKey(confirm_host))
+            if self.trust_path.exists():
+                client.load_system_host_keys(str(self.trust_path))
+            policy = ConfirmHostKey(confirm_host, self.trust_path)
+            client.set_missing_host_key_policy(policy)
             if stop.is_set():
                 raise InterruptedError("Download cancelled.")
             connect_args = dict(username=settings.username, password=settings.password,
-                                timeout=5, banner_timeout=5, auth_timeout=5,
+                                timeout=SSH_TIMEOUT, banner_timeout=SSH_TIMEOUT, auth_timeout=SSH_TIMEOUT,
                                 look_for_keys=False, allow_agent=False)
             try:
                 client.connect(settings.ip, **connect_args)
+                policy.save()
             except paramiko.BadHostKeyException as error:
                 client.close()
                 details = (f"Changed host key — a different robot may be using this IP.\n\n"
                            f"Saved: {host_fingerprint(error.expected_key)}\n"
                            f"Received: {host_fingerprint(error.key)}")
-                if not confirm_host(settings.ip, details):
+                if not confirm_host(settings.ip, details, replacement=True):
                     raise paramiko.SSHException("Changed SSH host key was not accepted.") from None
                 if stop.is_set():
                     raise InterruptedError("Download cancelled.")
@@ -59,6 +81,10 @@ class InstallationTransfer:
                 self.client = client
                 client.get_host_keys().add(settings.ip, error.key.get_name(), error.key)
                 client.connect(settings.ip, **connect_args)
+                try:
+                    replace_host_key(self.trust_path, settings.ip, error.key)
+                except OSError as save_error:
+                    raise OSError(f"Could not update SSH trust file {self.trust_path}: {save_error}") from None
             def progress(_filename, size, _sent):
                 if stop.is_set():
                     raise InterruptedError("Download cancelled.")

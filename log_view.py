@@ -20,6 +20,7 @@ from flight_charts import chart_palette, retheme_figure
 from workspace_panel import WorkspacePanel
 import ui_theme as theme
 from ui_theme import style_toolbar, style_tree, status_color
+from ssh_trust import host_key_prompt
 
 
 
@@ -353,11 +354,7 @@ class LogWindow(WorkspacePanel):
                     break
                 if kind == 'host_key':
                     if not job.stopped.is_set():
-                        title = 'Replace saved robot SSH key?' if value.replacement else 'Verify robot SSH host'
-                        prompt = (value.fingerprint + '\n\nRemove the old key and update to the new one?'
-                                  if value.replacement else
-                                  f'{value.hostname}\n\n{value.fingerprint}\n\nVerify this fingerprint with your robot administrator. Trust for this connection?')
-                        value.accepted = messagebox.askyesno(title, prompt, parent=self, default='no')
+                        value.accepted = messagebox.askyesno(*host_key_prompt(value), parent=self, default='no')
                     value.answered.set()
                 elif kind == 'backup_destination':
                     try:

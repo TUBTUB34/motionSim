@@ -76,6 +76,8 @@ def check(app):
         from program_check_pdf import export_program_pdf
         from program_transfer import ProgramSourceJob
         assert ProgramSourceJob, 'Bundled program retrieval module is missing'
+        import fast_transfer
+        assert fast_transfer.available(), 'Bundled AsyncSSH is missing; robot downloads would fall back to paramiko'
         program = Path(folder) / 'packaging.script'
         program.write_text(
             'set_payload(1, [0,0,.1])\n'

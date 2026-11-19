@@ -8,6 +8,37 @@ import socket
 import struct
 import time
 
+# Slow robot links can pause the stream for several seconds without being broken.
+# Connecting stays short so a wrong address fails quickly; only a long silence
+# on an established stream ends the session.
+CONNECT_TIMEOUT = 15.
+DATA_TIMEOUT = 60.
+# Seconds without a sample before the UI says the link is slow (not broken).
+STALE_AFTER = 2.
+# The controller closes the stream when the client falls behind and its buffer
+# overflows. Room for several seconds of 125 Hz packets rides out a busy PC; it
+# is set before connecting so the TCP window can open that far.
+RECEIVE_BUFFER = 4 * 1024 * 1024
+
+
+def open_socket(address, timeout):
+    """socket.create_connection with a large receive buffer requested before the handshake."""
+    error = None
+    for family, kind, protocol, _name, target in socket.getaddrinfo(*address, type=socket.SOCK_STREAM):
+        sock = socket.socket(family, kind, protocol)
+        try:
+            try:
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, RECEIVE_BUFFER)
+            except OSError:
+                pass  # The system default still works; it is only less forgiving.
+            sock.settimeout(timeout)
+            sock.connect(target)
+            return sock
+        except OSError as exc:
+            error = exc
+            sock.close()
+    raise error or OSError(f"Could not resolve {address[0]}.")
+
 @dataclass(frozen=True)
 class RobotSample:
     timestamp: float
@@ -17,19 +48,21 @@ class RobotSample:
     telemetry: Mapping = field(default_factory=lambda: MappingProxyType({}))
 
 class RTDEClient:
-    def __init__(self, host, port=30004, timeout=10., socket_factory=socket.create_connection, telemetry=True,
-                 frequency=125.):
-        self.host, self.port, self.timeout = host, port, timeout
+    def __init__(self, host, port=30004, timeout=CONNECT_TIMEOUT, socket_factory=open_socket, telemetry=True,
+                 frequency=125., data_timeout=DATA_TIMEOUT):
+        self.host, self.port, self.timeout, self.data_timeout = host, port, timeout, data_timeout
         # The controller clamps the requested output rate to what it supports.
         self.frequency = frequency
         self.socket_factory = socket_factory
         self.sock = None
+        self._buffer = bytearray()
         self.recipe_id = None
         self.fields = BASE_FIELDS + (STATUS_FIELDS if telemetry else ())
         self.decoder = None
 
     def close(self):
         sock, self.sock = self.sock, None
+        self._buffer = bytearray()
         if sock:
             try:
                 sock.shutdown(socket.SHUT_RDWR)
@@ -38,16 +71,20 @@ class RTDEClient:
             sock.close()
 
     def _read_exact(self, size):
-        data = bytearray()
-        while len(data) < size:
+        # One recv takes everything waiting (often many packets), so the reader
+        # needs far fewer turns on the interpreter than one recv per header and body.
+        buffer = self._buffer
+        while len(buffer) < size:
             sock = self.sock
             if sock is None:
                 raise ConnectionError("RTDE connection closed.")
-            block = sock.recv(size - len(data))
+            block = sock.recv(65536)
             if not block:
                 raise ConnectionError("Robot closed the RTDE connection.")
-            data.extend(block)
-        return bytes(data)
+            buffer.extend(block)
+        data = bytes(buffer[:size])
+        del buffer[:size]
+        return data
 
     def _packet(self):
         size, kind = struct.unpack("!HB", self._read_exact(3))
@@ -75,6 +112,7 @@ class RTDEClient:
             self._setup_outputs()
             if self._request(83) != b"\x01":
                 raise ConnectionError("Robot refused to start the RTDE stream.")
+            self.sock.settimeout(self.data_timeout)
         except Exception:
             self.close()
             raise
@@ -109,9 +147,12 @@ class RTDEClient:
             return
 
     def receive(self):
-        deadline = time.monotonic() + self.timeout
+        deadline = time.monotonic() + self.data_timeout
         while time.monotonic() < deadline:
-            kind, data = self._packet()
+            try:
+                kind, data = self._packet()
+            except socket.timeout:
+                break
             if kind == 77:
                 continue
             if kind != 85 or len(data) != self.decoder.size + 1 or data[0] != self.recipe_id:
@@ -127,4 +168,4 @@ class RTDEClient:
                 offset += count
             return RobotSample(values["timestamp"], values["actual_q"], values["actual_TCP_pose"],
                                time.monotonic(), MappingProxyType(values))
-        raise TimeoutError("No data received from RTDE.")
+        raise TimeoutError(f"No RTDE data from the robot for {self.data_timeout:.0f} s.")

@@ -199,7 +199,10 @@ class LogTests(unittest.TestCase):
         sftp = client.open_sftp.return_value.__enter__.return_value
         sftp.stat.return_value.st_size = len(content or b'')
         sftp.open.side_effect = lambda *args: io.BytesIO(content or b'')
-        job = LogJob(connection=LogConnection('127.0.0.1', 'root', 'secret'), client_factory=lambda: client)
+        folder = tempfile.TemporaryDirectory()
+        self.addCleanup(folder.cleanup)
+        job = LogJob(connection=LogConnection('127.0.0.1', 'root', 'secret'), client_factory=lambda: client,
+                     trust_path=Path(folder.name) / 'known_hosts')  # never the user's real trust file
         return job, client, sftp
 
     def results(self, job):

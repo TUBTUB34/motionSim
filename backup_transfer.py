@@ -12,7 +12,7 @@ import time
 from uuid import uuid4
 
 from log_transfer import DOWNLOAD_IDLE_TIMEOUT, LogJob
-from transfer_stream import copy_remote
+from transfer_stream import copy_remote, SSH_TIMEOUT
 
 
 @dataclass
@@ -104,7 +104,7 @@ class BackupJob(LogJob):
 
     def create_archive(self, client, sources):
         self.events.put(('status', f'Creating backup of {" and ".join(sources)} on robot…'))
-        channel = client.get_transport().open_session(timeout=5)
+        channel = client.get_transport().open_session(timeout=SSH_TIMEOUT)
         output = bytearray()
         try:
             channel.set_combine_stderr(True)
@@ -140,14 +140,15 @@ class BackupJob(LogJob):
                 eta = (size - total) / max(rate * 1048576, 1)
                 self.events.put(('progress', total / size))
                 self.events.put(('status', f'Downloading backup · {total / 1048576:.2f} / '
-                                 f'{size / 1048576:.2f} MiB · {rate:.2f} MiB/s · {eta:.0f}s remaining'))
+                                 f'{size / 1048576:.2f} MiB · {rate:.2f} MiB/s · {eta:.0f}s remaining · {self.engine_label}'))
                 last_report = now
 
         try:
             with tempfile.NamedTemporaryFile(prefix='.ur-backup-', suffix='.part',
                                              dir=destination.parent, delete=False) as local:
                 temporary = Path(local.name)
-                with sftp.open(self.remote_path, 'rb') as remote:
+                # tar output is uncompressed, so zlib on the wire helps slow links most here.
+                with self.open_bulk(sftp, self.remote_path, compress=True, size=size) as remote:
                     copy_remote(remote, local, size, check_cancel=self.check_cancel, progress=progress)
                 if sftp.stat(self.remote_path).st_size != size:
                     raise OSError('Robot archive changed during download. Please retry.')
@@ -199,6 +200,7 @@ class BackupJob(LogJob):
                 message = message.replace(self.connection.password, '[redacted]')
             if self.client:
                 self.client.close()
+            self.close_fast()
             self.client = None
             self.connection = None
             self.events.put(('backup_finished', message))

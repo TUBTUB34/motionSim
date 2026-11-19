@@ -7,3 +7,8 @@ dist/
 # Retired checkout: preserve local edits without maintaining a second repository.
 Vibe_UR_Graph_generator/
 .ecc/
+# Retired Ruflo/claude-flow state (archived 2026-11-19; not used).
+.swarm/
+.claude-flow/
+ruvector.db
+agentdb.rvf*

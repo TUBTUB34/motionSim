@@ -193,7 +193,7 @@ class LogUITests(unittest.TestCase):
                 self.assertTrue(question.answered.is_set())
                 self.assertTrue(question.accepted)
                 self.assertEqual(popup.call_args.args[0], 'Replace saved robot SSH key?')
-                self.assertIn('Remove the old key and update to the new one?', popup.call_args.args[1])
+                self.assertIn('Remove the old key and save the new one?', popup.call_args.args[1])
                 self.assertEqual(popup.call_args.kwargs['default'], 'no')
         finally:
             app.close()

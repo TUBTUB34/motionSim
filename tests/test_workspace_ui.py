@@ -112,7 +112,7 @@ class WorkspaceUITests(unittest.TestCase):
         self.app.session = Mock()
         self.app.last_sample = RobotSample(1, (0,) * 6, (0,) * 6, time.monotonic() - 2)
         self.app.open_home()
-        self.assertIn('Stale telemetry', self.app.home_page.connection.get())
+        self.assertIn('Slow link', self.app.home_page.connection.get())
         self.app.edit_connection_page()
         self.app.session.stop.assert_not_called()
         self.assertEqual(self.app.active_page, 'simulator')

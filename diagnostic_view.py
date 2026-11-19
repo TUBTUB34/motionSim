@@ -7,10 +7,12 @@ from tkinter import ttk, filedialog
 
 from diagnostic_pdf import incident_sections, unique_text
 from diagnostic_transfer import DiagnosticSourceJob
-from connection import active_robot_settings, transfer_connection, simulator_connection_text
+from connection import (active_robot_settings, robot_download_folder, should_select_robot,
+                        simulator_connection_text, transfer_connection)
 from address_book import SavedAddressCombobox
 from robot_diagnostics import analyze_directory
 from robot_status import build_robot_status
+from ssh_trust import host_key_prompt
 from ui_theme import style_text
 from workspace_panel import WorkspacePanel
 import ui_dialogs as messagebox
@@ -38,6 +40,7 @@ class DiagnosticWindow(WorkspacePanel):
         self.events = queue.Queue()
         self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix='robot-diagnostics')
         self.source_mode = tk.StringVar(value='Local folder')
+        self.connected_ip = None
         self.folder = tk.StringVar(value='No dataset selected')
         self.status = tk.StringVar(value='Choose a folder containing logs and flight recordings, or collect them from the robot.')
         self.notice = tk.StringVar(value='A client-ready assessment of recorded robot condition, each joint and program areas to review.')
@@ -159,6 +162,14 @@ class DiagnosticWindow(WorkspacePanel):
 
     def sync_connection(self):
         settings = active_robot_settings(self.app)
+        if should_select_robot(self.connected_ip, settings) and not self.busy:
+            self.connected_ip = settings.ip
+            if self.source_mode.get() != 'Robot':
+                self.source_mode.set('Robot')
+                self.change_source()
+                return
+        if settings is None:
+            self.connected_ip = None
         robot = self.source_mode.get() == 'Robot'
         if settings is not None:
             for name in ('ip', 'username', 'password'):
@@ -206,9 +217,13 @@ class DiagnosticWindow(WorkspacePanel):
             return
         try:
             connection = transfer_connection(self.app, self.ip.get(), self.username.get(), self.password.get(), self.log_path.get().strip())
-            destination = filedialog.askdirectory(parent=self, title='Save a new robot diagnostic dataset in…')
-            if not destination:
-                return
+            if active_robot_settings(self.app) is not None:
+                destination = robot_download_folder(self.app, 'Robot Status', connection.ip)
+                destination.mkdir(parents=True, exist_ok=True)
+            else:
+                destination = filedialog.askdirectory(parent=self, title='Save a new robot diagnostic dataset in…')
+                if not destination:
+                    return
             job = DiagnosticSourceJob(connection=connection, destination=destination, flight_directory=self.flight_path.get().strip())
         except Exception as error:
             self.status.set(f'Cannot collect robot evidence: {error}')
@@ -217,7 +232,8 @@ class DiagnosticWindow(WorkspacePanel):
         self._reset_report()
         self.set_busy(True)
         self.notice.set('Collecting a read-only snapshot. Existing files on the robot are retained.')
-        self.status.set('Connecting to robot…')
+        self.folder.set(str(destination))
+        self.status.set(f'Connecting to robot… Saving into {destination}')
         self.download_job = job
         job.start()
 
@@ -358,9 +374,9 @@ class DiagnosticWindow(WorkspacePanel):
                 kind, result = job.events.get_nowait()
                 if kind == 'host_key':
                     try:
+                        title, message = host_key_prompt(result, 'Robot Status collection')
                         result.accepted = not self.cancelled.is_set() and messagebox.askyesno(
-                            'Verify robot SSH host', f'Robot Status collection: {result.hostname}\n\n{result.fingerprint}\n\nTrust this robot identity?',
-                            parent=self.app.root if self.embedded else self, default='no')
+                            title, message, parent=self.app.root if self.embedded else self, default='no')
                     finally:
                         result.answered.set()
                 elif kind == 'status':

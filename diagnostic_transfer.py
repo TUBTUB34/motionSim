@@ -80,7 +80,7 @@ must exist; every run creates a separate dataset rather than replacing old data.
             nonlocal last
             now = time.monotonic()
             if now - last >= .2:
-                self.events.put(('status', f'Downloading {name} · {count / 1048576:.2f} MiB'))
+                self.events.put(('status', f'Downloading {name} · {count / 1048576:.2f} MiB · {self.engine_label}'))
                 last = now
         return update
 
@@ -106,7 +106,7 @@ must exist; every run creates a separate dataset rather than replacing old data.
             with tempfile.NamedTemporaryFile(dir=directory, prefix='.source-',
                     suffix='.part' + Path(local_name).suffix, delete=False) as local:
                 temporary = Path(local.name)
-                with self.sftp.open(remote_path, 'rb') as remote:
+                with self.open_bulk(self.sftp, remote_path, compress=kind == 'log', size=size) as remote:
                     copied = copy_remote(remote, local, size, check_cancel=self.check_cancel,
                             progress=self._progress(PurePosixPath(remote_path).name),
                             allow_growth=kind == 'log', max_bytes=min(ceiling, remaining))

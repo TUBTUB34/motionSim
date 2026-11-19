@@ -15,8 +15,9 @@ import paramiko
 from log_data import MAX_LOG_BYTES, load_log, load_logs
 from session import HostKeyQuestion
 from transfer import ConfirmHostKey, host_fingerprint
+import fast_transfer
 from ssh_trust import known_hosts_path, replace_host_key
-from transfer_stream import copy_remote, DOWNLOAD_IDLE_TIMEOUT
+from transfer_stream import copy_remote, DOWNLOAD_IDLE_TIMEOUT, SSH_TIMEOUT
 
 DEFAULT_LOG_PATH = "/root/log_history.txt"
 
@@ -48,6 +49,12 @@ class LogJob:
         self.events = queue.Queue()
         self.stopped = threading.Event()
         self.client = None
+        self.host_key = None
+        self.host_port = 22
+        # Bulk downloads use AsyncSSH when it can connect; paramiko otherwise.
+        self.use_fast = fast_transfer.available()
+        self.transfer_engine = 'paramiko'
+        self._fast = {}
         self.thread = threading.Thread(target=self.run, daemon=True)
 
     def start(self):
@@ -57,6 +64,56 @@ class LogJob:
         self.stopped.set()
         if self.client:
             self.client.close()
+        self.close_fast()
+
+    def close_fast(self):
+        """Close AsyncSSH sessions; safe from any thread and when none were opened."""
+        for session in list(self._fast.values()):
+            if session is not None:
+                session.close()
+        self._fast = {}
+
+    @property
+    def engine_label(self):
+        """Short progress-text note, so the user can see which transfer engine is in use."""
+        return 'via AsyncSSH' if self.transfer_engine == 'AsyncSSH' else 'via paramiko'
+
+    def open_bulk(self, sftp, path, *, compress=False, size=None):
+        """Open ``path`` for a large ``copy_remote`` download.
+
+AsyncSSH keeps far more reads in flight than paramiko, and ``compress`` adds
+zlib for text such as logs and uncompressed tar backups. Without AsyncSSH, or
+when it cannot connect, this is the paramiko file it always was.
+"""
+        session = self._fast_session(compress)
+        return session.open(path, size) if session is not None else sftp.open(path, 'rb')
+
+    def _fast_session(self, compress):
+        if not self.use_fast or not isinstance(self.host_key, paramiko.PKey) or self.connection is None:
+            return None
+        if compress not in self._fast:
+            settings = self.connection
+            try:
+                session = fast_transfer.FastSFTP.connect(settings.ip, settings.username, settings.password,
+                                                         self.host_key, port=self.host_port, compress=compress,
+                                                         stop=self.stopped)
+            except InterruptedError:
+                raise
+            except Exception as error:
+                # Speed only: keep the verified paramiko path and stop trying.
+                self.use_fast = False
+                detail = str(error) or type(error).__name__
+                if settings.password:
+                    detail = detail.replace(settings.password, '[redacted]')
+                self.transfer_engine = f'paramiko (AsyncSSH unavailable: {detail})'
+                self.events.put(('status', f'Fast transfer unavailable ({detail}); continuing with the standard SSH download.'))
+                return None
+            self._fast[compress] = session
+            self.transfer_engine = 'AsyncSSH'
+            if self.stopped.is_set():
+                self.close_fast()
+        self.check_cancel()
+        return self._fast[compress]
 
     def check_cancel(self):
         if self.stopped.is_set():
@@ -80,12 +137,15 @@ class LogJob:
         self.check_cancel()
         if self.trust_path.exists():
             client.load_system_host_keys(str(self.trust_path))
-        client.set_missing_host_key_policy(ConfirmHostKey(self.confirm_host))
+        policy = ConfirmHostKey(self.confirm_host, self.trust_path)
+        client.set_missing_host_key_policy(policy)
         connect_args = dict(username=settings.username, password=settings.password,
-                       timeout=5, banner_timeout=5, auth_timeout=5, channel_timeout=5,
-                       look_for_keys=False, allow_agent=False)
+                       timeout=SSH_TIMEOUT, banner_timeout=SSH_TIMEOUT, auth_timeout=SSH_TIMEOUT,
+                       channel_timeout=SSH_TIMEOUT, look_for_keys=False, allow_agent=False)
         try:
             client.connect(settings.ip, **connect_args)
+            self.check_cancel()
+            policy.save()
         except paramiko.BadHostKeyException as error:
             client.close()
             details = (f'A different robot may now be using {settings.ip}.\n\n'
@@ -108,6 +168,12 @@ class LogJob:
             except OSError as save_error:
                 raise OSError(f'Could not update SSH trust file {self.trust_path}: {save_error}') from None
         self.check_cancel()
+        transport = client.get_transport()
+        if transport is not None:
+            # A second, faster session must reach the same endpoint with the same identity.
+            self.host_key = transport.get_remote_server_key()
+            if isinstance(self.host_key, paramiko.PKey):
+                self.host_port = transport.getpeername()[1]
         return client
 
     def download(self, destination):
@@ -142,7 +208,7 @@ class LogJob:
                         speed = (f'{rate / 1048576:.2f} MiB/s' if rate >= 1048576 else
                                  f'{rate / 1024:.1f} KiB/s' if rate >= 1024 else f'{rate:.0f} B/s')
                         self.events.put(('status', f'Downloading {local_path.name} · '
-                                         f'{total / 1048576:.2f} / {size / 1048576:.2f} MiB · {speed}'))
+                                         f'{total / 1048576:.2f} / {size / 1048576:.2f} MiB · {speed} · {self.engine_label}'))
                         last_progress, last_bytes = now, total
 
                     report_progress(last_progress)
@@ -153,7 +219,7 @@ class LogJob:
                         if now - last_progress >= .2:
                             report_progress(now)
 
-                    with sftp.open(remote_path, 'rb') as remote, local_path.open('wb') as local:
+                    with self.open_bulk(sftp, remote_path, compress=True, size=size) as remote, local_path.open('wb') as local:
                         try:
                             copy_remote(remote, local, size, check_cancel=self.check_cancel,
                                         progress=transferred, allow_growth=True, max_bytes=MAX_LOG_BYTES)
@@ -278,5 +344,6 @@ class LogJob:
         finally:
             if self.client:
                 self.client.close()
+            self.close_fast()
             self.client = None
             self.connection = None

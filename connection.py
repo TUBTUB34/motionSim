@@ -1,7 +1,7 @@
 """Validated startup settings; credentials are held only in memory."""
 from dataclasses import dataclass, field
 from ipaddress import ip_address
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 from kinematics import MODELS
 
 @dataclass(frozen=True)
@@ -44,6 +44,18 @@ def transfer_connection(app, ip, username, password, path='/root/log_history.txt
     if callable(remember):
         remember(connection.ip)
     return connection
+
+
+def robot_download_folder(app, name, ip):
+    """Per-robot folder beside the flight library, e.g. .../URMotionStudio/Robot programs/<ip>."""
+    from flight_transfer import default_library
+    library = Path(getattr(app, 'flight_library_root', None) or default_library())
+    return library.parent / name / ip.replace(':', '-')
+
+
+def should_select_robot(previous_ip, settings):
+    """Select the Robot source once per newly connected robot, not on every sync."""
+    return settings is not None and settings.ip != previous_ip
 
 
 def simulator_connection_text(settings):

@@ -11,6 +11,8 @@ from unittest.mock import patch
 
 from connection import active_robot_settings, make_settings, transfer_connection
 from backup_view import backup_filename
+from flight_transfer import default_library
+from connection import robot_download_folder, should_select_robot
 
 
 def session():
@@ -35,6 +37,25 @@ class ConnectionSharingTests(unittest.TestCase):
         app = SimpleNamespace(settings=make_settings('192.0.2.8', 'root', '', ''), session=session())
         with self.assertRaisesRegex(ValueError, 'Simulator → Connection'):
             transfer_connection(app, '192.0.2.9', 'other', 'old-secret')
+
+    def test_report_downloads_default_to_a_per_robot_folder_beside_the_flight_library(self):
+        app = SimpleNamespace(flight_library_root=Path('data', 'URMotionStudio', 'flightreports'))
+        self.assertEqual(robot_download_folder(app, 'Robot programs', '192.0.2.8'),
+                         Path('data', 'URMotionStudio', 'Robot programs', '192.0.2.8'))
+        self.assertEqual(robot_download_folder(app, 'Robot Status', 'fe80::1'),
+                         Path('data', 'URMotionStudio', 'Robot Status', 'fe80--1'))
+        self.assertEqual(robot_download_folder(SimpleNamespace(), 'Robot Status', '192.0.2.8'),
+                         default_library().parent / 'Robot Status' / '192.0.2.8')
+
+    def test_robot_source_is_selected_only_when_a_robot_newly_connects(self):
+        settings = make_settings('192.0.2.8', 'root', 'secret', '')
+        self.assertFalse(should_select_robot(None, None))
+        self.assertFalse(should_select_robot('192.0.2.8', None))
+        self.assertTrue(should_select_robot(None, settings))
+        self.assertFalse(should_select_robot('192.0.2.8', settings))
+        from dataclasses import replace
+        self.assertFalse(should_select_robot('192.0.2.8', replace(settings, model='UR5')))
+        self.assertTrue(should_select_robot('192.0.2.8', make_settings('192.0.2.9', 'root', 'secret', '')))
 
     def test_project_date_filename_is_portable_and_required(self):
         self.assertEqual(backup_filename(' Project One ', '2026-11-02'), 'Project One-2026-11-02.tar')
@@ -151,17 +172,56 @@ class SharedCredentialUITests(unittest.TestCase):
             self.assertEqual(self.app.log_window.ip.get(), '192.0.2.10')
 
     def test_report_downloads_share_the_simulator_identity(self):
+        self.app.flight_library_root = Path(self.folder.name) / 'flightreports'
         self.connect()
         program, status = self.app.program_check_window, self.app.diagnostic_window
         program.robot_password.set('stale')
         status.password.set('stale')
-        with patch('program_transfer.ProgramSourceJob') as programs, patch('diagnostic_view.DiagnosticSourceJob') as diagnostics, patch('tkinter.filedialog.askdirectory', return_value=self.folder.name):
+        with patch('program_transfer.ProgramSourceJob') as programs, patch('diagnostic_view.DiagnosticSourceJob') as diagnostics, patch('tkinter.filedialog.askdirectory') as ask:
             program.pull_programs()
             status.choose_source()
-            for factory in (programs, diagnostics):
+            ask.assert_not_called()
+            for factory, name in ((programs, 'Robot programs'), (diagnostics, 'Robot Status')):
                 connection = factory.call_args.kwargs['connection']
                 self.assertEqual(connection.ip, '192.0.2.8')
                 self.assertEqual(connection.password, 'session-secret')
+                destination = Path(factory.call_args.kwargs['destination'])
+                self.assertEqual(destination, Path(self.folder.name) / name / '192.0.2.8')
+                self.assertTrue(destination.is_dir())
+        self.assertEqual(program.working_folder.get(), str(Path(self.folder.name) / 'Robot programs' / '192.0.2.8'))
+
+    def test_connecting_selects_robot_once_and_keeps_a_manual_local_choice(self):
+        pages = (self.app.program_check_window, self.app.diagnostic_window)
+        for page in pages:
+            page.source_mode.set('Local folder')
+            page.change_source()
+        self.connect()
+        self.assertEqual([page.source_mode.get() for page in pages], ['Robot', 'Robot'])
+        self.assertTrue(all(not page.robot_controls.winfo_manager() for page in pages))
+        for page in pages:
+            page.source_mode.set('Local folder')
+            page.change_source()
+        self.sync()
+        self.assertEqual([page.source_mode.get() for page in pages], ['Local folder', 'Local folder'])
+        self.app.session.stop_event.set()
+        self.sync()
+        self.connect()
+        self.assertEqual([page.source_mode.get() for page in pages], ['Robot', 'Robot'])
+        program = self.app.program_check_window
+        pairs = [object()]
+        program.pairs = pairs
+        self.app.session.stop_event.set()
+        self.sync()
+        self.connect()
+        self.assertIs(program.pairs, pairs)
+        # Programs loaded from a local folder are never discarded by a new connection.
+        program.source_mode.set('Local folder')
+        program.pairs = pairs
+        self.app.session.stop_event.set()
+        self.sync()
+        self.connect()
+        self.assertEqual(program.source_mode.get(), 'Local folder')
+        self.assertIs(program.pairs, pairs)
 
     def test_missing_shared_password_and_project_are_actionable_without_transfer(self):
         backup = self.app.backup_page

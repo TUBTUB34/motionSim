@@ -4,6 +4,8 @@ import time
 from tkinter import ttk
 
 import ui_theme as theme
+from rtde_client import STALE_AFTER
+from session import reconnect_reason
 
 
 class WorkspaceShell(ttk.Frame):
@@ -69,8 +71,10 @@ class WorkspaceShell(ttk.Frame):
         else:
             state = 'Connected' if app.session is not None and app.last_sample is not None else (
                 'Connecting' if app.session is not None else 'Disconnected')
-            if state == 'Connected' and time.monotonic() - app.last_sample.received_at >= 1:
-                state = 'Stale telemetry'
+            if state == 'Connected' and reconnect_reason(app.session):
+                state = 'Reconnecting'
+            elif state == 'Connected' and time.monotonic() - app.last_sample.received_at >= STALE_AFTER:
+                state = 'Slow link · waiting'
             value = f'{state}\n{app.settings.model} · {app.settings.ip}'
             state = {'Connected': 'SUCCESS', 'Disconnected': 'DISABLED'}.get(state, 'WARNING')
         if self.connection.get() != value:
@@ -167,7 +171,7 @@ class SimulatorPopout(tk.Toplevel):
             self.last_sample = app.last_sample
         state = ('Disconnected · Last received pose' if app.session is None else
                  'Waiting for live joints' if app.last_sample is None else
-                 'Stale · Last received pose' if time.monotonic() - app.last_sample.received_at >= 1 else
+                 'Slow link · Last received pose' if time.monotonic() - app.last_sample.received_at >= STALE_AFTER else
                  'Live joint geometry')
         self.viewer.set_stream_state(state)
 

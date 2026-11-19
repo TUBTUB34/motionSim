@@ -5,7 +5,7 @@ import struct
 import threading
 import time
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import numpy as np
 from connection import make_settings
@@ -305,7 +305,91 @@ class RTDETests(unittest.TestCase):
         with self.assertRaises(TimeoutError):
             client.receive()
 
+    def test_many_packets_in_one_read_are_all_delivered_in_order(self):
+        sock = FragmentedSocket(handshake() + b"".join(
+            sample_packet(values=[float(n)] + list(range(6)) + [.1]*6) for n in range(1, 6)))
+        sock.recv = lambda size: (bytes(sock.incoming[:size]), sock.incoming.__delitem__(slice(0, size)))[0]
+        client = RTDEClient("127.0.0.1", socket_factory=lambda *a, **kw: sock, telemetry=False)
+        client.connect()
+        self.assertEqual([client.receive().timestamp for _ in range(5)], [1., 2., 3., 4., 5.])
+        with self.assertRaisesRegex(ConnectionError, "Robot closed"):
+            client.receive()
+
+
+class ScriptedClient:
+    """RTDE client double: streams ``count`` samples, then the robot closes the stream."""
+    def __init__(self, count, fail_connect=False):
+        self.count, self.fail_connect = count, fail_connect
+        self.frequency = None
+        self.closed = False
+        self.sent = 0
+
+    def connect(self):
+        if self.fail_connect:
+            raise ConnectionRefusedError("refused")
+
+    def receive(self):
+        time.sleep(.002)
+        if self.closed:
+            raise ConnectionError("RTDE connection closed.")
+        if self.sent >= self.count:
+            raise ConnectionError("Robot closed the RTDE connection.")
+        self.sent += 1
+        return RobotSample(time.monotonic(), (0,)*6, (0,)*6, time.monotonic())
+
+    def close(self):
+        self.closed = True
+
+
 class SessionTests(unittest.TestCase):
+    def run_session(self, clients, until):
+        made = []
+
+        def factory(_ip):
+            made.append(clients.pop(0) if clients else ScriptedClient(10**9))
+            return made[-1]
+        session = RobotSession(make_settings("127.0.0.1", "", "", ""), factory, lambda: Mock())
+        session.start()
+        events = []
+        deadline = time.monotonic() + 3
+        while time.monotonic() < deadline and not until(events, session):
+            try:
+                events.append(session.events.get(timeout=.05))
+            except Exception:
+                pass
+        session.stop()
+        session.threads[0].join(1)
+        return session, [kind for kind, _data in events], made
+
+    def test_robot_closing_a_working_stream_reconnects_and_keeps_streaming(self):
+        session, kinds, made = self.run_session([ScriptedClient(3)], lambda events, s: s.reconnects and s.sample()
+                                                and s.client.sent > 2)
+        self.assertEqual([kind for kind in kinds if kind != "installation_error"], ["connected", "reconnecting", "reconnected"])
+        self.assertEqual(session.reconnects, 1)
+        self.assertGreater(made[1].sent, 2)
+        self.assertTrue(made[0].closed)
+        # One drop is retried at the same rate.
+        self.assertEqual((session.rate, made[1].frequency), (125., 125.))
+        self.assertIsNone(session.reconnecting)
+
+    def test_dropping_again_soon_after_reconnecting_lowers_the_rate(self):
+        session, _kinds, made = self.run_session([ScriptedClient(3), ScriptedClient(3)],
+                                                 lambda events, s: s.reconnects >= 2 and s.client.sent > 2)
+        self.assertEqual([client.frequency for client in made[:3]], [125., 125., 50.])
+        self.assertEqual(session.rate, 50.)
+
+    def test_a_stream_that_never_started_fails_at_once(self):
+        _session, kinds, _made = self.run_session([ScriptedClient(0)], lambda events, s: "error" in [k for k, _ in events])
+        self.assertIn("error", kinds)
+        self.assertNotIn("reconnecting", kinds)
+
+    def test_reconnecting_gives_up_after_the_data_timeout(self):
+        clients = [ScriptedClient(3)] + [ScriptedClient(0, fail_connect=True) for _ in range(50)]
+        with patch("session.DATA_TIMEOUT", .3), patch("session.RETRY_EVERY", .05):
+            _session, kinds, _made = self.run_session(clients, lambda events, s: any(k == "error" for k, _ in events))
+        self.assertEqual(kinds[-1], "error")
+        self.assertIn("reconnecting", kinds)
+
     def test_installation_failure_does_not_stop_joint_stream(self):
         stopped = threading.Event()
         class Client:

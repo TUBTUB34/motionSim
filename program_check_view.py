@@ -8,7 +8,9 @@ import tkinter as tk
 from tkinter import ttk, filedialog
 from program_check import discover_programs, review_program, ProgramPair, ProgramSource, REFERENCES
 from ui_theme import style_text
-from connection import active_robot_settings, transfer_connection, simulator_connection_text
+from connection import (active_robot_settings, robot_download_folder, should_select_robot,
+                        simulator_connection_text, transfer_connection)
+from ssh_trust import host_key_prompt
 from address_book import SavedAddressCombobox
 from workspace_panel import WorkspacePanel
 import ui_dialogs as messagebox
@@ -30,6 +32,7 @@ class ProgramCheckWindow(WorkspacePanel):
         self.cancelled = threading.Event()
         self.download_job = None
         self.source_mode = tk.StringVar(value='Local folder')
+        self.connected_ip = None
         self.robot_ip = tk.StringVar()
         self.robot_username = tk.StringVar(value='root')
         self.robot_password = tk.StringVar()
@@ -221,6 +224,15 @@ class ProgramCheckWindow(WorkspacePanel):
 
     def sync_connection(self):
         settings = active_robot_settings(self.app)
+        if should_select_robot(self.connected_ip, settings) and not self.busy:
+            self.connected_ip = settings.ip
+            # Switching clears the list, so never discard local programs the user already loaded.
+            if self.source_mode.get() != 'Robot' and not self.pairs and self.review is None:
+                self.source_mode.set('Robot')
+                self.change_source()
+                return
+        if settings is None:
+            self.connected_ip = None
         robot = self.source_mode.get() == 'Robot'
         if settings is not None:
             for variable, name in ((self.robot_ip, 'ip'), (self.robot_username, 'username'), (self.robot_password, 'password')):
@@ -249,16 +261,25 @@ class ProgramCheckWindow(WorkspacePanel):
         except ValueError as exc:
             self.status.set(str(exc))
             return
-        destination = filedialog.askdirectory(parent=self, title='Choose where to save the robot programs folder', mustexist=True)
-        if not destination:
-            return
+        if active_robot_settings(self.app) is not None:
+            destination = robot_download_folder(self.app, 'Robot programs', connection.ip)
+            try:
+                destination.mkdir(parents=True, exist_ok=True)
+            except OSError as exc:
+                self.status.set(f'Cannot create {destination}: {exc}')
+                return
+        else:
+            destination = filedialog.askdirectory(parent=self, title='Choose where to save the robot programs folder', mustexist=True)
+            if not destination:
+                return
         from program_transfer import ProgramSourceJob
         self.clear_sources()
         self.cancelled.clear()
         self.download_job = ProgramSourceJob(connection=connection, destination=Path(destination))
         self.cancellable = True
         self.set_busy(True)
-        self.status.set('Connecting to robot and retrieving program sources…')
+        self.working_folder.set(str(destination))
+        self.status.set(f'Connecting to robot and retrieving program sources into {destination}…')
         self.download_job.start()
 
     def clear_sources(self):
@@ -513,10 +534,9 @@ class ProgramCheckWindow(WorkspacePanel):
                 kind, result = job.events.get_nowait()
                 if kind == 'host_key':
                     try:
+                        title, message = host_key_prompt(result)
                         result.accepted = False if self.cancelled.is_set() else messagebox.askyesno(
-                            'Verify robot SSH host',
-                            f'Robot: {result.hostname}\n\n{result.fingerprint}\n\nTrust this robot identity?',
-                            parent=self, default='no')
+                            title, message, parent=self, default='no')
                     finally:
                         result.answered.set()
                 elif kind == 'status':

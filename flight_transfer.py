@@ -153,6 +153,7 @@ class FlightTransfer(LogJob):
         self.sftp = None
         if client:
             client.close()
+        self.close_fast()
 
     def confirm_host(self, hostname, fingerprint, *, replacement=False):
         # A retry must never approve a different identity midway through a batch.
@@ -318,7 +319,7 @@ class FlightTransfer(LogJob):
             with tempfile.NamedTemporaryFile(dir=directory, prefix='.flight-', suffix='.part.zip',
                                              delete=False) as local_stream:
                 temporary = Path(local_stream.name)
-                with self.sftp.open(entry.path, 'rb') as remote:
+                with self.open_bulk(self.sftp, entry.path, size=entry.size) as remote:
                     copy_remote(remote, local_stream, entry.size, check_cancel=self.check_cancel, progress=progress)
                 local_stream.flush()
                 os.fsync(local_stream.fileno())

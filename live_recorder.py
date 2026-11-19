@@ -189,14 +189,22 @@ class LiveCapture:
     def snapshot(self, seconds, headers):
         """Chronological copies of the requested columns for the latest ``seconds``."""
         columns = [COLUMN[header] for header in ('Timestamp [s]', *headers)]
+        # Only the requested columns are copied, so the receiver thread waits on
+        # the lock for microseconds, not for a copy of the whole 120 s window.
         with self._lock:
             size = min(self._count, len(self._ring))
             end = self._count % len(self._ring)
-            rows = (self._ring[:size] if size < len(self._ring)
-                    else np.concatenate((self._ring[end:], self._ring[:end])))[:, columns]
+            rows = (self._ring[:size, columns] if size < len(self._ring)
+                    else np.concatenate((self._ring[end:, columns], self._ring[:end, columns])))
         if size:
             rows = rows[rows[:, 0] >= rows[-1, 0] - seconds]
         return {header: rows[:, index] for index, header in enumerate(('Timestamp [s]', *headers))}
+
+    @property
+    def received(self):
+        """Samples received since the last reset; the UI derives frames per second from it."""
+        with self._lock:
+            return self._count
 
     def sample_rate(self):
         """Measured stream rate in Hz from the most recent samples, or None."""

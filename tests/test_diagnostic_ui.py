@@ -155,6 +155,7 @@ class DiagnosticUITests(unittest.TestCase):
 
     def test_hidden_page_prompts_for_trust_on_root_without_rejecting_transfer(self):
         from session import HostKeyQuestion
+        from ssh_trust import host_key_prompt
         job = self.start_robot()
         question = HostKeyQuestion('192.0.2.1', 'test-fingerprint')
         job.events.put(('host_key', question))
@@ -164,6 +165,7 @@ class DiagnosticUITests(unittest.TestCase):
             self.poll()
             prompt.assert_called_once()
             self.assertIs(prompt.call_args.kwargs['parent'], self.root)
+            self.assertEqual(prompt.call_args.args, host_key_prompt(question, 'Robot Status collection'))
         self.assertTrue(question.answered.is_set())
         self.assertTrue(question.accepted)
         self.assertFalse(self.window.busy)

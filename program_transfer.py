@@ -5,7 +5,9 @@ import os
 import shutil
 import stat
 import tempfile
+import threading
 import time
+from concurrent.futures import FIRST_EXCEPTION, ThreadPoolExecutor, wait
 
 from log_transfer import LogJob
 from program_check import MAX_BYTES
@@ -16,6 +18,7 @@ MAX_TOTAL_BYTES = 128 * 1024 * 1024
 MAX_ENTRIES = 100_000
 MAX_DIRECTORIES = 4096
 MAX_DEPTH = 32
+PARALLEL_FILES = 8
 SOURCE_SUFFIXES = {'.urp', '.script', '.installation'}
 WINDOWS_DEVICE_NAMES = {'CON', 'PRN', 'AUX', 'NUL', 'CONIN$', 'CONOUT$'} | {
     f'{prefix}{number}' for prefix in ('COM', 'LPT') for number in '123456789¹²³'
@@ -120,39 +123,77 @@ class ProgramSourceJob(LogJob):
         return sorted(files, key=lambda entry: str(entry[0])), total_bytes
 
     def _download(self, sftp, files, root, staging, total_bytes):
-        completed = 0
-        last_update = 0.
-        for index, (remote_path, listed) in enumerate(files, 1):
+        """Copy every listed source; with AsyncSSH several files transfer at once."""
+        fast = self._fast_session(False)
+        lstat = fast.lstat if fast is not None else sftp.lstat
+        open_remote = fast.open if fast is not None else (lambda path, _size: sftp.open(path, 'rb'))
+        lock = threading.Lock()
+        done = dict(files=0, update=0.)
+        received = {}  # bytes so far per file; parallel files each report their own count
+        failed = threading.Event()
+
+        def check():
             self.check_cancel()
-            before = sftp.lstat(str(remote_path))
+            if failed.is_set():
+                raise InterruptedError('Stopped because another program file failed.')
+
+        def one(remote_path, listed):
+            check()
+            before = lstat(str(remote_path))
             if not stat.S_ISREG(before.st_mode) or _signature(before) != _signature(listed):
                 raise OSError(f'Robot source changed before download; retry: {remote_path}')
             local_path = staging / PurePosixPath(root).name / remote_path.relative_to(root)
             local_path.parent.mkdir(parents=True, exist_ok=True)
 
             def progress(count):
-                nonlocal last_update
                 now = time.monotonic()
-                if now - last_update >= .2 or count == before.st_size:
-                    self.events.put(('status', f'Downloading program sources · {index}/{len(files)} files · '
-                                     f'{(completed + count) / 1048576:.2f}/{total_bytes / 1048576:.2f} MiB · {remote_path.name}'))
-                    last_update = now
+                with lock:
+                    received[remote_path] = count
+                    if now - done['update'] >= .2 or count == before.st_size:
+                        self.events.put(('status', f'Downloading program sources · {done["files"]}/{len(files)} files · '
+                                         f'{sum(received.values()) / 1048576:.2f}/{total_bytes / 1048576:.2f} MiB · {remote_path.name} · {self.engine_label}'))
+                        done['update'] = now
 
-            with sftp.open(str(remote_path), 'rb') as remote, local_path.open('xb') as local:
-                copy_remote(remote, local, before.st_size, check_cancel=self.check_cancel, progress=progress)
+            with open_remote(str(remote_path), before.st_size) as remote, local_path.open('xb') as local:
+                copy_remote(remote, local, before.st_size, check_cancel=check, progress=progress)
                 local.flush()
                 os.fsync(local.fileno())
-            after = sftp.lstat(str(remote_path))
+            after = lstat(str(remote_path))
             if not stat.S_ISREG(after.st_mode) or _signature(before) != _signature(after):
                 raise OSError(f'Robot source changed during download; retry: {remote_path}')
-            completed += before.st_size
+            with lock:
+                done['files'] += 1
+
+        def each(function, items):
+            if fast is None:
+                for item in items:
+                    function(*item)
+                return
+            # Small program files are latency-bound: overlap their round trips.
+            with ThreadPoolExecutor(PARALLEL_FILES, thread_name_prefix='program-download') as pool:
+                futures = [pool.submit(function, *item) for item in items]
+                finished, _ = wait(futures, return_when=FIRST_EXCEPTION)
+                failures = [future for future in finished if future.exception() is not None]
+                if failures:
+                    # Stop the others mid-file, then report the first real cause.
+                    failed.set()
+                    for future in futures:
+                        future.cancel()
+                    wait(futures)
+                    errors = [future.exception() for future in futures
+                              if future.done() and not future.cancelled() and future.exception() is not None]
+                    raise next((error for error in errors if not isinstance(error, InterruptedError)), errors[0])
+
+        each(one, files)
+
         # Recheck earlier copies too: saving a program can replace its URP,
         # generated script and installation while later files are transferring.
-        for remote_path, listed in files:
-            self.check_cancel()
-            current = sftp.lstat(str(remote_path))
+        def recheck(remote_path, listed):
+            check()
+            current = lstat(str(remote_path))
             if not stat.S_ISREG(current.st_mode) or _signature(current) != _signature(listed):
                 raise OSError(f'Robot source changed while downloading the snapshot; retry: {remote_path}')
+        each(recheck, files)
 
     def run(self):
         staging = None
@@ -184,10 +225,13 @@ class ProgramSourceJob(LogJob):
             if self.stopped.is_set() or isinstance(exc, InterruptedError):
                 self.events.put(('cancelled', None))
             else:
-                message = str(exc).replace(self.connection.password, '[redacted]')
+                message = str(exc)
+                if self.connection.password:
+                    message = message.replace(self.connection.password, '[redacted]')
                 self.events.put(('error', message))
         finally:
             if staging is not None:
                 shutil.rmtree(staging, ignore_errors=True)
             if self.client:
                 self.client.close()
+            self.close_fast()

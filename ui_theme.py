@@ -439,7 +439,7 @@ def status_color(text):
     value = str(text).lower()
     if any(word in value for word in ('failed', 'failure', 'error', 'could not', 'rejected')):
         return DANGER
-    if any(word in value for word in ('stale', 'cancel', 'warning', 'unavailable')):
+    if any(word in value for word in ('stale', 'slow link', 'reconnecting', 'cancel', 'warning', 'unavailable')):
         return WARNING
     if any(word in value for word in ('loading', 'finding', 'fetching', 'exporting', 'connecting')):
         return ACCENT
@@ -449,12 +449,16 @@ def status_color(text):
 def flow(frame, gap=6):
     """Place a frame's children left to right, wrapping onto new rows as its width changes.
 
-    Call the returned function after adding or removing children; it re-arranges once Tk is idle.
+    Call the returned function after adding or removing children, or after setting a
+    child's ``flow_hidden`` attribute to hide it; it re-arranges once Tk is idle.
     """
     def arrange(event=None):
         width = event.width if event is not None else frame.winfo_width()
         x = y = row_height = 0
         for child in frame.winfo_children():
+            if getattr(child, 'flow_hidden', False):
+                child.place_forget()
+                continue
             need, height = child.winfo_reqwidth(), child.winfo_reqheight()
             if x and x + need > width:
                 x, y, row_height = 0, y + row_height + gap, 0
