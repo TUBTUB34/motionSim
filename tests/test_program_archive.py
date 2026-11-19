@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from program_check import discover_programs, review_program
+from motionstudio.programs.check import discover_programs, review_program
 
 
 class ProgramArchiveTests(unittest.TestCase):
@@ -59,7 +59,7 @@ class ProgramArchiveTests(unittest.TestCase):
     def test_archive_source_limits_apply_before_reading(self):
         path = self.archive([('programs/demo.script', b'movej(q)')])
         pair = discover_programs(path)[0]
-        with patch('program_check.MAX_BYTES', 4):
+        with patch('motionstudio.programs.check.MAX_BYTES', 4):
             with self.assertRaisesRegex(ValueError, 'exceeds'):
                 pair.script.read()
 

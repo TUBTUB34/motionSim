@@ -11,7 +11,7 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock, patch
 
-from app_preferences import Preferences
+from motionstudio.app.preferences import Preferences
 
 
 @unittest.skipUnless(os.environ.get('MOTIONSIM_UI_TESTS') == '1', 'requires native display')
@@ -20,13 +20,13 @@ class PreferencesUITests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.path = Path(self.temp.name) / 'preferences.json'
         self.errors = []
-        self.discovery = patch('flight_view.FlightWindow._discover')
+        self.discovery = patch('motionstudio.flight.view.FlightWindow._discover')
         self.discovery.start()
         self.start_app()
 
     def start_app(self):
         import tkinter as tk
-        from main import SimulatorApp
+        from motionstudio.app.main_window import SimulatorApp
         self.root = tk.Tk()
         self.root.report_callback_exception = lambda *args: self.errors.append(args)
         self.app = SimulatorApp(self.root, preferences_path=self.path)
@@ -35,7 +35,7 @@ class PreferencesUITests(unittest.TestCase):
         self.settle()
 
     def stop_app(self):
-        with patch('commissioning_view.messagebox.askyesno', return_value=True):
+        with patch('motionstudio.commissioning.view.messagebox.askyesno', return_value=True):
             self.app.close()
         del self.app, self.root
         gc.collect()
@@ -67,10 +67,10 @@ class PreferencesUITests(unittest.TestCase):
         self.app.save_address_button.invoke()
 
     def test_save_invalid_duplicate_ipv6_and_forget_without_starting_robot(self):
-        from address_book import SavedAddressCombobox
+        from motionstudio.ui.address_book import SavedAddressCombobox
         field = self.app.setup_entries[str(self.app.ip)]
         self.assertIsInstance(field, SavedAddressCombobox)
-        with patch('main.RobotSession') as robot:
+        with patch('motionstudio.app.main_window.RobotSession') as robot:
             self.save('not-an-ip')
             self.assertTrue(field.instate(['invalid']))
             self.assertIn('valid robot IP', self.app.address_notice.get())
@@ -107,7 +107,7 @@ class PreferencesUITests(unittest.TestCase):
         self.assertIsNone(self.app.session)
 
     def test_existing_ip_selectors_share_saved_choices_without_overwriting_typed_values(self):
-        from address_book import SavedAddressCombobox
+        from motionstudio.ui.address_book import SavedAddressCombobox
         for action in (self.app.open_logs, self.app.open_backups,
                        self.app.open_program_check, self.app.open_diagnostics):
             action()
@@ -132,7 +132,7 @@ class PreferencesUITests(unittest.TestCase):
             self.assertEqual(tuple(field.cget('values')), ('2001:db8::2',))
 
     def test_validated_transfers_remember_addresses_but_never_credentials(self):
-        from connection import transfer_connection
+        from motionstudio.remote.connection import transfer_connection
         with self.assertRaises(ValueError):
             transfer_connection(self.app, '192.0.2.11', 'root', '')
         self.assertFalse(self.path.exists())
@@ -145,7 +145,7 @@ class PreferencesUITests(unittest.TestCase):
 
     def test_submit_remembers_valid_address_without_network_and_invalid_submit_does_not(self):
         connection = self.fake_session()
-        with patch('main.RobotSession', return_value=connection) as robot:
+        with patch('motionstudio.app.main_window.RobotSession', return_value=connection) as robot:
             self.app.ip.set('')
             self.app.submit()
             robot.assert_not_called()
@@ -167,9 +167,9 @@ class PreferencesUITests(unittest.TestCase):
         self.save('192.0.2.10')
         before = self.path.read_bytes()
         connection = self.fake_session()
-        with patch('app_preferences.os.replace', side_effect=PermissionError('Read-only folder')), \
-                patch('main.messagebox.showerror') as error, \
-                patch('main.RobotSession', return_value=connection):
+        with patch('motionstudio.app.preferences.os.replace', side_effect=PermissionError('Read-only folder')), \
+                patch('motionstudio.app.main_window.messagebox.showerror') as error, \
+                patch('motionstudio.app.main_window.RobotSession', return_value=connection):
             self.app.ip.set('192.0.2.20')
             self.app.submit()
             error.assert_called_once()
@@ -182,8 +182,8 @@ class PreferencesUITests(unittest.TestCase):
     def test_failed_theme_save_restores_toggle_without_repainting_or_losing_saved_addresses(self):
         self.save('192.0.2.10')
         before = self.path.read_bytes()
-        with patch('app_preferences.os.replace', side_effect=PermissionError('Read-only folder')), \
-                patch('main.messagebox.showerror') as error:
+        with patch('motionstudio.app.preferences.os.replace', side_effect=PermissionError('Read-only folder')), \
+                patch('motionstudio.app.main_window.messagebox.showerror') as error:
             self.app.shell.theme_toggle.invoke()
             error.assert_called_once()
         self.assertTrue(self.app.dark_mode.get())
@@ -194,7 +194,7 @@ class PreferencesUITests(unittest.TestCase):
     def test_return_on_address_actions_and_theme_does_not_bubble_to_connect(self):
         self.app.ip.set('192.0.2.10')
         self.assertTrue(self.root.bind('<Return>'))
-        with patch('main.RobotSession') as robot:
+        with patch('motionstudio.app.main_window.RobotSession') as robot:
             for control in (self.app.save_address_button, self.app.forget_address_button,
                             self.app.shell.theme_toggle):
                 control.focus_force()
@@ -207,7 +207,7 @@ class PreferencesUITests(unittest.TestCase):
         self.assertIsNone(self.app.session)
 
     def test_theme_changes_keep_loaded_pages_flight_position_draft_and_active_job(self):
-        from log_data import load_log
+        from motionstudio.logs.data import load_log
         from tests.test_flight_ui import flight
         log = Path(self.temp.name) / 'log_history.txt'
         log.write_text('3.5 :: 1s :: 2026-04-01 12:00:00 :: 110 :: C153A0:6 :: Synthetic incident\n')

@@ -11,9 +11,9 @@ from unittest.mock import patch
 class LiveMonitorTests(unittest.TestCase):
     def setUp(self):
         import tkinter as tk
-        from main import SimulatorApp
-        from rtde_client import RTDEClient
-        from session import RobotSession
+        from motionstudio.app.main_window import SimulatorApp
+        from motionstudio.live.rtde_client import RTDEClient
+        from motionstudio.live.session import RobotSession
         from tests.test_ui import MockRobot
         self.folder = tempfile.TemporaryDirectory()
         self.root = tk.Tk()
@@ -30,7 +30,7 @@ class LiveMonitorTests(unittest.TestCase):
             def close(self):
                 pass
 
-        with patch('main.RobotSession', lambda settings: RobotSession(
+        with patch('motionstudio.app.main_window.RobotSession', lambda settings: RobotSession(
                 settings, lambda host: RTDEClient(host, port=self.robot.port), Transfer)):
             self.app.ip.set('127.0.0.1')
             self.app.model.set('UR10e')
@@ -54,8 +54,8 @@ class LiveMonitorTests(unittest.TestCase):
         self.fail('Timed out waiting for the live stream')
 
     def test_record_stop_save_and_open_in_flight_reports(self):
-        from flight_data import load_flight
-        from live_recorder import REPORT_TYPE
+        from motionstudio.flight.data import load_flight
+        from motionstudio.live.recorder import REPORT_TYPE
         self.app.open_live()
         page = self.app.live_page
         self.pump(lambda: page.capture.sample_rate() is not None)
@@ -73,7 +73,7 @@ class LiveMonitorTests(unittest.TestCase):
         self.pump(lambda: page.save_button.instate(['!disabled']) and page.save_button.winfo_manager())
         target = Path(self.folder.name) / 'cell2-live.zip'
         page.notes.set('Cycle after gripper change')
-        with patch('live_view.filedialog.asksaveasfilename', return_value=str(target)):
+        with patch('motionstudio.live.view.filedialog.asksaveasfilename', return_value=str(target)):
             page.save_recording()
             self.pump(lambda: page.saved_path is not None)
         report = load_flight(target)
@@ -120,7 +120,7 @@ class LiveMonitorTests(unittest.TestCase):
         self.app.disconnect()
         self.assertFalse(page.capture.recording.active)
         self.assertIn('connection ended', page.capture.recording.stop_reason)
-        with patch('live_view.messagebox.askyesno', return_value=False) as ask:
+        with patch('motionstudio.live.view.messagebox.askyesno', return_value=False) as ask:
             self.app.close()
             ask.assert_called_once()
         self.assertFalse(self.app.closed)

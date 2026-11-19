@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from rasterizer import rasterize
+from motionstudio.viewer.rasterizer import rasterize
 
 
 class RasterizerTests(unittest.TestCase):

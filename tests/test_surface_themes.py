@@ -12,8 +12,8 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.colors import to_rgba
 from matplotlib.figure import Figure
 
-import ui_theme as theme
-from flight_charts import FlightCharts, LIGHT_JOINT_COLORS
+from motionstudio.ui import theme
+from motionstudio.flight.charts import FlightCharts, LIGHT_JOINT_COLORS
 from tests.test_flight_ui import flight
 
 
@@ -77,11 +77,11 @@ class ChartThemeTests(unittest.TestCase):
 class SurfaceThemeUITests(unittest.TestCase):
     def test_live_palette_switch_preserves_recording_log_zoom_and_robot_camera(self):
         import tkinter as tk
-        from connection import make_settings
-        from log_data import load_log
-        from main import SimulatorApp
-        from rtde_client import RobotSample
-        with tempfile.TemporaryDirectory() as temp, patch('flight_view.FlightWindow._discover'):
+        from motionstudio.remote.connection import make_settings
+        from motionstudio.logs.data import load_log
+        from motionstudio.app.main_window import SimulatorApp
+        from motionstudio.live.rtde_client import RobotSample
+        with tempfile.TemporaryDirectory() as temp, patch('motionstudio.flight.view.FlightWindow._discover'):
             root = tk.Tk()
             app = SimulatorApp(root, preferences_path=Path(temp) / 'preferences.json')
             errors = []

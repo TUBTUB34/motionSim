@@ -9,10 +9,10 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
-from connection import active_robot_settings, make_settings, transfer_connection
-from backup_view import backup_filename
-from flight_transfer import default_library
-from connection import robot_download_folder, should_select_robot
+from motionstudio.remote.connection import active_robot_settings, make_settings, transfer_connection
+from motionstudio.backup.view import backup_filename
+from motionstudio.flight.transfer import default_library
+from motionstudio.remote.connection import robot_download_folder, should_select_robot
 
 
 def session():
@@ -71,13 +71,13 @@ class ConnectionSharingTests(unittest.TestCase):
 class SharedCredentialUITests(unittest.TestCase):
     def setUp(self):
         import tkinter as tk
-        from main import SimulatorApp
+        from motionstudio.app.main_window import SimulatorApp
         self.root = tk.Tk()
         self.app = SimulatorApp(self.root)
         self.root.after_cancel(self.app.poll_id)
         self.errors = []
         self.root.report_callback_exception = lambda *args: self.errors.append(args)
-        self.discovery = patch('flight_view.FlightWindow._discover')
+        self.discovery = patch('motionstudio.flight.view.FlightWindow._discover')
         self.discovery.start()
         self.app.open_backups()
         self.app.open_logs()
@@ -133,13 +133,13 @@ class SharedCredentialUITests(unittest.TestCase):
         for page in (backup, logs):
             page.ip.set('192.0.2.99')
             page.password.set('stale-page-secret')
-        with patch('backup_view.BackupJob.start'), patch('log_view.LogJob.start'), patch('log_view.messagebox.askyesno', return_value=False):
+        with patch('motionstudio.backup.view.BackupJob.start'), patch('motionstudio.logs.view.LogJob.start'), patch('motionstudio.logs.view.messagebox.askyesno', return_value=False):
             backup.make_backup()
             logs.fetch()
         for page in (backup, logs):
             self.assertEqual(page.job.connection.ip, '192.0.2.8')
             self.assertEqual(page.job.connection.password, 'session-secret')
-        from backup_transfer import BackupDestination
+        from motionstudio.backup.transfer import BackupDestination
         question = BackupDestination()
         original_filename = backup._filename
         backup.project_name.set('Edited after start')
@@ -158,7 +158,7 @@ class SharedCredentialUITests(unittest.TestCase):
         from tests.test_flight_retrieval_ui import QueuedTransfer
         self.connect()
         flight = self.app.flight_retrieval_window
-        with patch('flight_retrieval_view.FlightTransfer', QueuedTransfer):
+        with patch('motionstudio.flight.retrieval_view.FlightTransfer', QueuedTransfer):
             self.assertTrue(flight._ensure_controller())
             first = flight.controller
             self.connect('192.0.2.10', 'replacement-secret')
@@ -177,7 +177,7 @@ class SharedCredentialUITests(unittest.TestCase):
         program, status = self.app.program_check_window, self.app.diagnostic_window
         program.robot_password.set('stale')
         status.password.set('stale')
-        with patch('program_transfer.ProgramSourceJob') as programs, patch('diagnostic_view.DiagnosticSourceJob') as diagnostics, patch('tkinter.filedialog.askdirectory') as ask:
+        with patch('motionstudio.programs.transfer.ProgramSourceJob') as programs, patch('motionstudio.diagnostics.view.DiagnosticSourceJob') as diagnostics, patch('tkinter.filedialog.askdirectory') as ask:
             program.pull_programs()
             status.choose_source()
             ask.assert_not_called()
@@ -227,7 +227,7 @@ class SharedCredentialUITests(unittest.TestCase):
         backup = self.app.backup_page
         backup.directory.set(self.folder.name)
         self.connect(password='')
-        with patch('backup_view.BackupJob.start') as start:
+        with patch('motionstudio.backup.view.BackupJob.start') as start:
             backup.make_backup()
             self.assertIn('project name', backup.status.get())
             backup.project_name.set('Client cell')

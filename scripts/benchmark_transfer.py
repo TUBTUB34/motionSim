@@ -17,7 +17,7 @@ import sys
 import time
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from transfer_stream import READ_SIZE, PIPELINE_REQUESTS, copy_remote
+from motionstudio.remote.stream import READ_SIZE, PIPELINE_REQUESTS, copy_remote
 
 
 class SimulatedSFTP(io.BytesIO):

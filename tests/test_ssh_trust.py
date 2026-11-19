@@ -6,8 +6,8 @@ from unittest.mock import MagicMock, Mock, patch
 
 import paramiko
 
-from log_transfer import LogConnection, LogJob
-from ssh_trust import known_hosts_path, replace_host_key
+from motionstudio.logs.transfer import LogConnection, LogJob
+from motionstudio.remote.ssh_trust import known_hosts_path, replace_host_key
 
 
 class SSHTrustTests(unittest.TestCase):
@@ -37,12 +37,12 @@ class SSHTrustTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             # No OS-specific shell utilities or hard-coded /home paths.
             for home in (Path(folder) / 'Users' / 'Operator', Path(folder) / 'home' / 'operator'):
-                with patch('ssh_trust.Path.home', return_value=home):
+                with patch('motionstudio.remote.ssh_trust.Path.home', return_value=home):
                     path = known_hosts_path()
                 self.assertEqual(path, home / '.ssh' / 'known_hosts')
                 replace_host_key(path, '127.0.0.1', self.old)
                 original = path.read_bytes()
-                with patch('ssh_trust.os.replace', side_effect=PermissionError(errno.EACCES, 'denied')):
+                with patch('motionstudio.remote.ssh_trust.os.replace', side_effect=PermissionError(errno.EACCES, 'denied')):
                     with self.assertRaises(PermissionError):
                         replace_host_key(path, '127.0.0.1', self.new)
                 self.assertEqual(path.read_bytes(), original)

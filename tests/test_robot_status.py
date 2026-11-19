@@ -2,10 +2,10 @@
 from dataclasses import replace
 import unittest
 
-from flight_data import JOINTS
-from log_data import LogData
-from robot_diagnostics import DiagnosticReport, Incident, JointEvidence, ProgramEvidence, analyze_data
-from robot_status import build_robot_status
+from motionstudio.flight.data import JOINTS
+from motionstudio.logs.data import LogData
+from motionstudio.diagnostics.analysis import DiagnosticReport, Incident, JointEvidence, ProgramEvidence, analyze_data
+from motionstudio.diagnostics.status import build_robot_status
 from tests.test_robot_diagnostics import event, flight
 
 

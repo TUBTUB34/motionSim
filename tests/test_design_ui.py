@@ -7,7 +7,7 @@ import unittest
 class CompactDesignTests(unittest.TestCase):
     def setUp(self):
         import tkinter as tk
-        from main import SimulatorApp
+        from motionstudio.app.main_window import SimulatorApp
         self.root = tk.Tk()
         self.app = SimulatorApp(self.root)
 
@@ -35,7 +35,7 @@ class CompactDesignTests(unittest.TestCase):
                              viewport.winfo_rooty()+viewport.winfo_height()+1)
 
     def live_view(self):
-        from connection import make_settings
+        from motionstudio.remote.connection import make_settings
         self.app.settings = make_settings('127.0.0.1', '', '', '')
         self.app.show_view()
         self.root.geometry('980x620')
@@ -43,7 +43,7 @@ class CompactDesignTests(unittest.TestCase):
 
     def test_catalog_keeps_actions_below_long_reference_details(self):
         from tkinter import ttk
-        from model_catalog import show_catalog
+        from motionstudio.app.model_catalog import show_catalog
         window = show_catalog(self.root, self.app.model)
         try:
             window.geometry('820x580')
@@ -111,7 +111,7 @@ class CompactDesignTests(unittest.TestCase):
 
     def test_workspace_shortcut_respects_modal_confirmation(self):
         from unittest.mock import Mock
-        from ui_dialogs import MessageDialog
+        from motionstudio.ui.dialogs import MessageDialog
         action = Mock()
         dialog = MessageDialog(self.root, 'Confirm', 'Choose an action', question=True)
         dialog.deiconify()
@@ -127,7 +127,7 @@ class CompactDesignTests(unittest.TestCase):
         from tkinter import ttk
         from unittest.mock import patch
         self.root.geometry('1120x740')
-        with patch('flight_view.FlightWindow._discover'):
+        with patch('motionstudio.flight.view.FlightWindow._discover'):
             self.app.open_flights()
         self.settle()
         names = {'How to', 'Export PDF…', 'Full-size playback', 'Reset zoom'}
@@ -145,15 +145,15 @@ class CompactDesignTests(unittest.TestCase):
         import tempfile
         from unittest.mock import patch
         from tkinter import ttk
-        from connection import make_settings
-        from backup_transfer import BackupDestination
+        from motionstudio.remote.connection import make_settings
+        from motionstudio.backup.transfer import BackupDestination
         self.app.settings = make_settings('127.0.0.2', 'root', 'password', '')
         self.app.show_view()
         self.root.geometry('980x620')
         self.settle()
-        with tempfile.TemporaryDirectory() as folder, patch('backup_transfer.BackupJob.start') as start, patch(
-                'backup_view.filedialog.askdirectory', return_value=folder):
-            from backup_view import backup_filename
+        with tempfile.TemporaryDirectory() as folder, patch('motionstudio.backup.transfer.BackupJob.start') as start, patch(
+                'motionstudio.backup.view.filedialog.askdirectory', return_value=folder):
+            from motionstudio.backup.view import backup_filename
             previous = Path(folder) / backup_filename('Fixture project')
             previous.write_bytes(b'existing archive')
             self.app.make_full_backup()
@@ -184,10 +184,10 @@ class CompactDesignTests(unittest.TestCase):
 
     def test_cancel_full_backup_folder_does_not_start_robot_work(self):
         from unittest.mock import patch
-        from connection import make_settings
+        from motionstudio.remote.connection import make_settings
         self.app.settings = make_settings('127.0.0.2', 'root', 'password', '')
-        with patch('backup_transfer.BackupJob.start') as start, patch(
-                'backup_view.filedialog.askdirectory', return_value=''):
+        with patch('motionstudio.backup.transfer.BackupJob.start') as start, patch(
+                'motionstudio.backup.view.filedialog.askdirectory', return_value=''):
             self.app.make_full_backup()
             self.app.backup_page.project_name.set('Fixture project')
             self.app.backup_page.make_backup()

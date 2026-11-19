@@ -12,8 +12,8 @@ class CommissioningUITests(unittest.TestCase):
     def setUp(self):
         import tkinter as tk
         from types import SimpleNamespace
-        from commissioning_view import CommissioningPage
-        from ui_theme import apply_theme
+        from motionstudio.commissioning.view import CommissioningPage
+        from motionstudio.ui.theme import apply_theme
         self.root = tk.Tk()
         self.root.geometry('920x650')
         apply_theme(self.root)
@@ -45,12 +45,12 @@ class CommissioningUITests(unittest.TestCase):
         self.assertEqual(self.page.record['items']['mounting']['note'], 'Owner: Alex\nReview the bracket.')
         self.assertTrue(self.page.dirty)
         path = str(Path(self.temp.name) / 'review.json')
-        with patch('commissioning_view.filedialog.asksaveasfilename', return_value=path):
+        with patch('motionstudio.commissioning.view.filedialog.asksaveasfilename', return_value=path):
             self.assertTrue(self.page.save())
         self.assertFalse(self.page.dirty)
         self.page.new()
         self.assertEqual(self.page.metadata['project'].get(), '')
-        with patch('commissioning_view.filedialog.askopenfilename', return_value=path):
+        with patch('motionstudio.commissioning.view.filedialog.askopenfilename', return_value=path):
             self.page.open()
         self.assertEqual(self.page.metadata['project'].get(), 'Application 1')
         self.assertEqual(self.page.notes.get('1.0', 'end-1c'), 'Owner: Alex\nReview the bracket.')
@@ -61,14 +61,14 @@ class CommissioningUITests(unittest.TestCase):
         self.page.metadata['project'].set('Keep this')
         invalid = Path(self.temp.name) / 'invalid.json'
         invalid.write_text('{"version": 99}', encoding='utf-8')
-        with patch('commissioning_view.filedialog.askopenfilename', return_value=str(invalid)):
+        with patch('motionstudio.commissioning.view.filedialog.askopenfilename', return_value=str(invalid)):
             self.page.open()
         self.assertEqual(self.page.metadata['project'].get(), 'Keep this')
         self.assertIn('Could not open', self.page.error.get())
-        with patch('commissioning_view.filedialog.asksaveasfilename', return_value=''):
+        with patch('motionstudio.commissioning.view.filedialog.asksaveasfilename', return_value=''):
             self.assertFalse(self.page.save())
         self.assertTrue(self.page.dirty)
-        with patch('commissioning_view.messagebox.askyesno', return_value=False):
+        with patch('motionstudio.commissioning.view.messagebox.askyesno', return_value=False):
             self.assertFalse(self.page.confirm_discard())
             self.page.new()
         self.assertEqual(self.page.metadata['project'].get(), 'Keep this')
@@ -90,7 +90,7 @@ class CommissioningUITests(unittest.TestCase):
     def test_csv_export_does_not_mark_draft_saved(self):
         self.page.metadata['project'].set('Still unsaved')
         path = str(Path(self.temp.name) / 'review.csv')
-        with patch('commissioning_view.filedialog.asksaveasfilename', return_value=path):
+        with patch('motionstudio.commissioning.view.filedialog.asksaveasfilename', return_value=path):
             self.page.export()
         self.assertTrue(Path(path).is_file())
         self.assertTrue(self.page.dirty)

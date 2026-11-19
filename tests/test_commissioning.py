@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from commissioning import (DEPLOYMENT_CHECKS, DEPLOYMENT_REFERENCES, MAX_FILE_BYTES, RECORD_NOTICE,
+from motionstudio.commissioning.records import (DEPLOYMENT_CHECKS, DEPLOYMENT_REFERENCES, MAX_FILE_BYTES, RECORD_NOTICE,
     export_record_csv, load_record, new_record, review_counts, save_record, validate_record)
 
 
@@ -79,7 +79,7 @@ class CommissioningTests(unittest.TestCase):
         save_record(self.path, original)
         changed = new_record()
         changed['metadata']['project'] = 'New content'
-        with patch('commissioning.os.replace', side_effect=OSError('Disk unavailable')):
+        with patch('motionstudio.commissioning.records.os.replace', side_effect=OSError('Disk unavailable')):
             with self.assertRaises(OSError):
                 save_record(self.path, changed)
         self.assertEqual(load_record(self.path), original)

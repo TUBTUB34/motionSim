@@ -9,9 +9,9 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import MagicMock, patch
 
-from log_transfer import LogConnection
-from program_check import discover_programs, review_program
-from program_transfer import ProgramSourceJob, _safe_name
+from motionstudio.logs.transfer import LogConnection
+from motionstudio.programs.check import discover_programs, review_program
+from motionstudio.programs.transfer import ProgramSourceJob, _safe_name
 
 
 class FakeSFTP:
@@ -225,7 +225,7 @@ class ProgramTransferTests(unittest.TestCase):
                                ('MAX_ENTRIES', 1), ('MAX_DEPTH', 0)):
             with self.subTest(setting=setting):
                 job, _, _ = self.make_job()
-                with patch('program_transfer.' + setting, value):
+                with patch('motionstudio.programs.transfer.' + setting, value):
                     job.run()
                 self.assertEqual(len(self.events(job, 'error')), 1)
                 self.assertEqual(list(self.destination.iterdir()), [])

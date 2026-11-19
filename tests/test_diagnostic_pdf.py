@@ -3,8 +3,8 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from diagnostic_pdf import export_diagnostic_pdf, incident_sections, _chart
-from robot_diagnostics import DiagnosticReport, Incident, ChartEvidence, analyze_directory
+from motionstudio.diagnostics.pdf import export_diagnostic_pdf, incident_sections, _chart
+from motionstudio.diagnostics.analysis import DiagnosticReport, Incident, ChartEvidence, analyze_directory
 
 
 class DiagnosticPdfTests(unittest.TestCase):
@@ -94,7 +94,7 @@ class DiagnosticPdfTests(unittest.TestCase):
 
     def test_plot_keeps_gap_and_explicit_marker_distinct(self):
         from matplotlib.backends.backend_pdf import PdfPages
-        from flight_pdf import _Report
+        from motionstudio.flight.pdf import _Report
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder)/'flight.csv'
             path.write_text('Timestamp [s],Actual velocity j0 [rad/s]\n100,0\n101,1\n102,2\n120,1\n121,0\n')

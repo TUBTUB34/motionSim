@@ -11,9 +11,9 @@ import numpy as np
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.figure import Figure
 
-from flight_charts import FlightCharts, gap_series, script_line_at
-from flight_data import FlightReport
-from flight_motion import sample_at
+from motionstudio.flight.charts import FlightCharts, gap_series, script_line_at
+from motionstudio.flight.data import FlightReport
+from motionstudio.core.playback import sample_at
 
 
 def flight(name='example.csv', offset=0.):
@@ -30,7 +30,7 @@ def flight(name='example.csv', offset=0.):
 
 class FlightChartTests(unittest.TestCase):
     def test_fine_wheel_deltas_accumulate_without_large_jumps(self):
-        from flight_view import FlightWindow
+        from motionstudio.flight.view import FlightWindow
         window = SimpleNamespace(tk=Mock(), scroll_chart=Mock())
         window.tk.call.return_value = 'win32'
         for _ in range(3):
@@ -59,7 +59,7 @@ class FlightChartTests(unittest.TestCase):
         self.assertIsNone(script_line_at(report, 10.))
 
     def test_discovery_is_scoped_and_excludes_unfinished_files(self):
-        from flight_view import FlightWindow
+        from motionstudio.flight.view import FlightWindow
         from tests.test_flight_transfer import recording
         with tempfile.TemporaryDirectory() as directory:
             folder = Path(directory)
@@ -138,10 +138,10 @@ class FlightChartTests(unittest.TestCase):
 class FlightWindowTests(unittest.TestCase):
     def setUp(self):
         import tkinter as tk
-        from flight_view import FlightWindow
+        from motionstudio.flight.view import FlightWindow
         self.root = tk.Tk()
         self.root.withdraw()
-        with patch('flight_view.discover_flights', return_value=[]), patch('flight_view.discover_library', return_value=[]):
+        with patch('motionstudio.flight.view.discover_flights', return_value=[]), patch('motionstudio.flight.view.discover_library', return_value=[]):
             self.window = FlightWindow(SimpleNamespace(root=self.root))
             self.window.future = self.window.executor.submit(lambda: None)
             self.window.future.result(timeout=5)
@@ -275,7 +275,7 @@ class FlightWindowTests(unittest.TestCase):
             window.after_cancel(window.after_id)
             # The fixture lasts 40 ms; disk/plotting time must not make this
             # discovery-state test finish playback before its assertions.
-            with patch('flight_view.time.monotonic', return_value=window._last_tick):
+            with patch('motionstudio.flight.view.time.monotonic', return_value=window._last_tick):
                 window.poll()
             self.assertEqual(window.paths, [path])
             self.assertIn('1 report in', window.library_summary.get())
@@ -353,8 +353,8 @@ class FlightWindowTests(unittest.TestCase):
         window.set_report(selected)
         window.charts.axes[0].set_xlim(10.01, 10.02)
         window.seek(.02)
-        with patch('flight_view.filedialog.asksaveasfilename', return_value='/tmp/flight-ui-mocked.pdf'), \
-                patch('flight_pdf.export_flight_pdf') as export:
+        with patch('motionstudio.flight.view.filedialog.asksaveasfilename', return_value='/tmp/flight-ui-mocked.pdf'), \
+                patch('motionstudio.flight.pdf.export_flight_pdf') as export:
             window.export_pdf()
             window.executor.submit(lambda: None).result(timeout=10)
             export.assert_called_once_with(selected, '/tmp/flight-ui-mocked.pdf')

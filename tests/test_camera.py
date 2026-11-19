@@ -7,9 +7,9 @@ from dataclasses import replace
 
 import numpy as np
 
-from kinematics import forward_kinematics, view_base_transform
-from rtde_client import RobotSample
-from view import RobotView
+from motionstudio.core.kinematics import forward_kinematics, view_base_transform
+from motionstudio.live.rtde_client import RobotSample
+from motionstudio.viewer.robot_view import RobotView
 
 
 @unittest.skipUnless(os.environ.get('MOTIONSIM_UI_TESTS') == '1', 'requires native display')

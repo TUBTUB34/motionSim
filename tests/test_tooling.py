@@ -3,9 +3,9 @@ from unittest.mock import Mock
 
 import numpy as np
 
-from kinematics import pose_matrix
-from tooling import TOOLS, tool_parts, tool_tcp, tool_placement
-from view import RobotView
+from motionstudio.core.kinematics import pose_matrix
+from motionstudio.core.tooling import TOOLS, tool_parts, tool_tcp, tool_placement
+from motionstudio.viewer.robot_view import RobotView
 
 
 class ToolTests(unittest.TestCase):

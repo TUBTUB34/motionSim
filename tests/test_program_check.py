@@ -5,7 +5,7 @@ import unittest
 from unittest.mock import patch
 import zipfile
 
-from program_check import (ProgramPair, ProgramSource, discover_programs, review_program,
+from motionstudio.programs.check import (ProgramPair, ProgramSource, discover_programs, review_program,
                            calls_in, CATEGORIES, literal)
 
 
@@ -92,7 +92,7 @@ class ProgramCheckTests(unittest.TestCase):
 
     def test_source_read_and_xml_limits(self):
         pair = self.pair('movej(q)')
-        with patch('program_check.MAX_BYTES', 4):
+        with patch('motionstudio.programs.check.MAX_BYTES', 4):
             with self.assertRaises(ValueError):
                 pair.script.read()
         pair.urp.path.write_text('<!DOCTYPE doc [<!ENTITY x "attack">]><URProgram>&x;</URProgram>')
@@ -180,7 +180,7 @@ class ProgramCheckTests(unittest.TestCase):
         self.assertEqual(result.metadata['lastSavedIn'], '5.24.0')
 
     def test_pdf_contains_source_evidence_and_urp_only_limitation(self):
-        from program_check_pdf import export_program_pdf
+        from motionstudio.programs.pdf import export_program_pdf
         result = review_program(self.pair('set_tcp(p[0,0,.1,0,0,0])\nmovel(p, a=3)'))
         destination = self.base/'review.pdf'
         export_program_pdf(result, destination)

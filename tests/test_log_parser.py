@@ -2,7 +2,7 @@
 import tempfile
 import unittest
 from pathlib import Path
-from log_parser import read_events, JOINTS, summarize
+from motionstudio.logs.parser import read_events, JOINTS, summarize
 
 
 def line(code, time='2026-04-01 12:00:00', uptime='1s', source='-3', message='test'):

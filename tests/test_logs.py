@@ -6,8 +6,8 @@ import tempfile
 import unittest
 from unittest.mock import MagicMock, call, patch
 
-from log_data import MAX_LOG_BYTES, chart_series, load_log, select_events
-from log_transfer import DOWNLOAD_IDLE_TIMEOUT, LogConnection, LogJob
+from motionstudio.logs.data import MAX_LOG_BYTES, chart_series, load_log, select_events
+from motionstudio.logs.transfer import DOWNLOAD_IDLE_TIMEOUT, LogConnection, LogJob
 
 
 def line(code='C153A0:6', day='2026-04-01', uptime='1s'):
@@ -57,7 +57,7 @@ class LogTests(unittest.TestCase):
                         raise PermissionError('Current log is open in another application')
                     return replace(source, destination)
 
-                with patch('log_transfer.os.replace', side_effect=publish):
+                with patch('motionstudio.logs.transfer.os.replace', side_effect=publish):
                     with self.assertRaises(PermissionError):
                         LogJob(save_path=current).save_downloads(sources)
                 self.assertEqual(current.read_bytes(), b'previous current')
@@ -86,7 +86,7 @@ class LogTests(unittest.TestCase):
                     raise PermissionError('Destination became read-only')
                 return replace(source, destination)
 
-            with patch('log_transfer.os.replace', side_effect=publish):
+            with patch('motionstudio.logs.transfer.os.replace', side_effect=publish):
                 with self.assertRaisesRegex(OSError, 'Recovery needed') as caught:
                     LogJob(save_path=current).save_downloads(sources)
             recovery = list(directory.glob('.ur-log-restore-*'))
@@ -146,7 +146,7 @@ class LogTests(unittest.TestCase):
             self.assertEqual(len(load_log(path).events), 2)
 
     def test_parser_cancellation_propagates(self):
-        from log_parser import read_events
+        from motionstudio.logs.parser import read_events
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / 'log.txt'
             path.write_text(line())
@@ -217,7 +217,7 @@ class LogTests(unittest.TestCase):
                 clock[0] += 30
                 return super().read(size)
         sftp.open.side_effect = lambda *args: SlowStream(content)
-        with patch('log_transfer.time.monotonic', side_effect=lambda: clock[0]):
+        with patch('motionstudio.logs.transfer.time.monotonic', side_effect=lambda: clock[0]):
             job.run()
         self.assertGreater(clock[0], 60)
         self.assertEqual(self.results(job)[-1][0], 'loaded')
@@ -294,7 +294,7 @@ class LogTests(unittest.TestCase):
     def test_growing_log_cannot_exceed_size_limit(self):
         job, _, sftp = self.make_job(line().encode())
         sftp.stat.return_value.st_size = 10
-        with patch('log_transfer.MAX_LOG_BYTES', 20):
+        with patch('motionstudio.logs.transfer.MAX_LOG_BYTES', 20):
             job.run()
         self.assertEqual(self.results(job)[-1][0], 'error')
         self.assertIn('size limit', self.results(job)[-1][1])

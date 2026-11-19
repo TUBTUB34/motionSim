@@ -7,7 +7,7 @@ import unittest
 import paramiko
 from paramiko.sftp import CMD_CLOSE, CMD_DATA, CMD_READ
 
-from transfer_stream import PIPELINE_REQUESTS, READ_SIZE, copy_remote
+from motionstudio.remote.stream import PIPELINE_REQUESTS, READ_SIZE, copy_remote
 
 
 class PipelinedFile(io.BytesIO):

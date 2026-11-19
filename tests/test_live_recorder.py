@@ -9,11 +9,11 @@ import zipfile
 
 import numpy as np
 
-from flight_data import TELEMETRY_MEMBER, load_flight
-from flight_motion import sample_at
-from live_recorder import HEADERS, LiveCapture, REPORT_TYPE
-from rtde_client import RobotSample
-import live_recorder
+from motionstudio.flight.data import TELEMETRY_MEMBER, load_flight
+from motionstudio.core.playback import sample_at
+from motionstudio.live.recorder import HEADERS, LiveCapture, REPORT_TYPE
+from motionstudio.live.rtde_client import RobotSample
+from motionstudio.live import recorder as live_recorder
 
 
 def sample(tick, *, missing=()):
@@ -76,8 +76,8 @@ class LiveRecorderTests(unittest.TestCase):
         self.assertAlmostEqual(motion.tcp_pose[0], .301, places=6)
 
     def test_pulled_installation_mounting_travels_with_the_recording(self):
-        from installation import InstallationData
-        from kinematics import forward_kinematics, mounting_matrix
+        from motionstudio.core.installation import InstallationData
+        from motionstudio.core.kinematics import forward_kinematics, mounting_matrix
         self.capture.add(sample(0))
         recording = self.capture.start_recording()
         self.capture.add(sample(1))

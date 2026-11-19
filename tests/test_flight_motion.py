@@ -4,9 +4,9 @@ import unittest
 
 import numpy as np
 
-from flight_data import FlightReport, discover_flights, load_flight
-from flight_motion import PlaybackTimeline, interpolate_rotation, sample_at
-from kinematics import pose_matrix
+from motionstudio.flight.data import FlightReport, discover_flights, load_flight
+from motionstudio.core.playback import PlaybackTimeline, interpolate_rotation, sample_at
+from motionstudio.core.kinematics import pose_matrix
 
 
 def fixture(times=(0., .1, .2), joints=None):
@@ -79,7 +79,7 @@ class MotionTests(unittest.TestCase):
         self.assertIsNone(sample_at(r, float("nan")))
 
     def test_derived_flange_rotation_matches_kinematics_near_pi(self):
-        from kinematics import forward_kinematics
+        from motionstudio.core.kinematics import forward_kinematics
         r = fixture(joints=[0., math.pi, math.pi])
         r.columns = {key: value for key, value in r.columns.items() if "TCP" not in key}
         for elapsed in (0., .05, .1):

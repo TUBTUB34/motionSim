@@ -10,8 +10,8 @@ import unittest
 
 import paramiko
 
-import fast_transfer
-from transfer_stream import copy_remote
+from motionstudio.remote import fast_transfer
+from motionstudio.remote.stream import copy_remote
 
 try:
     import asyncssh
@@ -164,7 +164,7 @@ class JobIntegrationTests(unittest.TestCase):
         cls.folder.cleanup()
 
     def job(self, kind=None, **kwargs):
-        from log_transfer import LogConnection, LogJob
+        from motionstudio.logs.transfer import LogConnection, LogJob
         kind = kind or LogJob
         port = self.port
 
@@ -198,7 +198,7 @@ class JobIntegrationTests(unittest.TestCase):
         self.assertTrue(job.events.empty() or all(kind == 'status' for kind, _ in job.events.queue))
 
     def test_program_snapshot_downloads_files_in_parallel_with_asyncssh(self):
-        from program_transfer import ProgramSourceJob
+        from motionstudio.programs.transfer import ProgramSourceJob
         programs = self.root / 'programs'
         expected = {}
         for index in range(30):
@@ -221,7 +221,7 @@ class JobIntegrationTests(unittest.TestCase):
 
     def test_program_snapshot_failure_stops_other_files_and_reports_the_cause(self):
         from unittest.mock import patch
-        from program_transfer import ProgramSourceJob
+        from motionstudio.programs.transfer import ProgramSourceJob
         programs = self.root / 'programs'
         programs.mkdir(exist_ok=True)
         for index in range(40):

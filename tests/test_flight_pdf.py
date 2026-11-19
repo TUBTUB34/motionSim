@@ -6,10 +6,10 @@ from unittest.mock import patch
 
 import numpy as np
 
-from flight_data import FlightReport
-from flight_pdf import (_findings, _identity, default_pdf_name, export_flight_pdf,
+from motionstudio.flight.data import FlightReport
+from motionstudio.flight.pdf import (_findings, _identity, default_pdf_name, export_flight_pdf,
                         measurement_summary, program_facts)
-from flight_stats import joint_statistics
+from motionstudio.flight.stats import joint_statistics
 
 
 def report_fixture():
@@ -134,7 +134,7 @@ class FlightPdfTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             target = Path(directory)/'existing.pdf'
             target.write_bytes(b'previous report')
-            with patch('flight_pdf._summary_page', side_effect=RuntimeError('export failed')):
+            with patch('motionstudio.flight.pdf._summary_page', side_effect=RuntimeError('export failed')):
                 with self.assertRaisesRegex(RuntimeError, 'export failed'):
                     export_flight_pdf(report_fixture(), target)
             self.assertEqual(target.read_bytes(), b'previous report')

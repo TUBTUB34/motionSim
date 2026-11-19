@@ -8,7 +8,7 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock, patch
 
-from flight_transfer import RemoteFlight
+from motionstudio.flight.transfer import RemoteFlight
 
 
 class QueuedTransfer:
@@ -51,9 +51,9 @@ class QueuedTransfer:
 class FlightRetrievalUITests(unittest.TestCase):
     def setUp(self):
         import tkinter as tk
-        from connection import make_settings
-        from flight_retrieval_view import RobotFlightWindow
-        from ui_theme import apply_theme
+        from motionstudio.remote.connection import make_settings
+        from motionstudio.flight.retrieval_view import RobotFlightWindow
+        from motionstudio.ui.theme import apply_theme
         self.root = tk.Tk()
         self.root.withdraw()
         apply_theme(self.root)
@@ -61,7 +61,7 @@ class FlightRetrievalUITests(unittest.TestCase):
         self.app = SimpleNamespace(root=self.root, session=None,
                 settings=make_settings('192.0.2.1', 'root', 'fixture-password', 'default'),
                 flight_window=None, flight_library_root=Path(self.temporary.name))
-        self.patcher = patch('flight_retrieval_view.FlightTransfer', QueuedTransfer)
+        self.patcher = patch('motionstudio.flight.retrieval_view.FlightTransfer', QueuedTransfer)
         self.patcher.start()
         self.window = RobotFlightWindow(self.app)
         self.window.after_cancel(self.window.after_id)
@@ -101,7 +101,7 @@ class FlightRetrievalUITests(unittest.TestCase):
         self.assertEqual(self.window.controller.options['library'], folder)
 
     def test_graph_and_retrieval_share_folder_and_guard_active_download(self):
-        from flight_view import FlightWindow
+        from motionstudio.flight.view import FlightWindow
         viewer = FlightWindow(self.app)
         self.app.flight_window = viewer
         self.app.flight_retrieval_window = self.window
@@ -114,7 +114,7 @@ class FlightRetrievalUITests(unittest.TestCase):
             self.assertEqual(Path(self.window.library.get()), Path(self.temporary.name))
             self.listed()
             self.window.download_new()
-            with patch('flight_view.filedialog.askdirectory') as chooser:
+            with patch('motionstudio.flight.view.filedialog.askdirectory') as chooser:
                 viewer.choose_folder()
             chooser.assert_not_called()
             self.assertIn('cancel', viewer.status.get())
@@ -182,9 +182,9 @@ class FlightRetrievalUITests(unittest.TestCase):
         self.assertIn('Refresh', self.window.status.get())
 
     def test_selected_download_updates_live_selector_without_interrupting_playback(self):
-        from flight_view import FlightWindow
+        from motionstudio.flight.view import FlightWindow
         from tests.test_flight_ui import flight
-        with patch('flight_view.discover_flights', return_value=[]), patch('flight_view.discover_library', return_value=[]):
+        with patch('motionstudio.flight.view.discover_flights', return_value=[]), patch('motionstudio.flight.view.discover_library', return_value=[]):
             viewer = FlightWindow(self.app)
             viewer.executor.submit(lambda: None).result(timeout=5)
         self.app.flight_window = viewer
@@ -253,9 +253,9 @@ class FlightRetrievalUITests(unittest.TestCase):
         self.assertTrue(self.window.retry_button.instate(['!disabled']))
 
     def test_host_key_prompt_always_releases_worker(self):
-        from session import HostKeyQuestion
+        from motionstudio.live.session import HostKeyQuestion
         question = HostKeyQuestion('192.0.2.1', 'SHA256:fixture', threading.Event())
-        with patch('flight_retrieval_view.messagebox.askyesno', return_value=False):
+        with patch('motionstudio.flight.retrieval_view.messagebox.askyesno', return_value=False):
             self.window._handle_event('host_key', question)
         self.assertTrue(question.answered.is_set())
         self.assertFalse(question.accepted)

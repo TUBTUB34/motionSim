@@ -12,7 +12,7 @@ from tests.test_logs import line
 class HeadlessLogUITests(unittest.TestCase):
     def test_backup_selection_is_passed_to_worker(self):
         from unittest.mock import Mock
-        from log_view import LogWindow
+        from motionstudio.logs.view import LogWindow
         for programs, apps in ((True, True), (True, False), (False, True), (False, False)):
             with self.subTest(programs=programs, apps=apps):
                 window = Mock(job=None)
@@ -21,7 +21,7 @@ class HeadlessLogUITests(unittest.TestCase):
                 window.password.get.return_value = 'secret'
                 window.backup_programs.get.return_value = programs
                 window.backup_apps.get.return_value = apps
-                with patch('log_view.messagebox.showerror') as popup:
+                with patch('motionstudio.logs.view.messagebox.showerror') as popup:
                     LogWindow.make_backup(window)
                 if programs or apps:
                     job = window.begin.call_args.args[0]
@@ -34,7 +34,7 @@ class HeadlessLogUITests(unittest.TestCase):
 
     def test_missing_password_shows_validation_before_starting_worker(self):
         from unittest.mock import Mock
-        from log_view import LogWindow
+        from motionstudio.logs.view import LogWindow
         for action, title in ((LogWindow.fetch, 'Cannot fetch robot logs'),
                               (LogWindow.make_backup, 'Cannot make robot backup')):
             with self.subTest(action=action.__name__):
@@ -43,7 +43,7 @@ class HeadlessLogUITests(unittest.TestCase):
                 window.username.get.return_value = 'root'
                 window.password.get.return_value = ''
                 window.remote_path.get.return_value = '/root/log_history.txt'
-                with patch('log_view.messagebox.showerror') as popup:
+                with patch('motionstudio.logs.view.messagebox.showerror') as popup:
                     action(window)
                 popup.assert_called_once_with(
                     title, 'Enter an SSH username and password to connect to the robot.', parent=window)
@@ -53,7 +53,7 @@ class HeadlessLogUITests(unittest.TestCase):
         from types import SimpleNamespace
         from unittest.mock import Mock
         from matplotlib.figure import Figure
-        from log_view import LogWindow
+        from motionstudio.logs.view import LogWindow
         figure = Figure()
         window = SimpleNamespace(
             axes=figure.add_subplot(), data=True, period=Mock(get=lambda: 'Day'),
@@ -79,8 +79,8 @@ class HeadlessLogUITests(unittest.TestCase):
         import threading
         from types import SimpleNamespace
         from unittest.mock import Mock
-        from backup_transfer import BackupDestination
-        from log_view import LogWindow
+        from motionstudio.backup.transfer import BackupDestination
+        from motionstudio.logs.view import LogWindow
         for destination in ('/tmp/backup.tar', ''):
             with self.subTest(destination=destination):
                 question = BackupDestination()
@@ -89,7 +89,7 @@ class HeadlessLogUITests(unittest.TestCase):
                 job.events.put(('backup_finished', 'Backup result'))
                 window = Mock(job=job, closed=True, save_directory=None)
                 original_data = window.data
-                with patch('log_view.filedialog.asksaveasfilename', return_value=destination):
+                with patch('motionstudio.logs.view.filedialog.asksaveasfilename', return_value=destination):
                     LogWindow.poll(window)
                 self.assertTrue(question.answered.is_set())
                 self.assertEqual(question.path, destination or None)
@@ -100,7 +100,7 @@ class HeadlessLogUITests(unittest.TestCase):
 
     def test_fetch_optional_save_remembers_folder(self):
         from unittest.mock import Mock
-        from log_view import LogWindow
+        from motionstudio.logs.view import LogWindow
         for accept, filename in ((False, ''), (True, ''), (True, '/tmp/log_history.txt')):
             with self.subTest(accept=accept, filename=filename):
                 window = Mock(job=None, save_directory=None)
@@ -108,9 +108,9 @@ class HeadlessLogUITests(unittest.TestCase):
                 window.username.get.return_value = 'root'
                 window.password.get.return_value = 'secret'
                 window.remote_path.get.return_value = '/root/log_history.txt'
-                with patch('log_view.messagebox.askyesno', return_value=accept), patch(
-                        'log_view.filedialog.asksaveasfilename', return_value=filename) as dialog, patch(
-                        'log_view.LogJob') as factory:
+                with patch('motionstudio.logs.view.messagebox.askyesno', return_value=accept), patch(
+                        'motionstudio.logs.view.filedialog.asksaveasfilename', return_value=filename) as dialog, patch(
+                        'motionstudio.logs.view.LogJob') as factory:
                     LogWindow.fetch(window)
                 self.assertEqual(dialog.call_count, int(accept))
                 self.assertEqual(factory.call_args.kwargs['save_path'], filename or None)
@@ -122,8 +122,8 @@ class HeadlessLogUITests(unittest.TestCase):
         import threading
         from types import SimpleNamespace
         from unittest.mock import Mock
-        from backup_transfer import BackupDestination
-        from log_view import LogWindow
+        from motionstudio.backup.transfer import BackupDestination
+        from motionstudio.logs.view import LogWindow
         with tempfile.TemporaryDirectory() as folder:
             original = Path(folder) / 'backup.tar'
             original.write_bytes(b'previous backup')
@@ -131,7 +131,7 @@ class HeadlessLogUITests(unittest.TestCase):
             job = SimpleNamespace(events=queue.Queue(), stopped=threading.Event())
             job.events.put(('backup_destination', question))
             window = Mock(job=job, closed=True, save_directory=Path(folder))
-            with patch('log_view.filedialog.asksaveasfilename') as dialog:
+            with patch('motionstudio.logs.view.filedialog.asksaveasfilename') as dialog:
                 LogWindow.poll(window)
             dialog.assert_not_called()
             self.assertTrue(question.answered.is_set())
@@ -144,8 +144,8 @@ class HeadlessLogUITests(unittest.TestCase):
 class LogUITests(unittest.TestCase):
     def test_controller_warnings_filter_without_inventing_joint_counts(self):
         import tkinter as tk
-        from main import SimulatorApp
-        from log_data import load_log
+        from motionstudio.app.main_window import SimulatorApp
+        from motionstudio.logs.data import load_log
         root = tk.Tk()
         app = SimulatorApp(root)
         try:
@@ -174,8 +174,8 @@ class LogUITests(unittest.TestCase):
         import threading
         import tkinter as tk
         from unittest.mock import Mock
-        from main import SimulatorApp
-        from session import HostKeyQuestion
+        from motionstudio.app.main_window import SimulatorApp
+        from motionstudio.live.session import HostKeyQuestion
         root = tk.Tk()
         app = SimulatorApp(root)
         try:
@@ -185,7 +185,7 @@ class LogUITests(unittest.TestCase):
             question = HostKeyQuestion('127.0.0.1', 'Old fingerprint: old\nNew fingerprint: new', replacement=True)
             job.events.put(('host_key', question))
             window.job = job
-            with patch('log_view.messagebox.askyesno', return_value=True) as popup:
+            with patch('motionstudio.logs.view.messagebox.askyesno', return_value=True) as popup:
                 deadline = time.monotonic() + 2
                 while not question.answered.is_set() and time.monotonic() < deadline:
                     root.update()
@@ -200,8 +200,8 @@ class LogUITests(unittest.TestCase):
 
     def test_desktop_workflow_and_simulator_navigation(self):
         import tkinter as tk
-        from main import SimulatorApp
-        from log_transfer import LogJob
+        from motionstudio.app.main_window import SimulatorApp
+        from motionstudio.logs.transfer import LogJob
         root = tk.Tk()
         app = SimulatorApp(root)
         try:
@@ -239,7 +239,7 @@ class LogUITests(unittest.TestCase):
                     window.show_message()
                     self.assertIn('Collision', window.message.get())
                     csv_path = Path(folder) / 'events.csv'
-                    with patch('log_view.filedialog.asksaveasfilename', return_value=str(csv_path)):
+                    with patch('motionstudio.logs.view.filedialog.asksaveasfilename', return_value=str(csv_path)):
                         window.export_csv()
                     self.assertIn('C157A1', csv_path.read_text(encoding='utf-8-sig'))
                     self.assertNotIn('C153A0', csv_path.read_text(encoding='utf-8-sig'))
@@ -267,8 +267,8 @@ class LogUITests(unittest.TestCase):
 
     def test_backup_save_dialog_and_completion_keep_loaded_log(self):
         import tkinter as tk
-        from main import SimulatorApp
-        from log_data import load_log
+        from motionstudio.app.main_window import SimulatorApp
+        from motionstudio.logs.data import load_log
         from tests.test_backup import BackupTests
         root = tk.Tk()
         app = SimulatorApp(root)
@@ -286,8 +286,8 @@ class LogUITests(unittest.TestCase):
                 del job.choose_destination
                 window.ip.set('127.0.0.1')
                 window.password.set('secret')
-                with patch('log_view.BackupJob', return_value=job), patch(
-                        'log_view.filedialog.asksaveasfilename', return_value=str(destination)) as dialog:
+                with patch('motionstudio.logs.view.BackupJob', return_value=job), patch(
+                        'motionstudio.logs.view.filedialog.asksaveasfilename', return_value=str(destination)) as dialog:
                     window.make_backup()
                     self.assertEqual(str(window.backup_button['state']), 'disabled')
                     deadline = time.monotonic() + 5
@@ -306,6 +306,6 @@ class LogUITests(unittest.TestCase):
             app.close()
 
     def test_csv_formula_guard(self):
-        from log_view import LogWindow
+        from motionstudio.logs.view import LogWindow
         self.assertEqual(LogWindow.csv_cell('=1+1'), "'=1+1")
         self.assertEqual(LogWindow.csv_cell('normal'), 'normal')

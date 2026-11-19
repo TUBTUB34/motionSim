@@ -3,8 +3,8 @@ import math
 from pathlib import Path
 import tempfile
 import unittest
-from program_check import ProgramPair, ProgramSource, review_program, CATEGORIES
-from program_motion import resolve, Pose, distance, source_definitions, definition_estimate
+from motionstudio.programs.check import ProgramPair, ProgramSource, review_program, CATEGORIES
+from motionstudio.programs.motion import resolve, Pose, distance, source_definitions, definition_estimate
 
 
 class ProgramMotionTests(unittest.TestCase):

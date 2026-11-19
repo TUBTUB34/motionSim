@@ -13,7 +13,7 @@ from unittest.mock import MagicMock, patch
 class DiagnosticUITests(unittest.TestCase):
     def setUp(self):
         import tkinter as tk
-        from main import SimulatorApp
+        from motionstudio.app.main_window import SimulatorApp
         self.root = tk.Tk()
         self.app = SimulatorApp(self.root)
         self.errors = []
@@ -58,8 +58,8 @@ class DiagnosticUITests(unittest.TestCase):
         self.window.password.set('test-credential')
         job = MagicMock()
         job.events = queue.Queue()
-        with patch('diagnostic_view.DiagnosticSourceJob', return_value=job) as factory, patch(
-                'diagnostic_view.filedialog.askdirectory', return_value=str(self.folder)):
+        with patch('motionstudio.diagnostics.view.DiagnosticSourceJob', return_value=job) as factory, patch(
+                'motionstudio.diagnostics.view.filedialog.askdirectory', return_value=str(self.folder)):
             self.window.choose_source()
         factory.assert_called_once()
         job.start.assert_called_once_with()
@@ -69,7 +69,7 @@ class DiagnosticUITests(unittest.TestCase):
         return job
 
     def test_local_analysis_navigation_export_and_workspace_preservation(self):
-        with patch('diagnostic_view.filedialog.askdirectory', return_value=str(self.folder)):
+        with patch('motionstudio.diagnostics.view.filedialog.askdirectory', return_value=str(self.folder)):
             self.window.choose_source()
         self.finish()
         report = self.window.report
@@ -91,7 +91,7 @@ class DiagnosticUITests(unittest.TestCase):
         self.assertIn('log_history.txt', self.text())
         self.assertTrue(self.window.export_button.instate(['!disabled']))
         target = self.folder / 'diagnostic.pdf'
-        with patch('diagnostic_view.filedialog.asksaveasfilename', return_value=str(target)):
+        with patch('motionstudio.diagnostics.view.filedialog.asksaveasfilename', return_value=str(target)):
             self.window.export()
         self.finish()
         self.assertTrue(target.read_bytes().startswith(b'%PDF-'))
@@ -131,7 +131,7 @@ class DiagnosticUITests(unittest.TestCase):
         job = self.start_robot()
         self.window.cancel()
         job.cancel.assert_called_once()
-        with patch('diagnostic_view.analyze_directory') as analyze:
+        with patch('motionstudio.diagnostics.view.analyze_directory') as analyze:
             job.events.put(('cancelled', {'path': self.folder, 'warnings': ['Incomplete dataset'],
                     'complete': False, 'downloaded_files': 1, 'message': 'Cancelled; saved files retained.'}))
             self.poll()
@@ -147,21 +147,21 @@ class DiagnosticUITests(unittest.TestCase):
         job.events.put(('collected', {'path': self.folder, 'warnings': [], 'complete': True,
                                       'downloaded_files': 2, 'message': 'Saved'}))
         self.window.cancel()
-        with patch('diagnostic_view.analyze_directory') as analyze:
+        with patch('motionstudio.diagnostics.view.analyze_directory') as analyze:
             self.poll()
             analyze.assert_not_called()
         self.assertIsNone(self.window.report)
         self.assertFalse(self.window.busy)
 
     def test_hidden_page_prompts_for_trust_on_root_without_rejecting_transfer(self):
-        from session import HostKeyQuestion
-        from ssh_trust import host_key_prompt
+        from motionstudio.live.session import HostKeyQuestion
+        from motionstudio.remote.ssh_trust import host_key_prompt
         job = self.start_robot()
         question = HostKeyQuestion('192.0.2.1', 'test-fingerprint')
         job.events.put(('host_key', question))
         job.events.put(('cancelled', {'path': None, 'warnings': [], 'message': 'Cancelled'}))
         self.app.open_home()
-        with patch('diagnostic_view.messagebox.askyesno', return_value=True) as prompt:
+        with patch('motionstudio.diagnostics.view.messagebox.askyesno', return_value=True) as prompt:
             self.poll()
             prompt.assert_called_once()
             self.assertIs(prompt.call_args.kwargs['parent'], self.root)
@@ -171,12 +171,12 @@ class DiagnosticUITests(unittest.TestCase):
         self.assertFalse(self.window.busy)
 
     def test_cancelled_collection_still_rejects_pending_trust(self):
-        from session import HostKeyQuestion
+        from motionstudio.live.session import HostKeyQuestion
         job = self.start_robot()
         question = HostKeyQuestion('192.0.2.1', 'test-fingerprint')
         job.events.put(('host_key', question))
         self.window.cancel()
-        with patch('diagnostic_view.messagebox.askyesno') as prompt:
+        with patch('motionstudio.diagnostics.view.messagebox.askyesno') as prompt:
             self.poll()
             prompt.assert_not_called()
         self.assertTrue(question.answered.is_set())
@@ -186,7 +186,7 @@ class DiagnosticUITests(unittest.TestCase):
         job = self.start_robot()
         job.events.put(('error', {'path': self.folder, 'warnings': ['Flight transfer failed'],
                                  'complete': False, 'message': 'Could not save coverage manifest.'}))
-        with patch('diagnostic_view.analyze_directory') as analyze:
+        with patch('motionstudio.diagnostics.view.analyze_directory') as analyze:
             self.poll()
             analyze.assert_not_called()
         self.assertIn('Could not save coverage manifest', self.text())
@@ -195,15 +195,15 @@ class DiagnosticUITests(unittest.TestCase):
         self.assertTrue(self.window.export_button.instate(['disabled']))
 
     def test_client_metadata_and_optional_evidence_are_forwarded_to_export(self):
-        from robot_diagnostics import DiagnosticReport
+        from motionstudio.diagnostics.analysis import DiagnosticReport
         self.window.set_report(DiagnosticReport(source=str(self.folder)))
         self.window.client_name.set(' Example customer ')
         self.window.robot_label.set(' Packaging cell 2 ')
         self.window.prepared_by.set(' Service team ')
         self.window.include_evidence.set(True)
         destination = self.folder/'client-status.pdf'
-        with patch('diagnostic_view.filedialog.asksaveasfilename', return_value=str(destination)), patch(
-                'diagnostic_pdf.export_diagnostic_pdf', return_value=destination) as export:
+        with patch('motionstudio.diagnostics.view.filedialog.asksaveasfilename', return_value=str(destination)), patch(
+                'motionstudio.diagnostics.pdf.export_diagnostic_pdf', return_value=destination) as export:
             self.window.export()
             self.finish()
         self.assertEqual(export.call_args.kwargs['metadata'],
@@ -211,7 +211,7 @@ class DiagnosticUITests(unittest.TestCase):
         self.assertTrue(export.call_args.kwargs['include_evidence'])
 
     def test_source_controls_advanced_and_cancelled_picker_preserve_review(self):
-        from robot_diagnostics import DiagnosticReport
+        from motionstudio.diagnostics.analysis import DiagnosticReport
         report = DiagnosticReport(source=str(self.folder), summary=['Existing review'])
         self.window.set_report(report)
         self.window.source_mode.set('Robot')
@@ -224,8 +224,8 @@ class DiagnosticUITests(unittest.TestCase):
         self.assertTrue(self.window.advanced.winfo_ismapped())
         self.window.ip.set('192.0.2.1')
         self.window.password.set('test-credential')
-        with patch('diagnostic_view.filedialog.askdirectory', return_value=''), patch(
-                'diagnostic_view.DiagnosticSourceJob') as factory:
+        with patch('motionstudio.diagnostics.view.filedialog.askdirectory', return_value=''), patch(
+                'motionstudio.diagnostics.view.DiagnosticSourceJob') as factory:
             self.window.choose_source()
             factory.assert_not_called()
         self.assertIs(self.window.report, report)
@@ -236,10 +236,10 @@ class DiagnosticUITests(unittest.TestCase):
         self.assertFalse(self.window.robot_controls.winfo_ismapped())
 
     def test_optional_log_clock_offset_is_forwarded_to_local_analysis(self):
-        from robot_diagnostics import DiagnosticReport
+        from motionstudio.diagnostics.analysis import DiagnosticReport
         report = DiagnosticReport(source=str(self.folder), summary=['Clock alignment review'])
         self.window.log_utc_offset.set(' +02:00 ')
-        with patch('diagnostic_view.analyze_directory', return_value=report) as analyze:
+        with patch('motionstudio.diagnostics.view.analyze_directory', return_value=report) as analyze:
             self.window.analyze(self.folder)
             self.finish()
         analyze.assert_called_once()
@@ -250,7 +250,7 @@ class DiagnosticUITests(unittest.TestCase):
         self.assertIs(self.window.report, report)
 
     def test_cancel_discards_report_already_queued_by_analysis(self):
-        from robot_diagnostics import DiagnosticReport
+        from motionstudio.diagnostics.analysis import DiagnosticReport
         self.window.set_busy(True)
         self.window.events.put(('progress', 'Still processing'))
         self.window.events.put(('report', DiagnosticReport(source=str(self.folder))))

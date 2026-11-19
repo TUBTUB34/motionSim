@@ -3,10 +3,10 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from diagnostic_pdf import export_diagnostic_pdf
-from flight_data import JOINTS
-from robot_diagnostics import DiagnosticReport, Incident
-from robot_status import RobotStatusReport, JointStatus, ProgramArea
+from motionstudio.diagnostics.pdf import export_diagnostic_pdf
+from motionstudio.flight.data import JOINTS
+from motionstudio.diagnostics.analysis import DiagnosticReport, Incident
+from motionstudio.diagnostics.status import RobotStatusReport, JointStatus, ProgramArea
 
 
 def client_report():

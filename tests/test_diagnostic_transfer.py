@@ -6,8 +6,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from diagnostic_transfer import DiagnosticSourceJob
-from log_transfer import LogConnection
+from motionstudio.diagnostics.transfer import DiagnosticSourceJob
+from motionstudio.logs.transfer import LogConnection
 from tests.test_flight_transfer import Remote, SFTP, Key, recording
 
 
@@ -187,7 +187,7 @@ class DiagnosticTransferTests(unittest.TestCase):
                 attr.st_size = 2
             return attr
         job = self.make_job()
-        with patch.object(SFTP, 'stat', small_stat), patch('diagnostic_transfer.MAX_LOG_BYTES', 5):
+        with patch.object(SFTP, 'stat', small_stat), patch('motionstudio.diagnostics.transfer.MAX_LOG_BYTES', 5):
             job.run()
         result, = self.events(job, 'collected')
         self.assertEqual(result['downloaded_files'], 1)

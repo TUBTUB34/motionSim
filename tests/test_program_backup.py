@@ -6,7 +6,7 @@ from pathlib import Path
 import re
 import unittest
 
-from program_check import CATEGORIES, discover_programs, review_program
+from motionstudio.programs.check import CATEGORIES, discover_programs, review_program
 
 ROOT = Path(__file__).resolve().parents[1]
 BACKUP = ROOT / 'tests/full-backup.tar'

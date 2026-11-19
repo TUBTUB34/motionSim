@@ -10,7 +10,7 @@ import unittest
 from unittest.mock import patch
 import zipfile
 
-from flight_transfer import FlightTransfer, LogConnection, RemoteFlight, discover_library
+from motionstudio.flight.transfer import FlightTransfer, LogConnection, RemoteFlight, discover_library
 
 
 def recording():
@@ -245,7 +245,7 @@ class FlightTransferTests(unittest.TestCase):
 
     def test_disk_full_does_not_open_report(self):
         self.list()
-        with patch('flight_transfer.shutil.disk_usage', return_value=SimpleNamespace(free=0)):
+        with patch('motionstudio.flight.transfer.shutil.disk_usage', return_value=SimpleNamespace(free=0)):
             self.assertEqual(self.worker._download_batch(None), (0, 1))
         self.assert_no_partial()
         self.assertEqual(discover_library(self.library), [])
@@ -257,7 +257,7 @@ class FlightTransferTests(unittest.TestCase):
         original, = discover_library(self.library)
         self.remote.mtime += 1
         self.list()
-        with patch('flight_transfer.copy_remote', side_effect=OSError(errno.ENOSPC, 'Disk full')):
+        with patch('motionstudio.flight.transfer.copy_remote', side_effect=OSError(errno.ENOSPC, 'Disk full')):
             self.assertEqual(self.worker._download_batch(None), (0, 1))
         self.assertTrue(original.is_file())
         self.assert_no_partial()

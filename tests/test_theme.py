@@ -5,8 +5,8 @@ import tkinter as tk
 from tkinter import ttk
 import unittest
 
-from ui_theme import apply_theme, make_root, style_text, style_toolbar, ScrollableFrame, FIELD, INK
-from ui_dialogs import askyesno, MessageDialog
+from motionstudio.ui.theme import apply_theme, make_root, style_text, style_toolbar, ScrollableFrame, FIELD, INK
+from motionstudio.ui.dialogs import askyesno, MessageDialog
 
 
 @unittest.skipUnless(os.environ.get('MOTIONSIM_UI_TESTS') == '1', 'requires local graphical display')

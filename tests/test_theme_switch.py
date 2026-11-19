@@ -4,7 +4,7 @@ import tkinter as tk
 from tkinter import ttk
 import unittest
 
-import ui_theme as theme
+from motionstudio.ui import theme
 
 
 def contrast(first, second):
@@ -79,8 +79,8 @@ class ThemeSwitchTests(unittest.TestCase):
 
     def test_dialogs_and_new_windows_preserve_selected_light_mode(self):
         from types import SimpleNamespace
-        from ui_dialogs import MessageDialog
-        from help_view import HelpWindow
+        from motionstudio.ui.dialogs import MessageDialog
+        from motionstudio.app.help_view import HelpWindow
         theme.apply_theme(self.root, 'light')
         theme.apply_theme(self.root)
         self.assertEqual(theme.MODE, 'light')

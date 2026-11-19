@@ -2,7 +2,7 @@
 
 import unittest
 
-from diagnostic_guidance import guidance_for_codes
+from motionstudio.diagnostics.guidance import guidance_for_codes
 
 
 class DiagnosticGuidanceTests(unittest.TestCase):

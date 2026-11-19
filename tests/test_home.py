@@ -3,7 +3,7 @@ from pathlib import Path
 from types import SimpleNamespace
 import unittest
 
-from home_view import workspace_summary
+from motionstudio.app.home import workspace_summary
 
 
 def status(text):

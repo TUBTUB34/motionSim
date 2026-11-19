@@ -15,7 +15,7 @@ import trimesh
 import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from kinematics import MODELS, forward_kinematics
+from motionstudio.core.kinematics import MODELS, forward_kinematics
 
 REVISION = "6662e15f32c23c12ece57d0050aee9a716e4fc41"
 LINKS = ("base", "shoulder", "upper_arm", "forearm", "wrist_1", "wrist_2", "wrist_3")

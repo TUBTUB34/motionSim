@@ -8,10 +8,10 @@ import zipfile
 
 import numpy as np
 
-from flight_data import FlightReport, TELEMETRY_MEMBER
-from log_data import LogData
-from log_parser import read_events
-from robot_diagnostics import analyze_data, analyze_directory
+from motionstudio.flight.data import FlightReport, TELEMETRY_MEMBER
+from motionstudio.logs.data import LogData
+from motionstudio.logs.parser import read_events
+from motionstudio.diagnostics.analysis import analyze_data, analyze_directory
 
 
 def event(code="C157A0", time="2026-04-01 12:00:00", **extra):
@@ -218,7 +218,7 @@ class RobotDiagnosticTests(unittest.TestCase):
             self.assertIn("C204A1", report.incidents[0].codes)
 
     def test_workshop_controller_signals_reach_reports_without_joint_faults(self):
-        from robot_status import build_robot_status
+        from motionstudio.diagnostics.status import build_robot_status
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / 'log_history.txt'
             path.write_text(logline('C171A1:6') + logline('C150A0:6') + logline('C152A0:6'))
@@ -259,7 +259,7 @@ class RobotDiagnosticTests(unittest.TestCase):
             self.assertIn("broken.zip", " ".join(report.warnings))
             self.assertIn("incomplete", " ".join(report.warnings))
             self.assertNotIn("Robot identity is missing", " ".join(report.incidents[0].missing_evidence))
-            with patch("robot_diagnostics.MAX_ANALYSIS_BYTES", 1):
+            with patch("motionstudio.diagnostics.analysis.MAX_ANALYSIS_BYTES", 1):
                 report = analyze_directory(root)
                 self.assertIn("memory budget", " ".join(report.warnings))
                 self.assertFalse(report.incidents[0].flight_names)

@@ -5,11 +5,11 @@ from unittest.mock import Mock, patch
 from pathlib import Path
 import paramiko
 
-from connection import make_settings
-from transfer import InstallationTransfer, ConfirmHostKey
+from motionstudio.remote.connection import make_settings
+from motionstudio.remote.installation_transfer import InstallationTransfer, ConfirmHostKey
 from tests.test_core import XML
-from installation import MAX_FILE_SIZE
-from transfer_stream import DOWNLOAD_IDLE_TIMEOUT, SSH_TIMEOUT, STREAM_BUFFER_SIZE
+from motionstudio.core.installation import MAX_FILE_SIZE
+from motionstudio.remote.stream import DOWNLOAD_IDLE_TIMEOUT, SSH_TIMEOUT, STREAM_BUFFER_SIZE
 
 class TransferTests(unittest.TestCase):
     def setUp(self):
@@ -19,8 +19,8 @@ class TransferTests(unittest.TestCase):
         self.addCleanup(folder.cleanup)
         self.trust = Path(folder.name) / "known_hosts"
 
-    @patch("transfer.SCPClient")
-    @patch("transfer.paramiko.SSHClient")
+    @patch("motionstudio.remote.installation_transfer.SCPClient")
+    @patch("motionstudio.remote.installation_transfer.paramiko.SSHClient")
     def test_scp_download_path_and_cleanup(self, ssh_class, scp_class):
         scp = scp_class.return_value.__enter__.return_value
         local_paths = []
@@ -40,15 +40,15 @@ class TransferTests(unittest.TestCase):
         self.assertEqual(scp_class.call_args.kwargs['socket_timeout'], DOWNLOAD_IDLE_TIMEOUT)
         self.assertEqual(scp_class.call_args.kwargs['buff_size'], STREAM_BUFFER_SIZE)
 
-    @patch("transfer.paramiko.SSHClient")
+    @patch("motionstudio.remote.installation_transfer.paramiko.SSHClient")
     def test_bad_credentials_close_connection(self, ssh_class):
         ssh_class.return_value.connect.side_effect = paramiko.AuthenticationException("failed")
         with self.assertRaises(paramiko.AuthenticationException):
             InstallationTransfer(self.trust).fetch(self.settings, threading.Event(), Mock())
         ssh_class.return_value.close.assert_called_once()
 
-    @patch("transfer.SCPClient")
-    @patch("transfer.paramiko.SSHClient")
+    @patch("motionstudio.remote.installation_transfer.SCPClient")
+    @patch("motionstudio.remote.installation_transfer.paramiko.SSHClient")
     def test_oversized_file_is_cancelled(self, ssh_class, scp_class):
         def construct(*args, **kwargs):
             kwargs["progress"]("test", MAX_FILE_SIZE+1, 0)
@@ -71,8 +71,8 @@ class TransferTests(unittest.TestCase):
         client.get_host_keys.return_value.add.assert_called_once_with("robot", "ssh-ed25519", key)
         self.assertTrue(confirm.call_args.args[1].startswith("SHA256:"))
 
-    @patch("transfer.SCPClient")
-    @patch("transfer.paramiko.SSHClient")
+    @patch("motionstudio.remote.installation_transfer.SCPClient")
+    @patch("motionstudio.remote.installation_transfer.paramiko.SSHClient")
     def test_changed_key_retry_pins_accepted_key(self, ssh_class, scp_class):
         old, new = paramiko.RSAKey.generate(1024), paramiko.RSAKey.generate(1024)
         first, retry = Mock(), Mock()
@@ -93,8 +93,8 @@ class TransferTests(unittest.TestCase):
         first.close.assert_called_once()
         retry.close.assert_called_once()
 
-    @patch("transfer.SCPClient")
-    @patch("transfer.paramiko.SSHClient")
+    @patch("motionstudio.remote.installation_transfer.SCPClient")
+    @patch("motionstudio.remote.installation_transfer.paramiko.SSHClient")
     def test_changed_key_rejection_does_not_download(self, ssh_class, scp_class):
         old, new = Mock(), Mock()
         old.asbytes.return_value, new.asbytes.return_value = b"old", b"new"
@@ -131,7 +131,7 @@ class PersistentHostKeyTests(unittest.TestCase):
         policy.save()
         self.assertFalse(self.trust.exists())
 
-    @patch("transfer.paramiko.SSHClient")
+    @patch("motionstudio.remote.installation_transfer.paramiko.SSHClient")
     def test_failed_login_does_not_save_key(self, ssh_class):
         settings = make_settings("192.0.2.5", "user", "secret", "default")
         def connect(*_args, **_kwargs):
@@ -143,8 +143,8 @@ class PersistentHostKeyTests(unittest.TestCase):
             InstallationTransfer(self.trust).fetch(settings, threading.Event(), Mock(return_value=True))
         self.assertFalse(self.trust.exists())
 
-    @patch("transfer.SCPClient")
-    @patch("transfer.paramiko.SSHClient")
+    @patch("motionstudio.remote.installation_transfer.SCPClient")
+    @patch("motionstudio.remote.installation_transfer.paramiko.SSHClient")
     def test_saved_key_is_loaded_on_next_connection(self, ssh_class, scp_class):
         self.trust.parent.mkdir()
         self.trust.write_text(f"192.0.2.5 ssh-rsa {self.key.get_base64()}\n")

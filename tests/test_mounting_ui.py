@@ -10,9 +10,9 @@ from unittest.mock import patch
 
 import numpy as np
 
-from installation import InstallationData
-from kinematics import forward_kinematics, mounting_matrix
-from rtde_client import RobotSample
+from motionstudio.core.installation import InstallationData
+from motionstudio.core.kinematics import forward_kinematics, mounting_matrix
+from motionstudio.live.rtde_client import RobotSample
 from tests.test_flight_ui import flight
 
 SAMPLE = RobotSample(1, (.7, -1.2, 1, -.3, .5, 0), (.3, -.2, .7, 0, 0, 0), time.monotonic())
@@ -21,7 +21,7 @@ SAVED = InstallationData(mounting=(math.radians(270), math.radians(45)))
 
 def drawn_mounting(viewer):
     """Robot-base transform the view passes to its kinematics on a redraw."""
-    with patch('view.forward_kinematics', wraps=forward_kinematics) as kinematics:
+    with patch('motionstudio.viewer.robot_view.forward_kinematics', wraps=forward_kinematics) as kinematics:
         viewer.redraw()
     return kinematics.call_args.args[2]
 
@@ -29,8 +29,8 @@ def drawn_mounting(viewer):
 @unittest.skipUnless(os.environ.get('MOTIONSIM_UI_TESTS') == '1', 'requires native display')
 class MountingAdjustmentTests(unittest.TestCase):
     def setUp(self):
-        from mounting_view import MountingControls
-        from view import RobotView
+        from motionstudio.viewer.mounting import MountingControls
+        from motionstudio.viewer.robot_view import RobotView
         self.root = tk.Tk()
         self.viewers = [RobotView(self.root, 'UR10e'), RobotView(tk.Toplevel(self.root), 'UR5e')]
         self.installation = SAVED
@@ -82,7 +82,7 @@ class MountingAdjustmentTests(unittest.TestCase):
         self.installation = replace(SAVED, mounting=(.4, 1.2))
         self.controls[0].mounting_changed()
         self.controls[0].apply()
-        from view import mounting_override
+        from motionstudio.viewer.robot_view import mounting_override
         self.assertIsNone(mounting_override(self.root))
 
     def test_playback_refresh_keeps_a_half_typed_angle(self):
@@ -117,11 +117,11 @@ class MountingAdjustmentTests(unittest.TestCase):
 @unittest.skipUnless(os.environ.get('MOTIONSIM_UI_TESTS') == '1', 'requires native display')
 class SimulatorMountingTests(unittest.TestCase):
     def setUp(self):
-        from main import SimulatorApp
+        from motionstudio.app.main_window import SimulatorApp
         self.root = tk.Tk()
         self.errors = []
         self.root.report_callback_exception = lambda *args: self.errors.append(args)
-        self.discovery = patch('flight_view.FlightWindow._discover')
+        self.discovery = patch('motionstudio.flight.view.FlightWindow._discover')
         self.discovery.start()
         self.app = SimulatorApp(self.root)
 

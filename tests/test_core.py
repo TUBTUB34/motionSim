@@ -8,11 +8,11 @@ import unittest
 from unittest.mock import Mock, patch
 
 import numpy as np
-from connection import make_settings
-from installation import decode_installation, numbers, MAX_FILE_SIZE
-from kinematics import MODELS, forward_kinematics, identify_models, mounting_matrix, pose_matrix, view_base_transform
-from rtde_client import RTDEClient, RobotSample
-from session import RobotSession
+from motionstudio.remote.connection import make_settings
+from motionstudio.core.installation import decode_installation, numbers, MAX_FILE_SIZE
+from motionstudio.core.kinematics import MODELS, forward_kinematics, identify_models, mounting_matrix, pose_matrix, view_base_transform
+from motionstudio.live.rtde_client import RTDEClient, RobotSample
+from motionstudio.live.session import RobotSession
 
 # Minimal synthetic fixtures retain the field layout of UR's published
 # PolyScope 3.2 / 5.1 installation examples, with non-zero test values.
@@ -385,7 +385,7 @@ class SessionTests(unittest.TestCase):
 
     def test_reconnecting_gives_up_after_the_data_timeout(self):
         clients = [ScriptedClient(3)] + [ScriptedClient(0, fail_connect=True) for _ in range(50)]
-        with patch("session.DATA_TIMEOUT", .3), patch("session.RETRY_EVERY", .05):
+        with patch("motionstudio.live.session.DATA_TIMEOUT", .3), patch("motionstudio.live.session.RETRY_EVERY", .05):
             _session, kinds, _made = self.run_session(clients, lambda events, s: any(k == "error" for k, _ in events))
         self.assertEqual(kinds[-1], "error")
         self.assertIn("reconnecting", kinds)

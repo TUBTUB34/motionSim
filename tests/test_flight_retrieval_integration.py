@@ -7,10 +7,10 @@ import unittest
 
 import numpy as np
 
-from flight_data import load_flight
-from flight_motion import PlaybackTimeline, sample_at
-from flight_pdf import export_flight_pdf
-from flight_transfer import FlightTransfer, LogConnection, discover_library
+from motionstudio.flight.data import load_flight
+from motionstudio.core.playback import PlaybackTimeline, sample_at
+from motionstudio.flight.pdf import export_flight_pdf
+from motionstudio.flight.transfer import FlightTransfer, LogConnection, discover_library
 from tests.test_flight_transfer import Remote
 
 

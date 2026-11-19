@@ -8,9 +8,9 @@ import time
 import unittest
 from unittest.mock import patch
 
-from rtde_client import RTDEClient
-from session import RobotSession
-from installation import decode_installation
+from motionstudio.live.rtde_client import RTDEClient
+from motionstudio.live.session import RobotSession
+from motionstudio.core.installation import decode_installation
 from tests.test_core import XML, packet
 
 class MockRobot:
@@ -48,7 +48,7 @@ class MockRobot:
             with sock:
                 sock.settimeout(1)
                 try:
-                    from telemetry import BASE_FIELDS, STATUS_FIELDS
+                    from motionstudio.core.telemetry import BASE_FIELDS, STATUS_FIELDS
                     from tests.test_telemetry import recipe, data_packet
                     fields = BASE_FIELDS + STATUS_FIELDS
                     for expected, response in [(86, packet(86, b"\1")), (79, recipe(fields)), (83, packet(83, b"\1"))]:
@@ -65,7 +65,7 @@ class MockRobot:
                                   -.7,-.25,.7,0,0,0)
                         pose = values[7:]
                         if self.model:
-                            from kinematics import forward_kinematics
+                            from motionstudio.core.kinematics import forward_kinematics
                             pose = (*forward_kinematics(self.model, values[1:7])[-1][:3, 3], 0, 0, 0)
                         sock.sendall(data_packet(fields, {"timestamp": values[0], "actual_q": values[1:7],
                             "actual_TCP_pose": pose, "script_control_line": 42, "runtime_state": 2,
@@ -92,9 +92,9 @@ class UITests(unittest.TestCase):
     def test_tcp_alignment_locks_until_reselected(self):
         import tkinter as tk
         import numpy as np
-        from view import RobotView
-        from rtde_client import RobotSample
-        from kinematics import forward_kinematics, pose_matrix
+        from motionstudio.viewer.robot_view import RobotView
+        from motionstudio.live.rtde_client import RobotSample
+        from motionstudio.core.kinematics import forward_kinematics, pose_matrix
         self.root = tk.Tk()
         viewer = RobotView(self.root, "UR15")
         first = RobotSample(1, (0, -1, 1, 0, 0, 0), (.3, -.2, .7, .4, -.5, 1.2), time.monotonic())
@@ -102,7 +102,7 @@ class UITests(unittest.TestCase):
         try:
             viewer.set_view_frame("Live TCP")
             self.assertIsNone(viewer.tcp_view_reference)
-            with patch("view.forward_kinematics", wraps=forward_kinematics) as fk:
+            with patch("motionstudio.viewer.robot_view.forward_kinematics", wraps=forward_kinematics) as fk:
                 viewer.update_robot(first, None)
                 locked = fk.call_args.args[2].copy()
                 np.testing.assert_allclose(locked @ pose_matrix(first.tcp_pose), np.eye(4), atol=1e-12)
@@ -124,8 +124,8 @@ class UITests(unittest.TestCase):
     def test_stationary_and_hidden_poses_skip_mesh_work(self):
         import tkinter as tk
         from dataclasses import replace
-        from rtde_client import RobotSample
-        from view import RobotView
+        from motionstudio.live.rtde_client import RobotSample
+        from motionstudio.viewer.robot_view import RobotView
         self.root = tk.Tk()
         viewer = RobotView(self.root, "UR15")
         sample = RobotSample(1, (0, -1, 1, 0, 0, 0), (.3, -.2, .7, 0, 0, 0), time.monotonic())
@@ -146,7 +146,7 @@ class UITests(unittest.TestCase):
 
     def test_connect_live_render_disconnect_reconnect(self):
         import tkinter as tk
-        from main import SimulatorApp
+        from motionstudio.app.main_window import SimulatorApp
         robot = MockRobot()
         class Transfer:
             def fetch(self, settings, stop, confirm):
@@ -158,7 +158,7 @@ class UITests(unittest.TestCase):
         errors = []
         self.root.report_callback_exception = lambda *args: errors.append(args)
         try:
-            with patch("main.RobotSession", lambda settings: RobotSession(
+            with patch("motionstudio.app.main_window.RobotSession", lambda settings: RobotSession(
                     settings, lambda host: RTDEClient(host, port=robot.port), Transfer)):
                 app.ip.set("bad")
                 app.submit()
@@ -218,7 +218,7 @@ class UITests(unittest.TestCase):
 
     def test_connect_sets_the_model_the_robot_geometry_shows(self):
         import tkinter as tk
-        from main import SimulatorApp
+        from motionstudio.app.main_window import SimulatorApp
         robot = MockRobot(model="UR10e")
         class Transfer:
             def fetch(self, *_args):
@@ -230,7 +230,7 @@ class UITests(unittest.TestCase):
         errors = []
         self.root.report_callback_exception = lambda *args: errors.append(args)
         try:
-            with patch("main.RobotSession", lambda settings: RobotSession(
+            with patch("motionstudio.app.main_window.RobotSession", lambda settings: RobotSession(
                     settings, lambda host: RTDEClient(host, port=robot.port), Transfer)):
                 app.ip.set("127.0.0.1")
                 app.model.set("UR15")

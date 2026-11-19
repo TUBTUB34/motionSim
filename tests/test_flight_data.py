@@ -8,7 +8,7 @@ import zipfile
 
 import numpy as np
 
-from flight_data import TELEMETRY_MEMBER, discover_flights, load_flight
+from motionstudio.flight.data import TELEMETRY_MEMBER, discover_flights, load_flight
 
 
 class FlightDataTests(unittest.TestCase):
@@ -148,7 +148,7 @@ class FlightDataTests(unittest.TestCase):
 
     def test_limits_and_empty_records_fail_with_actionable_errors(self):
         path = self.recording(["Timestamp [s]"], [[0], [1]])
-        with patch("flight_data.MAX_SAMPLES", 1), self.assertRaisesRegex(ValueError, "sample limit"):
+        with patch("motionstudio.flight.data.MAX_SAMPLES", 1), self.assertRaisesRegex(ValueError, "sample limit"):
             load_flight(path)
         empty = self.recording(["Timestamp [s]"], [], name="empty.zip")
         with self.assertRaisesRegex(ValueError, "no valid"):

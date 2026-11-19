@@ -11,11 +11,11 @@ from tests.test_flight_ui import flight
 class WorkspaceUITests(unittest.TestCase):
     def setUp(self):
         import tkinter as tk
-        from main import SimulatorApp
+        from motionstudio.app.main_window import SimulatorApp
         self.root = tk.Tk()
         self.errors = []
         self.root.report_callback_exception = lambda *args: self.errors.append(args)
-        self.discovery = patch('flight_view.FlightWindow._discover')
+        self.discovery = patch('motionstudio.flight.view.FlightWindow._discover')
         self.discovery.start()
         self.app = SimulatorApp(self.root)
 
@@ -105,8 +105,8 @@ class WorkspaceUITests(unittest.TestCase):
     def test_connection_navigation_does_not_disconnect_and_stale_data_is_visible(self):
         import time
         from unittest.mock import Mock
-        from connection import make_settings
-        from rtde_client import RobotSample
+        from motionstudio.remote.connection import make_settings
+        from motionstudio.live.rtde_client import RobotSample
         self.app.settings = make_settings('192.0.2.1', '', '', '')
         self.app.show_view()
         self.app.session = Mock()
@@ -122,7 +122,7 @@ class WorkspaceUITests(unittest.TestCase):
         self.app.open_checklist()
         self.app.checklist_page.metadata['project'].set('Unsaved review')
         session = self.app.session = Mock()
-        with patch('commissioning_view.messagebox.askyesno', return_value=False):
+        with patch('motionstudio.commissioning.view.messagebox.askyesno', return_value=False):
             self.app.close()
         self.assertFalse(self.app.closed)
         session.stop.assert_not_called()

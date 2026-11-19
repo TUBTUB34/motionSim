@@ -1,8 +1,8 @@
 import os
 import unittest
 
-from kinematics import MODELS
-from model_catalog import ROBOT_SIZES, model_summary, show_catalog
+from motionstudio.core.kinematics import MODELS
+from motionstudio.app.model_catalog import ROBOT_SIZES, model_summary, show_catalog
 
 
 class CatalogTests(unittest.TestCase):
@@ -29,7 +29,7 @@ class CatalogTests(unittest.TestCase):
     def test_catalog_selection_and_compact_controls(self):
         import tkinter as tk
         from tkinter import ttk
-        from main import SimulatorApp
+        from motionstudio.app.main_window import SimulatorApp
         root = tk.Tk()
         app = SimulatorApp(root)
         def descendants(widget):

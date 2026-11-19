@@ -8,8 +8,8 @@ from unittest.mock import patch
 import numpy as np
 from matplotlib.figure import Figure
 
-from flight_charts import FlightCharts, joint_colors
-from flight_data import load_flight
+from motionstudio.flight.charts import FlightCharts, joint_colors
+from motionstudio.flight.data import load_flight
 from tests.test_flight_ui import flight
 
 
@@ -113,12 +113,12 @@ class JointComparisonTests(unittest.TestCase):
 class JointComparisonUITests(unittest.TestCase):
     def setUp(self):
         import tkinter as tk
-        from flight_view import FlightWindow
-        from ui_theme import apply_theme
+        from motionstudio.flight.view import FlightWindow
+        from motionstudio.ui.theme import apply_theme
         self.root = tk.Tk()
         self.root.withdraw()
         apply_theme(self.root)
-        with patch('flight_view.discover_flights', return_value=[]), patch('flight_view.discover_library', return_value=[]):
+        with patch('motionstudio.flight.view.discover_flights', return_value=[]), patch('motionstudio.flight.view.discover_library', return_value=[]):
             self.window = FlightWindow(SimpleNamespace(root=self.root))
             self.window.executor.submit(lambda: None).result(timeout=5)
         self.window.after_cancel(self.window.after_id)
@@ -208,8 +208,8 @@ class JointComparisonUITests(unittest.TestCase):
 class HelpUITests(unittest.TestCase):
     def test_search_topics_empty_state_and_navigation_lifecycle(self):
         import tkinter as tk
-        from main import SimulatorApp
-        from help_content import TOPICS
+        from motionstudio.app.main_window import SimulatorApp
+        from motionstudio.app.help_content import TOPICS
         root = tk.Tk()
         app = SimulatorApp(root)
         try:

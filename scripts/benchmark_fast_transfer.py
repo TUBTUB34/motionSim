@@ -13,8 +13,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import paramiko
 from tests.test_fast_transfer import start_server
-import fast_transfer
-from transfer_stream import copy_remote
+from motionstudio.remote import fast_transfer
+from motionstudio.remote.stream import copy_remote
 
 
 def start_proxy(target_port, one_way_delay, rate_bytes):

@@ -11,7 +11,7 @@ from unittest.mock import patch
 class BackupPageTests(unittest.TestCase):
     def setUp(self):
         import tkinter as tk
-        from main import SimulatorApp
+        from motionstudio.app.main_window import SimulatorApp
         self.root = tk.Tk()
         self.app = SimulatorApp(self.root)
         self.app.open_backups()
@@ -37,7 +37,7 @@ class BackupPageTests(unittest.TestCase):
         self.page.poll()
 
     def test_navigation_preserves_backup_job_and_destination(self):
-        with patch('backup_view.BackupJob.start') as start:
+        with patch('motionstudio.backup.view.BackupJob.start') as start:
             self.page.make_backup()
             job = self.page.job
             self.app.open_logs()
@@ -48,11 +48,11 @@ class BackupPageTests(unittest.TestCase):
             start.assert_called_once()
 
     def test_backup_destination_never_overwrites_existing_archive(self):
-        from backup_transfer import BackupDestination
-        from backup_view import backup_filename
+        from motionstudio.backup.transfer import BackupDestination
+        from motionstudio.backup.view import backup_filename
         existing = Path(self.temp.name)/backup_filename('Fixture project')
         existing.write_bytes(b'keep')
-        with patch('backup_view.BackupJob.start'):
+        with patch('motionstudio.backup.view.BackupJob.start'):
             self.page.make_backup()
             question = BackupDestination(filename=existing.name)
             self.page.job.events.put(('backup_destination', question))
@@ -62,8 +62,8 @@ class BackupPageTests(unittest.TestCase):
             self.assertEqual(existing.read_bytes(), b'keep')
 
     def test_cancelled_backup_does_not_answer_destination_with_a_path(self):
-        from backup_transfer import BackupDestination
-        with patch('backup_view.BackupJob.start'):
+        from motionstudio.backup.transfer import BackupDestination
+        with patch('motionstudio.backup.view.BackupJob.start'):
             self.page.make_backup()
             self.page.cancel()
             question = BackupDestination()
@@ -78,7 +78,7 @@ class BackupPageTests(unittest.TestCase):
             self.assertIn('Cancelled', self.page.activity.get('1.0', 'end'))
 
     def test_custom_contents_and_validation_happen_before_transfer(self):
-        with patch('backup_view.BackupJob.start') as start:
+        with patch('motionstudio.backup.view.BackupJob.start') as start:
             self.page.full.set(False)
             for name in ('programs', 'apps', 'logs', 'flights'):
                 getattr(self.page, name).set(False)
@@ -100,7 +100,7 @@ class BackupPageTests(unittest.TestCase):
         self.page.full.set(False)
         self.page.remote_flights.set('/data/flights')
         for chosen in (('logs',), ('flights',), ('apps',), ('programs', 'logs', 'flights')):
-            with self.subTest(chosen=chosen), patch('backup_view.BackupJob.start'):
+            with self.subTest(chosen=chosen), patch('motionstudio.backup.view.BackupJob.start'):
                 for name in expected:
                     getattr(self.page, name).set(name in chosen)
                 self.page.update_contents()
@@ -115,7 +115,7 @@ class BackupPageTests(unittest.TestCase):
         self.page.update_contents()
         self.root.update()
         self.assertFalse(self.page.items.winfo_ismapped())
-        with patch('backup_view.BackupJob.start'):
+        with patch('motionstudio.backup.view.BackupJob.start'):
             self.page.make_backup()
             self.assertTrue(self.page.job.full)
             self.assertEqual(len(self.page.job.sources), 6)
@@ -129,7 +129,7 @@ class BackupPageTests(unittest.TestCase):
             self.assertIn('2.00', self.page.status.get())
 
     def test_empty_password_and_missing_folder_do_not_start_robot_operation(self):
-        with patch('backup_view.BackupJob.start') as start:
+        with patch('motionstudio.backup.view.BackupJob.start') as start:
             self.page.password.set('')
             self.page.make_backup()
             self.assertIn('password', self.page.status.get())

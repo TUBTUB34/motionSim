@@ -15,12 +15,12 @@ from tests.test_flight_ui import flight
 class ProgramPlaybackUITests(unittest.TestCase):
     def setUp(self):
         import tkinter as tk
-        from main import SimulatorApp
+        from motionstudio.app.main_window import SimulatorApp
         self.root = tk.Tk()
         self.app = SimulatorApp(self.root)
         self.errors = []
         self.root.report_callback_exception = lambda *args: self.errors.append(args)
-        self.discovery = patch('flight_view.FlightWindow._discover')
+        self.discovery = patch('motionstudio.flight.view.FlightWindow._discover')
         self.discovery.start()
         self.addCleanup(self.discovery.stop)
 
@@ -95,8 +95,8 @@ class ProgramPlaybackUITests(unittest.TestCase):
         self.assertLessEqual(panel.mounting_selector.winfo_rootx()+panel.mounting_selector.winfo_width(), self.root.winfo_rootx()+self.root.winfo_width())
 
     def test_live_samples_cannot_overwrite_recorded_robot(self):
-        from connection import make_settings
-        from rtde_client import RobotSample
+        from motionstudio.remote.connection import make_settings
+        from motionstudio.live.rtde_client import RobotSample
         self.app.settings = make_settings('127.0.0.1', '', '', '')
         self.app.show_view()
         live = RobotSample(1, (.7, -1, 1, 0, 0, 0), (.3, -.2, .7, 0, 0, 0), time.monotonic())
@@ -116,8 +116,8 @@ class ProgramPlaybackUITests(unittest.TestCase):
         self.assertIn('No valid recorded motion', self.app.recorded_panel.note.get())
 
     def test_simulator_source_switch_preserves_both_views_and_pauses_flight(self):
-        from connection import make_settings
-        from rtde_client import RobotSample
+        from motionstudio.remote.connection import make_settings
+        from motionstudio.live.rtde_client import RobotSample
         self.app.settings = make_settings('127.0.0.1', '', '', '')
         self.app.show_view()
         source = self.source()
@@ -158,7 +158,7 @@ class ProgramPlaybackUITests(unittest.TestCase):
         self.assertTrue(self.app.recorded_panel.winfo_ismapped())
 
     def test_program_selection_review_export_and_invalidation(self):
-        from program_check import discover_programs, CATEGORIES
+        from motionstudio.programs.check import discover_programs, CATEGORIES
         self.app.open_program_check()
         window = self.app.program_check_window
         window.executor.submit(lambda: None).result(timeout=10)
@@ -196,7 +196,7 @@ class ProgramPlaybackUITests(unittest.TestCase):
                 for item in window.tree.get_children(category):
                     self.assertEqual(window.tree.item(item, 'values')[0], 'Review recommended')
             self.assertEqual(len(window.review.findings), full_count)
-            with patch('program_check_view.filedialog.asksaveasfilename', return_value=str(base/'report.pdf')):
+            with patch('motionstudio.programs.view.filedialog.asksaveasfilename', return_value=str(base/'report.pdf')):
                 window.export()
                 window.executor.submit(lambda: None).result(timeout=20)
                 window.after_cancel(window.after_id)
@@ -271,7 +271,7 @@ class ProgramPlaybackUITests(unittest.TestCase):
             self.assertFalse(any('Saved installation' in f.detail for f in window.review.findings))
             self.assertFalse(window.advanced_visible)
             self.assertTrue(window.cancel_button.instate(['disabled']))
-            with patch('program_check_view.filedialog.asksaveasfilename', return_value=str(base/'selected.pdf')):
+            with patch('motionstudio.programs.view.filedialog.asksaveasfilename', return_value=str(base/'selected.pdf')):
                 window.export()
                 window.executor.submit(lambda: None).result(timeout=30)
                 window.after_cancel(window.after_id)
@@ -295,7 +295,7 @@ class ProgramPlaybackUITests(unittest.TestCase):
                     member = tarfile.TarInfo(name)
                     member.size = len(data)
                     archive.addfile(member, io.BytesIO(data))
-            with patch('program_check_view.filedialog.askopenfilename', return_value=str(archive_path)):
+            with patch('motionstudio.programs.view.filedialog.askopenfilename', return_value=str(archive_path)):
                 window.choose_zip()
             window.executor.submit(lambda: None).result(timeout=10)
             window.after_cancel(window.after_id)
@@ -315,7 +315,7 @@ class ProgramPlaybackUITests(unittest.TestCase):
         from contextlib import nullcontext
         from unittest.mock import MagicMock
         from tests.test_program_transfer import FakeSFTP
-        from program_transfer import ProgramSourceJob
+        from motionstudio.programs.transfer import ProgramSourceJob
         self.app.open_program_check()
         window = self.app.program_check_window
         window.source_mode.set('Robot')
@@ -337,8 +337,8 @@ class ProgramPlaybackUITests(unittest.TestCase):
                                        trust_path=Path(folder)/'known_hosts')
                 created.append(job)
                 return job
-            with patch('program_transfer.ProgramSourceJob', side_effect=factory), patch(
-                    'program_check_view.filedialog.askdirectory', return_value=folder):
+            with patch('motionstudio.programs.transfer.ProgramSourceJob', side_effect=factory), patch(
+                    'motionstudio.programs.view.filedialog.askdirectory', return_value=folder):
                 window.pull_programs()
             self.assertTrue(window.source_selector.instate(['disabled']))
             self.assertTrue(window.cancel_button.instate(['!disabled']))
@@ -362,13 +362,13 @@ class ProgramPlaybackUITests(unittest.TestCase):
             self.assertIsNone(self.app.session)
 
     def test_robot_source_cancelled_destination_and_host_trust_do_not_start_unapproved_work(self):
-        from session import HostKeyQuestion
+        from motionstudio.live.session import HostKeyQuestion
         self.app.open_program_check()
         window = self.app.program_check_window
         window.robot_ip.set('127.0.0.1')
         window.robot_username.set('root')
         window.robot_password.set('test-password')
-        with patch('program_check_view.filedialog.askdirectory', return_value=''), patch('program_transfer.ProgramSourceJob') as factory:
+        with patch('motionstudio.programs.view.filedialog.askdirectory', return_value=''), patch('motionstudio.programs.transfer.ProgramSourceJob') as factory:
             window.pull_programs()
             factory.assert_not_called()
         question = HostKeyQuestion('127.0.0.1', 'test-fingerprint')
@@ -376,7 +376,7 @@ class ProgramPlaybackUITests(unittest.TestCase):
         events.put(('host_key', question))
         events.put(('error', 'SSH host was not trusted'))
         window.download_job = SimpleNamespace(events=events)
-        with patch('program_check_view.messagebox.askyesno', return_value=False):
+        with patch('motionstudio.programs.view.messagebox.askyesno', return_value=False):
             window.after_cancel(window.after_id)
             window.poll()
         self.assertTrue(question.answered.is_set())

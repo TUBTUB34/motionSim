@@ -6,8 +6,8 @@ import os
 
 import numpy as np
 
-from kinematics import MODELS, forward_kinematics, pose_matrix
-from robot_assets import ASSET_DIRECTORY, load_robot_mesh, model_family
+from motionstudio.core.kinematics import MODELS, forward_kinematics, pose_matrix
+from motionstudio.core.robot_assets import ASSET_DIRECTORY, load_robot_mesh, model_family
 
 
 class RobotAssetTests(unittest.TestCase):

@@ -10,8 +10,8 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 from contextlib import nullcontext
 
-from backup_transfer import BackupJob
-from log_transfer import LogConnection
+from motionstudio.backup.transfer import BackupJob
+from motionstudio.logs.transfer import LogConnection
 
 
 class BackupTests(unittest.TestCase):
@@ -275,7 +275,7 @@ class BackupTests(unittest.TestCase):
                         return io.BytesIO(b'archive content')
                     sftp.open.side_effect = cancelled
                 failing_call = {'replace': 'os.replace', 'fsync': 'os.fsync'}.get(failure)
-                context = patch('backup_transfer.' + failing_call, side_effect=OSError('disk error')) if failing_call else nullcontext()
+                context = patch('motionstudio.backup.transfer.' + failing_call, side_effect=OSError('disk error')) if failing_call else nullcontext()
                 with context:
                     job.run()
                 self.assertEqual(path.read_bytes(), b'existing backup')

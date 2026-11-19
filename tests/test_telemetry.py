@@ -3,8 +3,8 @@ import struct
 import unittest
 from dataclasses import replace
 
-from rtde_client import RTDEClient
-from telemetry import (BASE_FIELDS, STATUS_FIELDS, TYPE_FORMATS, format_value,
+from motionstudio.live.rtde_client import RTDEClient
+from motionstudio.core.telemetry import (BASE_FIELDS, STATUS_FIELDS, TYPE_FORMATS, format_value,
                        script_line_text, SAFETY_MODES, enum_text)
 from tests.test_core import FragmentedSocket, packet
 

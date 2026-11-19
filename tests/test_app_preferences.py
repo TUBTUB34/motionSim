@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from app_preferences import MAX_ADDRESSES, MAX_FILE_BYTES, Preferences, default_preferences_path
+from motionstudio.app.preferences import MAX_ADDRESSES, MAX_FILE_BYTES, Preferences, default_preferences_path
 
 
 class PreferencesTests(unittest.TestCase):
@@ -83,7 +83,7 @@ class PreferencesTests(unittest.TestCase):
         for change in (lambda: preferences.add_address('192.168.0.11'),
                        lambda: preferences.remove_address('192.168.0.10'),
                        lambda: preferences.set_theme('light')):
-            with patch('app_preferences.os.replace', side_effect=PermissionError('Read-only folder')):
+            with patch('motionstudio.app.preferences.os.replace', side_effect=PermissionError('Read-only folder')):
                 with self.assertRaisesRegex(OSError, 'previous saved settings are unchanged'):
                     change()
             self.assertEqual(preferences.addresses, ('192.168.0.10',))
@@ -93,7 +93,7 @@ class PreferencesTests(unittest.TestCase):
 
     def test_failed_new_directory_does_not_claim_saved_preference(self):
         preferences = Preferences(self.path)
-        with patch('app_preferences.Path.mkdir', side_effect=PermissionError('Permission denied')):
+        with patch('motionstudio.app.preferences.Path.mkdir', side_effect=PermissionError('Permission denied')):
             with self.assertRaisesRegex(OSError, 'Could not save preferences'):
                 preferences.set_theme('light')
         self.assertEqual(preferences.theme, 'dark')
@@ -131,16 +131,16 @@ class PreferencesTests(unittest.TestCase):
     def test_platform_paths_are_user_local_and_ignore_relative_xdg_directory(self):
         home = Path(self.temp.name) / 'home'
         config = Path(self.temp.name) / 'custom-config'
-        with patch('app_preferences.Path.home', return_value=home), patch.dict('os.environ', {'MOTIONSIM_PREFERENCES_PATH': ''}):
-            with patch('app_preferences.sys.platform', 'linux'), patch.dict('os.environ', {'XDG_CONFIG_HOME': str(config)}):
+        with patch('motionstudio.app.preferences.Path.home', return_value=home), patch.dict('os.environ', {'MOTIONSIM_PREFERENCES_PATH': ''}):
+            with patch('motionstudio.app.preferences.sys.platform', 'linux'), patch.dict('os.environ', {'XDG_CONFIG_HOME': str(config)}):
                 self.assertEqual(default_preferences_path(), config / 'URMotionStudio/preferences.json')
-            with patch('app_preferences.sys.platform', 'linux'), patch.dict('os.environ', {'XDG_CONFIG_HOME': 'relative'}):
+            with patch('motionstudio.app.preferences.sys.platform', 'linux'), patch.dict('os.environ', {'XDG_CONFIG_HOME': 'relative'}):
                 self.assertEqual(default_preferences_path(), home / '.config/URMotionStudio/preferences.json')
-            with patch('app_preferences.sys.platform', 'darwin'):
+            with patch('motionstudio.app.preferences.sys.platform', 'darwin'):
                 self.assertEqual(default_preferences_path(), home / 'Library/Application Support/URMotionStudio/preferences.json')
-            with patch('app_preferences.sys.platform', 'win32'), patch.dict('os.environ', {'LOCALAPPDATA': '/custom/local'}):
+            with patch('motionstudio.app.preferences.sys.platform', 'win32'), patch.dict('os.environ', {'LOCALAPPDATA': '/custom/local'}):
                 self.assertEqual(default_preferences_path(), Path('/custom/local/URMotionStudio/preferences.json'))
-            with patch('app_preferences.sys.platform', 'win32'), patch.dict('os.environ', {'LOCALAPPDATA': ''}):
+            with patch('motionstudio.app.preferences.sys.platform', 'win32'), patch.dict('os.environ', {'LOCALAPPDATA': ''}):
                 self.assertEqual(default_preferences_path(), home / 'AppData/Local/URMotionStudio/preferences.json')
 
     def test_explicit_path_precedes_environment_override_and_override_precedes_platform(self):

@@ -3,8 +3,8 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from program_check import CATEGORIES, Finding, ProgramPair, ProgramReview
-from program_check_pdf import group_findings, export_program_pdf
+from motionstudio.programs.check import CATEGORIES, Finding, ProgramPair, ProgramReview
+from motionstudio.programs.pdf import group_findings, export_program_pdf
 
 
 class ProgramReportGroupingTests(unittest.TestCase):

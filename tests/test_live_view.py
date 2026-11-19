@@ -5,8 +5,8 @@ import numpy as np
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.figure import Figure
 
-from live_recorder import COLUMN
-from live_view import (LiveCharts, settle_limits, PROTECTIVE_STOP, SIGNALS, TCP_SIGNALS, TCP_VELOCITY, stop_spans,
+from motionstudio.live.recorder import COLUMN
+from motionstudio.live.view import (LiveCharts, settle_limits, PROTECTIVE_STOP, SIGNALS, TCP_SIGNALS, TCP_VELOCITY, stop_spans,
                        tcp_acceleration, tcp_series)
 
 
