@@ -8,57 +8,24 @@ import tkinter as tk
 from tkinter import ttk, filedialog
 
 import numpy as np
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
+from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
 from matplotlib.figure import Figure
 
-from motionstudio.flight.charts import (FlightCharts, JOINTS, METRICS, METRIC_LABELS, UNITS, X_REFERENCES, metric_unit,
-                           serialized_render, series_label, script_line_at)
+from motionstudio.flight.charts import (FlightCharts, METRICS, METRIC_LABELS, UNITS, X_REFERENCES, metric_unit,
+                                       series_label, script_line_at)
+from motionstudio.core.kinematics import JOINTS
 from motionstudio.flight.data import discover_flights, load_flight
 from motionstudio.core.playback import PlaybackTimeline, sample_at
 from motionstudio.flight.stats import STATE_FIELDS, protective_stops, state_changes
+from motionstudio.ui.chart_canvas import ChartCanvas
 from motionstudio.ui.workspace_panel import WorkspacePanel
-from motionstudio.flight.transfer import default_library, discover_library
+from motionstudio.flight.transfer import discover_library
+from motionstudio.core.paths import default_library
 from motionstudio.ui import theme
 from motionstudio.ui.theme import ScrollableFrame, flow, style_text, style_toolbar, status_color
 
 TRAILS = ('Off', 'Last 5 s', 'Whole recording')
 EVIDENCE_WINDOW = .25
-
-
-class FlightCanvas(FigureCanvasTkAgg):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.get_tk_widget().configure(background=theme.BACKGROUND, highlightthickness=0, borderwidth=0)
-        self._repaint_id = None
-        self.get_tk_widget().bind('<Expose>', self.refresh_pixels, add='+')
-
-    def resize(self, event):
-        # Moving the embedded window while scrolling also emits Configure.
-        # Rebuilding the PhotoImage at unchanged dimensions flashes blank strips.
-        if (event.width, event.height) == (self._tkphoto.width(), self._tkphoto.height()):
-            self.refresh_pixels()
-            return
-        return super().resize(event)
-
-    def refresh_pixels(self, _event=None):
-        """Repair newly exposed Tk pixels from Agg, without rendering traces again."""
-        if self._repaint_id is None:
-            self._repaint_id = self.get_tk_widget().after_idle(self._refresh_pixels)
-
-    @serialized_render
-    def _refresh_pixels(self):
-        self._repaint_id = None
-        if self.get_tk_widget().winfo_exists() and hasattr(self, 'renderer'):
-            self.blit()
-
-    @serialized_render
-    def draw(self):
-        charts = getattr(self, 'charts', None)
-        if charts is not None and charts.axes:
-            # Set margins before drawing, including Tk's idle resize draws.
-            # Scheduling another draw from draw_event can be coalesced away.
-            charts._layout()
-        return super().draw()
 
 
 def label(parent, text=None, variable=None, *, muted=False, size=10, bold=False, **kwargs):
@@ -329,7 +296,7 @@ class FlightWindow(WorkspacePanel):
         scroll = ttk.Scrollbar(chart_frame, orient='vertical', command=self.scroll_chart)
         scroll.grid(row=0, column=1, sticky='ns')
         self.chart_viewport.configure(yscrollcommand=scroll.set)
-        self.canvas = FlightCanvas(self.figure, master=self.chart_viewport)
+        self.canvas = ChartCanvas(self.figure, master=self.chart_viewport)
         self.canvas.charts = self.charts
         self.plot_window = self.chart_viewport.create_window(0, 0, anchor='nw', window=self.canvas.get_tk_widget())
         self.chart_viewport.bind('<Configure>', self._size_plot)

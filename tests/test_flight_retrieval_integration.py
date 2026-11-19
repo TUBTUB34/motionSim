@@ -10,7 +10,7 @@ import numpy as np
 from motionstudio.flight.data import load_flight
 from motionstudio.core.playback import PlaybackTimeline, sample_at
 from motionstudio.flight.pdf import export_flight_pdf
-from motionstudio.flight.transfer import FlightTransfer, LogConnection, discover_library
+from motionstudio.flight.transfer import FlightTransfer, SshConnection, discover_library
 from tests.test_flight_transfer import Remote
 
 
@@ -28,7 +28,7 @@ class FlightRetrievalIntegrationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             library = root / 'library'
-            worker = FlightTransfer(LogConnection('192.0.2.1', 'root', 'simulated-password'),
+            worker = FlightTransfer(SshConnection('192.0.2.1', 'root', 'simulated-password'),
                     library=library, client_factory=remote.factory,
                     trust_path=root / 'known_hosts')
             worker.start()

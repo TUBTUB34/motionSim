@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from motionstudio.flight.data import JOINTS
+from motionstudio.core.kinematics import JOINTS
 from motionstudio.core.telemetry import ROBOT_MODES, RUNTIME_STATES, SAFETY_MODES
 
 STATE_FIELDS = {'Safety mode': SAFETY_MODES, 'Robot mode': ROBOT_MODES, 'Program state': RUNTIME_STATES}

@@ -175,7 +175,7 @@ class LogUITests(unittest.TestCase):
         import tkinter as tk
         from unittest.mock import Mock
         from motionstudio.app.main_window import SimulatorApp
-        from motionstudio.live.session import HostKeyQuestion
+        from motionstudio.remote.ssh_trust import HostKeyQuestion
         root = tk.Tk()
         app = SimulatorApp(root)
         try:

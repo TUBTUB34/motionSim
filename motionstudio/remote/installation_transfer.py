@@ -1,45 +1,14 @@
 """SCP download of one installation file; never modifies the controller."""
-import base64
-import hashlib
 from pathlib import Path
 import tempfile
 
 import paramiko
 from scp import SCPClient
 from motionstudio.core.installation import MAX_FILE_SIZE, decode_installation
-from motionstudio.remote.ssh_trust import known_hosts_path, replace_host_key
+from motionstudio.remote.ssh_trust import ConfirmHostKey, host_fingerprint, known_hosts_path, replace_host_key
 from motionstudio.remote.stream import DOWNLOAD_IDLE_TIMEOUT, SSH_TIMEOUT, STREAM_BUFFER_SIZE
 
-def host_fingerprint(key):
-    return "SHA256:" + base64.b64encode(hashlib.sha256(key.asbytes()).digest()).decode().rstrip("=")
 
-class ConfirmHostKey(paramiko.MissingHostKeyPolicy):
-    """Ask once per new robot; ``save`` persists the approved key after a successful connect."""
-    def __init__(self, confirm, trust_path=None):
-        self.confirm = confirm
-        self.trust_path = trust_path
-        self.accepted = None
-
-    def missing_host_key(self, client, hostname, key):
-        fingerprint = host_fingerprint(key)
-        if not self.confirm(hostname, fingerprint):
-            raise paramiko.SSHException("SSH host key was not accepted.")
-        client.get_host_keys().add(hostname, key.get_name(), key)
-        self.accepted = (hostname, key)
-
-    def save(self):
-        """Remember the approved robot identity so later connections do not ask again.
-
-Credentials are never stored. A changed key is still reported on every
-connection until the user approves the replacement.
-"""
-        if self.accepted is None or self.trust_path is None:
-            return
-        try:
-            replace_host_key(self.trust_path, *self.accepted)
-        except OSError as error:
-            raise OSError(f"Could not save the robot SSH key to {self.trust_path}: {error}") from None
-        self.accepted = None
 
 class InstallationTransfer:
     def __init__(self, trust_path=None):

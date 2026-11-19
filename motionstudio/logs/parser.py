@@ -8,9 +8,10 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 import re
 
+from motionstudio.core.kinematics import JOINTS
+
 UR_CODES = "https://www.universal-robots.com/manuals/EN/HTML/SW5_24/Content/prod-err-codes/topics/"
 
-JOINTS = ("Base", "Shoulder", "Elbow", "Wrist 1", "Wrist 2", "Wrist 3")
 # ErrorCodes.pdf lists these families under the indicated headings. The A number
 # identifies the joint (0 through 5); the colon suffix is a log-message variant.
 CODES = {

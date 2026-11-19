@@ -5,7 +5,8 @@ from datetime import date, timedelta
 from itertools import accumulate
 from pathlib import Path
 
-from motionstudio.logs.parser import JOINTS, read_events, summarize
+from motionstudio.logs.parser import read_events, summarize
+from motionstudio.core.kinematics import JOINTS
 
 MAX_LOG_BYTES = 64 * 1024 * 1024
 

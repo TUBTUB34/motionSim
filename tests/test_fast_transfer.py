@@ -164,7 +164,8 @@ class JobIntegrationTests(unittest.TestCase):
         cls.folder.cleanup()
 
     def job(self, kind=None, **kwargs):
-        from motionstudio.logs.transfer import LogConnection, LogJob
+        from motionstudio.logs.transfer import LogJob
+        from motionstudio.remote.ssh_job import SshConnection
         kind = kind or LogJob
         port = self.port
 
@@ -182,7 +183,7 @@ class JobIntegrationTests(unittest.TestCase):
         trust.write_text(f'[127.0.0.1]:{port} {key.get_name()} {key.get_base64()}\n')
         if 'destination' in kwargs and kwargs['destination'] is None:
             kwargs['destination'] = local
-        job = kind(connection=LogConnection('127.0.0.1', 'root', 'robot-password', '/log_history.txt'),
+        job = kind(connection=SshConnection('127.0.0.1', 'root', 'robot-password', '/log_history.txt'),
                    client_factory=PortClient, trust_path=trust, **kwargs)
         self.addCleanup(job.close_fast)
         return job, local

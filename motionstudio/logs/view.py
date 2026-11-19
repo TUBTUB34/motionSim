@@ -11,12 +11,14 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 from matplotlib.figure import Figure
 from matplotlib.ticker import MaxNLocator
 
-from motionstudio.logs.data import JOINTS, chart_series, select_events
-from motionstudio.logs.transfer import DEFAULT_LOG_PATH, LogJob
+from motionstudio.logs.data import chart_series, select_events
+from motionstudio.core.kinematics import JOINTS
+from motionstudio.logs.transfer import LogJob
+from motionstudio.remote.ssh_job import DEFAULT_LOG_PATH
 from motionstudio.remote.connection import active_robot_settings, transfer_connection, simulator_connection_text
 from motionstudio.backup.transfer import BackupJob
 from motionstudio.ui.address_book import SavedAddressCombobox
-from motionstudio.flight.charts import chart_palette, retheme_figure
+from motionstudio.ui.charts import chart_palette, retheme_figure
 from motionstudio.ui.workspace_panel import WorkspacePanel
 from motionstudio.ui import theme
 from motionstudio.ui.theme import style_toolbar, style_tree, status_color

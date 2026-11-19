@@ -117,8 +117,8 @@ def check(app):
         app.open_backups()
         assert app.backup_page.job is None, 'Opening Backups must not start a robot operation'
         from motionstudio.backup.transfer import BackupJob
-        from motionstudio.logs.transfer import LogConnection
-        selected = BackupJob(connection=LogConnection('192.0.2.1', 'root', 'smoke'), contents=('logs', 'flights'))
+        from motionstudio.remote.ssh_job import SshConnection
+        selected = BackupJob(connection=SshConnection('192.0.2.1', 'root', 'smoke'), contents=('logs', 'flights'))
         assert [path for path, _kind in selected.sources] == [
             '/root/log_history.txt', '/root/log_history.bak', '/root/flightreports'], 'Backup item selection failed'
         # A live recording must round-trip into the flight workspace without a robot.

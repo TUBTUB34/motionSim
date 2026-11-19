@@ -8,7 +8,8 @@ from unittest.mock import patch
 import numpy as np
 from matplotlib.figure import Figure
 
-from motionstudio.flight.charts import FlightCharts, joint_colors
+from motionstudio.flight.charts import FlightCharts
+from motionstudio.ui.charts import joint_colors
 from motionstudio.flight.data import load_flight
 from tests.test_flight_ui import flight
 

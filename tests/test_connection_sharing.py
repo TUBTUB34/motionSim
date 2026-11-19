@@ -11,7 +11,7 @@ from unittest.mock import patch
 
 from motionstudio.remote.connection import active_robot_settings, make_settings, transfer_connection
 from motionstudio.backup.view import backup_filename
-from motionstudio.flight.transfer import default_library
+from motionstudio.core.paths import default_library
 from motionstudio.remote.connection import robot_download_folder, should_select_robot
 
 

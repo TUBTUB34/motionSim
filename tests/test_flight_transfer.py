@@ -10,7 +10,7 @@ import unittest
 from unittest.mock import patch
 import zipfile
 
-from motionstudio.flight.transfer import FlightTransfer, LogConnection, RemoteFlight, discover_library
+from motionstudio.flight.transfer import FlightTransfer, SshConnection, RemoteFlight, discover_library
 
 
 def recording():
@@ -136,7 +136,7 @@ class FlightTransferTests(unittest.TestCase):
         self.worker = self.make_worker()
 
     def make_worker(self):
-        worker = FlightTransfer(LogConnection('192.0.2.1', 'root', 'not-a-real-secret'),
+        worker = FlightTransfer(SshConnection('192.0.2.1', 'root', 'not-a-real-secret'),
                 library=self.library, client_factory=self.remote.factory,
                 trust_path=self.library / 'known_hosts')
         self.addCleanup(worker.close)

@@ -16,9 +16,11 @@ import numpy as np
 from matplotlib.collections import PolyCollection
 from matplotlib.figure import Figure
 
-from motionstudio.flight.charts import JOINTS, FlightCharts, joint_colors, serialized_render
-from motionstudio.flight.transfer import default_library
-from motionstudio.flight.view import FlightCanvas
+from motionstudio.ui.charts import StackedPanels, joint_colors
+from motionstudio.core.kinematics import JOINTS
+from motionstudio.core.rendering import serialized_render
+from motionstudio.core.paths import default_library
+from motionstudio.ui.chart_canvas import ChartCanvas
 from motionstudio.live.rtde_client import DATA_TIMEOUT, STALE_AFTER
 from motionstudio.live.session import reconnect_reason
 from motionstudio.core.telemetry import ROBOT_MODES, RUNTIME_STATES, SAFETY_MODES, enum_text
@@ -146,7 +148,7 @@ def clock_text(seconds):
     return f'{int(seconds // 60):02d}:{seconds % 60:04.1f}'
 
 
-class LiveCanvas(FlightCanvas):
+class LiveCanvas(ChartCanvas):
     """Times every full render so the page can back off when drawing is slow."""
     draw_seconds = 0.
     drawn_at = 0.
@@ -160,7 +162,7 @@ class LiveCanvas(FlightCanvas):
             self.drawn_at = time.monotonic()
 
 
-class LiveCharts:
+class LiveCharts(StackedPanels):
     """Persistent axes and lines; each refresh only replaces their data.
 
     Panels are (metric, joints): Combined overlays the selected joints, Separate
@@ -262,12 +264,9 @@ class LiveCharts:
             self._layout()
         self.headers = tuple(dict.fromkeys(headers))
 
-    # Same fixed pixel gaps between panels as Flight reports.
-    _flight_layout = FlightCharts._layout
-
     def _layout(self):
         """Called by the canvas just before each render, when positions are final."""
-        changed = self._flight_layout()
+        changed = super()._layout()
         for axis, visible in zip(self.axes, self.visible()):
             axis.set_visible(visible)
         return changed

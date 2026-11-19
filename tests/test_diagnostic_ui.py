@@ -154,7 +154,7 @@ class DiagnosticUITests(unittest.TestCase):
         self.assertFalse(self.window.busy)
 
     def test_hidden_page_prompts_for_trust_on_root_without_rejecting_transfer(self):
-        from motionstudio.live.session import HostKeyQuestion
+        from motionstudio.remote.ssh_trust import HostKeyQuestion
         from motionstudio.remote.ssh_trust import host_key_prompt
         job = self.start_robot()
         question = HostKeyQuestion('192.0.2.1', 'test-fingerprint')
@@ -171,7 +171,7 @@ class DiagnosticUITests(unittest.TestCase):
         self.assertFalse(self.window.busy)
 
     def test_cancelled_collection_still_rejects_pending_trust(self):
-        from motionstudio.live.session import HostKeyQuestion
+        from motionstudio.remote.ssh_trust import HostKeyQuestion
         job = self.start_robot()
         question = HostKeyQuestion('192.0.2.1', 'test-fingerprint')
         job.events.put(('host_key', question))

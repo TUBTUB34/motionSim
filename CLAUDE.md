@@ -4,9 +4,9 @@ Read-only Tkinter + matplotlib + numpy desktop app for Universal Robots: live RT
 
 ## Run / test (verified 2026-11-19)
 - App: `.venv/bin/python main.py`. Packaging check: `.venv/bin/python main.py --smoke-test`.
-- Tests (WSL, no windows opened): `.venv/bin/python -m unittest discover -s tests`. UI tests are skipped unless `MOTIONSIM_UI_TESTS=1`.
+- Tests (WSL, no windows opened): `.venv/bin/python -m unittest discover -s tests`. UI tests are skipped unless `MOTIONSIM_UI_TESTS=1`. When staging a copy for Windows, delete its old `*.py`/`__pycache__` first so stale modules cannot load.
 - **Never open app windows on the user's visible desktop.** WSL has no Xvfb. Run UI tests and the EXE smoke on the hidden Windows desktop: `scripts/run_hidden.py` from the staged copy (ECC: "never run UI tests…").
-- Windows EXE: `build_windows.bat` (PyInstaller, `MotionStudio.spec`). Add every new module to the spec's module guard.
+- Windows EXE: `build_windows.bat` (PyInstaller, `MotionStudio.spec`; the spec collects every `motionstudio` module).
 - Benchmarks (simulated, never a robot): `scripts/benchmark_transfer.py`, `scripts/benchmark_fast_transfer.py`.
 
 ## Rules
@@ -19,13 +19,21 @@ Read-only Tkinter + matplotlib + numpy desktop app for Universal Robots: live RT
 2. Code graph: codebase-memory-mcp project `motionSim` (`search_graph`, `get_code_snippet`, `get_file_outline`).
 3. Targeted `Read` with offset/limit, or grep. Use the map below to pick the file.
 
-## File map
-- Entry/shell: `main.py` (SimulatorApp, connection form, poll loop, fps status), `app_shell.py` (nav + side simulator), `home_view.py`, `workspace_panel.py`, `ui_theme.py` (tokens, `flow()`, `status_color`), `ui_dialogs.py`, `app_preferences.py`, `address_book.py`, `help_content.py`/`help_view.py`.
-- Live robot: `rtde_client.py` (RTDE; CONNECT_TIMEOUT / DATA_TIMEOUT / STALE_AFTER), `session.py` (RobotSession threads), `telemetry.py`, `status_view.py`, `live_recorder.py` (LiveCapture ring + recordings), `live_view.py` (Live monitor charts).
-- 3D: `view.py` (RobotView), `rasterizer.py`, `robot_assets.py`, `kinematics.py`, `tooling.py`, `mounting_view.py`, `playback_view.py`, `model_catalog.py`, `installation.py`.
-- SSH/transfer: `connection.py` (settings, `active_robot_settings`, `transfer_connection`), `ssh_trust.py` (prompt + saving keys), `transfer.py` (ConfirmHostKey, installation SCP), `log_transfer.py` (LogJob: shared verified connect, `open_bulk`), `fast_transfer.py` (AsyncSSH bulk reads), `transfer_stream.py` (`copy_remote`, SSH_TIMEOUT), `flight_transfer.py`, `backup_transfer.py`, `program_transfer.py`, `diagnostic_transfer.py`.
-- Flight reports: `flight_data.py`, `flight_stats.py`, `flight_charts.py`, `flight_motion.py`, `flight_view.py`, `flight_retrieval_view.py`, `flight_pdf.py`.
-- Logs: `log_parser.py`, `log_data.py`, `log_view.py`.
-- Reports: `program_check.py`, `program_motion.py`, `program_check_view.py`, `program_check_pdf.py`. Robot Status: `robot_diagnostics.py`, `robot_status.py`, `diagnostic_guidance.py`, `diagnostic_view.py`, `diagnostic_pdf.py`.
-- Other: `backup_view.py`, `commissioning.py`/`commissioning_view.py` (Checklist), `desktop_smoke.py`.
-- Docs: `docs/upgrade-2026-11-12.md` (earlier upgrade code map).
+## Structure and dependency rules
+`main.py` only launches `motionstudio.app.main_window.main()`. `tests/test_architecture.py` enforces:
+shared packages (`core` < `ui`/`remote`/`reporting` < `viewer`) never import features or `app`; a feature
+imports another feature only via `FEATURE_DEPENDENCIES` there, never its `view`; only `app` wires pages.
+Put new shared code in the lowest package that fits instead of importing across features.
+
+## File map (`motionstudio/`)
+- `app/`: `main_window.py` (SimulatorApp: connection form, poll loop, fps/reconnect status), `shell.py` (nav + side simulator), `home.py`, `preferences.py`, `help_content.py`/`help_view.py`, `model_catalog.py`, `status_view.py`, `smoke.py` (`--smoke-test`).
+- `core/`: `kinematics.py` (MODELS, JOINTS), `telemetry.py`, `installation.py`, `robot_assets.py`, `tooling.py`, `playback.py` (recorded-motion timeline), `paths.py` (`default_library`), `rendering.py` (RENDER_LOCK).
+- `ui/`: `theme.py` (tokens, `flow()`, `status_color`), `dialogs.py`, `workspace_panel.py`, `address_book.py`, `charts.py` (joint colours, palette, `StackedPanels`), `chart_canvas.py` (ChartCanvas).
+- `remote/`: `connection.py` (settings, `active_robot_settings`, `transfer_connection`, `robot_download_folder`), `ssh_trust.py` (prompt, HostKeyQuestion, ConfirmHostKey, saving keys), `ssh_job.py` (SshConnection, SshJob: verified connect, `open_bulk`), `fast_transfer.py` (AsyncSSH), `stream.py` (`copy_remote`, SSH_TIMEOUT), `installation_transfer.py` (SCP).
+- `reporting/pdf.py`: ReportDocument (A4 frame for every PDF).
+- `viewer/`: `robot_view.py` (RobotView), `rasterizer.py`, `mounting.py`, `playback.py`.
+- `live/`: `rtde_client.py` (CONNECT_TIMEOUT / DATA_TIMEOUT / STALE_AFTER), `session.py` (RobotSession, auto-reconnect), `recorder.py` (LiveCapture), `view.py` (Live monitor).
+- `flight/`: `data.py`, `stats.py`, `charts.py`, `pdf.py`, `transfer.py`, `view.py`, `retrieval_view.py`. `logs/`: `parser.py`, `data.py`, `transfer.py` (LogJob), `view.py`.
+- `programs/`: `check.py`, `motion.py`, `pdf.py`, `transfer.py`, `view.py`. `diagnostics/` (Robot Status): `analysis.py`, `status.py`, `guidance.py`, `pdf.py`, `transfer.py`, `view.py`.
+- `backup/`: `transfer.py`, `view.py`. `commissioning/` (Checklist): `records.py`, `view.py`.
+- Elsewhere: `samples/` (example installation and log), `docs/upgrade-2026-11-12.md` (historical code map, pre-package names).

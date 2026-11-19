@@ -6,7 +6,8 @@ from unittest.mock import MagicMock, Mock, patch
 
 import paramiko
 
-from motionstudio.logs.transfer import LogConnection, LogJob
+from motionstudio.logs.transfer import LogJob
+from motionstudio.remote.ssh_job import SshConnection
 from motionstudio.remote.ssh_trust import known_hosts_path, replace_host_key
 
 
@@ -59,7 +60,7 @@ class SSHTrustTests(unittest.TestCase):
                 if retry_failure:
                     retry.connect.side_effect = paramiko.BadHostKeyException('127.0.0.1', self.old, self.new)
                 factory = Mock(side_effect=[first, retry])
-                job = LogJob(connection=LogConnection('127.0.0.1', 'root', 'secret'),
+                job = LogJob(connection=SshConnection('127.0.0.1', 'root', 'secret'),
                              client_factory=factory, trust_path=path)
                 job.confirm_host = Mock(return_value=accept)
                 # Stop after trust handling, without performing any SFTP transfer.

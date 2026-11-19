@@ -362,7 +362,7 @@ class ProgramPlaybackUITests(unittest.TestCase):
             self.assertIsNone(self.app.session)
 
     def test_robot_source_cancelled_destination_and_host_trust_do_not_start_unapproved_work(self):
-        from motionstudio.live.session import HostKeyQuestion
+        from motionstudio.remote.ssh_trust import HostKeyQuestion
         self.app.open_program_check()
         window = self.app.program_check_window
         window.robot_ip.set('127.0.0.1')

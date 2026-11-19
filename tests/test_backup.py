@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch
 from contextlib import nullcontext
 
 from motionstudio.backup.transfer import BackupJob
-from motionstudio.logs.transfer import LogConnection
+from motionstudio.remote.ssh_job import SshConnection
 
 
 class BackupTests(unittest.TestCase):
@@ -25,7 +25,7 @@ class BackupTests(unittest.TestCase):
         sftp.stat.return_value.st_size = len(content)
         sftp.stat.return_value.st_mode = stat.S_IFDIR | 0o755
         sftp.open.side_effect = lambda *args: io.BytesIO(content)
-        job = BackupJob(connection=LogConnection('127.0.0.1', 'root', 'secret'),
+        job = BackupJob(connection=SshConnection('127.0.0.1', 'root', 'secret'),
                         client_factory=lambda: client, full=full, flight_directory=flight_directory, sources=sources)
         if full:
             directories = {path for path, kind in job.sources if kind == 'directory'}
@@ -94,7 +94,7 @@ class BackupTests(unittest.TestCase):
             self.assertIn('not a file: /root/log_history.txt', self.message(job))
 
     def test_full_backup_custom_log_folder_keeps_both_files(self):
-        connection = LogConnection('127.0.0.1', 'root', 'secret', '/data/logs/log_history.bak')
+        connection = SshConnection('127.0.0.1', 'root', 'secret', '/data/logs/log_history.bak')
         job = BackupJob(connection=connection, full=True, flight_directory='/data/reports')
         self.assertIn(('/data/logs/log_history.txt', 'file'), job.sources)
         self.assertIn(('/data/logs/log_history.bak', 'file'), job.sources)
@@ -127,7 +127,7 @@ class BackupTests(unittest.TestCase):
             BackupJob(sources=())
 
     def test_contents_select_any_combination_of_programs_apps_logs_and_flights(self):
-        connection = LogConnection('127.0.0.1', 'root', 'secret', '/data/logs/log_history.txt')
+        connection = SshConnection('127.0.0.1', 'root', 'secret', '/data/logs/log_history.txt')
         paths = {'programs': ['/programs'], 'apps': ['/apps', '/data/apps'],
                  'logs': ['/data/logs/log_history.txt', '/data/logs/log_history.bak'], 'flights': ['/data/reports']}
         for chosen in (('logs',), ('flights',), ('programs', 'flights'), ('apps', 'logs'), tuple(paths)):
@@ -159,7 +159,7 @@ class BackupTests(unittest.TestCase):
                 return SimpleNamespace(st_size=7, st_mode=stat.S_IFREG | 0o644)
             sftp.stat.side_effect = attributes
             sftp.open.side_effect = lambda *args: io.BytesIO(b'archive')
-            job = BackupJob(connection=LogConnection('127.0.0.1', 'root', 'secret'),
+            job = BackupJob(connection=SshConnection('127.0.0.1', 'root', 'secret'),
                             client_factory=lambda: client, contents=('logs',))
             job.choose_destination = MagicMock(return_value=destination)
             job.run()

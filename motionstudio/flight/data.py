@@ -16,14 +16,13 @@ import zipfile
 import numpy as np
 
 from motionstudio.core.installation import InstallationData, decode_installation
-from motionstudio.core.kinematics import MODELS
+from motionstudio.core.kinematics import JOINTS, MODELS
 
 TELEMETRY_MEMBER = "files/realtimedata.csv"
 MAX_TELEMETRY_BYTES = 256 * 1024 * 1024
 MAX_CONTEXT_BYTES = 4 * 1024 * 1024
 MAX_SAMPLES = 250_000
 MAX_COLUMNS = 256
-JOINTS = ("Base", "Shoulder", "Elbow", "Wrist 1", "Wrist 2", "Wrist 3")
 UNITS = {"position": "rad", "velocity": "rad/s", "acceleration": "rad/s^2",
          "current": "A", "torque": "Nm", "temperature": "C", "voltage": "V",
          "control_mode": "code", "current_upper": "A", "current_lower": "A"}

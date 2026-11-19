@@ -16,7 +16,8 @@ import zipfile
 
 import numpy as np
 
-from motionstudio.flight.data import FlightReport, JOINTS, MAX_TELEMETRY_BYTES, TELEMETRY_MEMBER, load_flight
+from motionstudio.flight.data import FlightReport, MAX_TELEMETRY_BYTES, TELEMETRY_MEMBER, load_flight
+from motionstudio.core.kinematics import JOINTS
 from motionstudio.logs.data import LogData, MAX_LOG_BYTES
 from motionstudio.logs.parser import read_events
 

@@ -15,7 +15,6 @@ import queue
 import re
 import shutil
 import stat
-import sys
 import tempfile
 import threading
 import time
@@ -24,21 +23,13 @@ import zipfile
 import paramiko
 
 from motionstudio.flight.data import load_flight, MAX_TELEMETRY_BYTES, TELEMETRY_MEMBER
-from motionstudio.logs.transfer import LogJob, LogConnection, DOWNLOAD_IDLE_TIMEOUT
-from motionstudio.remote.installation_transfer import host_fingerprint
-from motionstudio.remote.stream import copy_remote
+from motionstudio.remote.ssh_job import SshJob
+from motionstudio.remote.ssh_job import SshConnection
+from motionstudio.remote.ssh_trust import host_fingerprint
+from motionstudio.core.paths import default_library
+from motionstudio.remote.stream import copy_remote, DOWNLOAD_IDLE_TIMEOUT
 
 DEFAULT_FLIGHT_DIRECTORY = '/root/flightreports'
-
-
-def default_library():
-    if sys.platform == 'win32':
-        base = Path(os.environ.get('LOCALAPPDATA', Path.home() / 'AppData' / 'Local'))
-    elif sys.platform == 'darwin':
-        base = Path.home() / 'Library' / 'Application Support'
-    else:
-        base = Path(os.environ.get('XDG_DATA_HOME', Path.home() / '.local' / 'share'))
-    return base / 'URMotionStudio' / 'flightreports'
 
 
 def _manifest(directory):
@@ -81,13 +72,13 @@ class RemoteFlight:
     local_path: Path | None = None
 
 
-class FlightTransfer(LogJob):
+class FlightTransfer(SshJob):
     """One persistent worker/session; public requests are nonblocking and serialized.
 
     cancel() interrupts the current request; close() also stops the worker.
     No credentials or unverified files are persisted in the library manifest.
     """
-    def __init__(self, connection: LogConnection, *, library=None,
+    def __init__(self, connection: SshConnection, *, library=None,
                  directory=DEFAULT_FLIGHT_DIRECTORY, **kwargs):
         super().__init__(connection=connection, **kwargs)
         self.library = Path(library) if library is not None else default_library()

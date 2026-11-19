@@ -11,8 +11,8 @@ import threading
 import time
 from uuid import uuid4
 
-from motionstudio.logs.transfer import DOWNLOAD_IDLE_TIMEOUT, LogJob
-from motionstudio.remote.stream import copy_remote, SSH_TIMEOUT
+from motionstudio.remote.ssh_job import SshJob
+from motionstudio.remote.stream import copy_remote, SSH_TIMEOUT, DOWNLOAD_IDLE_TIMEOUT
 
 
 @dataclass
@@ -25,7 +25,7 @@ class BackupDestination:
 CONTENTS = ('programs', 'apps', 'logs', 'flights')
 
 
-class BackupJob(LogJob):
+class BackupJob(SshJob):
     """Archive robot data. ``contents`` picks any of CONTENTS; ``full`` means all.
 
     ``sources`` remains for callers that select the two program folders by path.

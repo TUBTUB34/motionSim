@@ -94,12 +94,12 @@ class DiagnosticPdfTests(unittest.TestCase):
 
     def test_plot_keeps_gap_and_explicit_marker_distinct(self):
         from matplotlib.backends.backend_pdf import PdfPages
-        from motionstudio.flight.pdf import _Report
+        from motionstudio.reporting.pdf import ReportDocument
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder)/'flight.csv'
             path.write_text('Timestamp [s],Actual velocity j0 [rad/s]\n100,0\n101,1\n102,2\n120,1\n121,0\n')
             with PdfPages(Path(folder)/'chart.pdf') as pdf:
-                document = _Report(pdf, path.name)
+                document = ReportDocument(pdf, path.name, 'ROBOT STATUS REPORT', '')
                 evidence = ChartEvidence(str(path), path.name, 2, 0, 21, 'Incident window')
                 _chart(document, evidence, 'INC-001')
                 lines = document.figure.axes[0].lines

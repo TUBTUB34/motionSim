@@ -9,7 +9,7 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import MagicMock, patch
 
-from motionstudio.logs.transfer import LogConnection
+from motionstudio.remote.ssh_job import SshConnection
 from motionstudio.programs.check import discover_programs, review_program
 from motionstudio.programs.transfer import ProgramSourceJob, _safe_name
 
@@ -73,7 +73,7 @@ class ProgramTransferTests(unittest.TestCase):
         sftp = FakeSFTP(files, root=root, links=links)
         client = MagicMock()
         client.open_sftp.return_value = nullcontext(sftp)
-        job = ProgramSourceJob(connection=LogConnection('127.0.0.1', 'root', 'password-secret'),
+        job = ProgramSourceJob(connection=SshConnection('127.0.0.1', 'root', 'password-secret'),
                                destination=self.destination, client_factory=lambda: client,
                                trust_path=self.destination / 'known_hosts')
         return job, client, sftp

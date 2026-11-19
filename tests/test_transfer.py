@@ -6,7 +6,8 @@ from pathlib import Path
 import paramiko
 
 from motionstudio.remote.connection import make_settings
-from motionstudio.remote.installation_transfer import InstallationTransfer, ConfirmHostKey
+from motionstudio.remote.installation_transfer import InstallationTransfer
+from motionstudio.remote.ssh_trust import ConfirmHostKey
 from tests.test_core import XML
 from motionstudio.core.installation import MAX_FILE_SIZE
 from motionstudio.remote.stream import DOWNLOAD_IDLE_TIMEOUT, SSH_TIMEOUT, STREAM_BUFFER_SIZE

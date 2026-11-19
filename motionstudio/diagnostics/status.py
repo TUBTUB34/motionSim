@@ -7,7 +7,7 @@ invented model-independent acceleration, temperature or current limit.
 from dataclasses import dataclass, field
 import re
 
-from motionstudio.flight.data import JOINTS
+from motionstudio.core.kinematics import JOINTS
 from motionstudio.logs.parser import CODES, HEALTH_CODES
 from motionstudio.diagnostics.analysis import DiagnosticReport, _date
 

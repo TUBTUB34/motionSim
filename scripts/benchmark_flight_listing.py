@@ -18,7 +18,7 @@ from types import SimpleNamespace
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from motionstudio.flight.transfer import FlightTransfer
-from motionstudio.logs.transfer import LogConnection
+from motionstudio.remote.ssh_job import SshConnection
 
 
 class SimulatedDirectory:
@@ -57,7 +57,7 @@ def benchmark(rtt_ms=4, repeats=5):
             timings = []
             for _ in range(repeats):
                 remote = SimulatedDirectory(entries, rtt_ms / 1000)
-                job = FlightTransfer(LogConnection('127.0.0.1', 'fixture', 'fixture'), library=library)
+                job = FlightTransfer(SshConnection('127.0.0.1', 'fixture', 'fixture'), library=library)
                 job.sftp = remote
                 job.robot_id = 'robot-fixture'
                 job.fingerprint = 'fixture'

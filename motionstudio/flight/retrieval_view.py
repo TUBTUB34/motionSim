@@ -7,7 +7,8 @@ import tkinter as tk
 from tkinter import ttk, filedialog
 
 from motionstudio.ui import dialogs as messagebox
-from motionstudio.flight.transfer import FlightTransfer, DEFAULT_FLIGHT_DIRECTORY, default_library
+from motionstudio.flight.transfer import FlightTransfer, DEFAULT_FLIGHT_DIRECTORY
+from motionstudio.core.paths import default_library
 from motionstudio.remote.connection import active_robot_settings, transfer_connection
 from motionstudio.ui.workspace_panel import WorkspacePanel
 from motionstudio.ui import theme

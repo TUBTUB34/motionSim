@@ -122,8 +122,8 @@ loaded log, independently of chart filters. Closing the log window retains its
 data until you exit the application. An unsuccessful load retains the previous log.
 
 The parser, incident deduplication, monitored codes and joint diagnostic summaries
-are maintained in this repository's `log_parser.py`, with chart aggregation in
-`log_data.py`. Counts represent monitored joint and selected controller incidents,
+are maintained in this repository's `motionstudio/logs/parser.py`, with chart aggregation in
+`motionstudio/logs/data.py`. Counts represent monitored joint and selected controller incidents,
 not all controller messages or failure predictions. C150–152 safety-limit proximity
 and subtype-specific C171 blend warnings appear under **Controller**, without being
 attributed to a joint. The joint overview remains separate. Missing joint mappings and
@@ -219,7 +219,7 @@ PDF export, retrieval controls, transfer helper and robot renderer. You can repe
 it with `URMotionStudio.exe --smoke-test` (exit code 0
 means success). It never connects to a robot and uses temporary preferences, leaving
 your saved addresses and appearance intact.
-The desktop log parser is included in `log_parser.py`; no separate
+The desktop log parser is included in `motionstudio/logs/parser.py`; no separate
 graph-generator checkout or Git submodule is required to run, test or package the
 log page. The retired `Vibe_UR_Graph_generator/` directory is ignored if present,
 so pre-existing local edits can be kept without maintaining a second repository.
@@ -261,7 +261,7 @@ Dark mode follows the supplied reference screenshots: near-black canvases, navy
 panels, fine slate borders and cyan focus. Light mode uses pale panels, white inputs,
 dark text and blue focus. Both use compact native controls. Connection setup, the robot catalog, simulator, Status, View
 options, all log tabs, flight playback, and application confirmation/error dialogs
-share `ui_theme.py` tokens and components. Charts retain distinct series colors;
+share `motionstudio/ui/theme.py` tokens and components. Charts retain distinct series colors;
 recorded actual/target traces remain blue and lime. The theme uses the existing
 Pillow dependency and ships inside the Windows executable.
 
@@ -446,6 +446,28 @@ python main.py
 
 On Windows, install Python with Tcl/Tk support and activate with
 `.venv\Scripts\activate` instead.
+
+Tests: `python -m unittest discover -s tests` (desktop UI tests run only with
+`MOTIONSIM_UI_TESTS=1`).
+
+## Project layout
+
+`main.py` only starts the app; the code is the `motionstudio` package:
+
+| Package | Holds |
+|---|---|
+| `core` | Robot domain without UI or network: kinematics, telemetry, installation files, robot meshes, tools, recorded-motion playback, data folders, the Matplotlib render lock |
+| `ui` | Shared Tk toolkit: theme, dialogs, page panel, saved addresses, chart styling and chart canvas |
+| `remote` | SSH: connection settings, host-key trust, the shared SSH job, streamed and AsyncSSH downloads, installation download |
+| `reporting` | The A4 frame every PDF report is drawn on |
+| `viewer` | The 3D robot view, mounting and recorded playback |
+| `live`, `flight`, `logs`, `programs`, `diagnostics`, `backup`, `commissioning` | One package per feature, split into data/analysis, `transfer`, `pdf` and `view` (page) modules |
+| `app` | Composition root: main window, navigation shell, Home, Help, preferences, packaged smoke check |
+
+`tests/test_architecture.py` enforces the dependency rules: shared packages never
+import features or `app`; a feature uses another feature only where the domain links
+them (for example Robot Status reads flight recordings and logs) and never its pages;
+only `app` wires pages together.
 
 ## Simulator and Status tabs
 

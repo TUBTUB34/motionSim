@@ -4,7 +4,7 @@ import tempfile
 import unittest
 
 from motionstudio.diagnostics.pdf import export_diagnostic_pdf
-from motionstudio.flight.data import JOINTS
+from motionstudio.core.kinematics import JOINTS
 from motionstudio.diagnostics.analysis import DiagnosticReport, Incident
 from motionstudio.diagnostics.status import RobotStatusReport, JointStatus, ProgramArea
 

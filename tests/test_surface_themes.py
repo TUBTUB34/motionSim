@@ -13,7 +13,8 @@ from matplotlib.colors import to_rgba
 from matplotlib.figure import Figure
 
 from motionstudio.ui import theme
-from motionstudio.flight.charts import FlightCharts, LIGHT_JOINT_COLORS
+from motionstudio.flight.charts import FlightCharts
+from motionstudio.ui.charts import LIGHT_JOINT_COLORS
 from tests.test_flight_ui import flight
 
 

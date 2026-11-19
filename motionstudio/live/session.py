@@ -1,10 +1,10 @@
 """Background RTDE and installation jobs; UI reads snapshots on its own thread."""
-from dataclasses import dataclass, field
 import queue
 import threading
 import time
 
 from motionstudio.live.rtde_client import DATA_TIMEOUT, RTDEClient
+from motionstudio.remote.ssh_trust import HostKeyQuestion
 from motionstudio.remote.installation_transfer import InstallationTransfer
 
 # The controller closes a stream its client (or the link) cannot keep up with,
@@ -20,13 +20,6 @@ def reconnect_reason(session):
     return reason if isinstance(reason, str) else None
 
 
-@dataclass
-class HostKeyQuestion:
-    hostname: str
-    fingerprint: str
-    answered: threading.Event = field(default_factory=threading.Event)
-    accepted: bool = False
-    replacement: bool = False
 
 class RobotSession:
     def __init__(self, settings, client_factory=RTDEClient, transfer_factory=InstallationTransfer):

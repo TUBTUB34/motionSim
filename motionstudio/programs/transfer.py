@@ -9,7 +9,7 @@ import threading
 import time
 from concurrent.futures import FIRST_EXCEPTION, ThreadPoolExecutor, wait
 
-from motionstudio.logs.transfer import LogJob
+from motionstudio.remote.ssh_job import SshJob
 from motionstudio.programs.check import MAX_BYTES
 from motionstudio.remote.stream import copy_remote, DOWNLOAD_IDLE_TIMEOUT
 
@@ -39,7 +39,7 @@ def _signature(attributes):
     return attributes.st_size, getattr(attributes, 'st_mtime', None)
 
 
-class ProgramSourceJob(LogJob):
+class ProgramSourceJob(SshJob):
     """Download source files to a new snapshot; never modify robot files."""
 
     def __init__(self, *, connection, destination, **kwargs):

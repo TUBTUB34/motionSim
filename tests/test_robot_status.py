@@ -2,7 +2,7 @@
 from dataclasses import replace
 import unittest
 
-from motionstudio.flight.data import JOINTS
+from motionstudio.core.kinematics import JOINTS
 from motionstudio.logs.data import LogData
 from motionstudio.diagnostics.analysis import DiagnosticReport, Incident, JointEvidence, ProgramEvidence, analyze_data
 from motionstudio.diagnostics.status import build_robot_status

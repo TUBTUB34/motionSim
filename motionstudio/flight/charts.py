@@ -1,84 +1,15 @@
 """Flight graph rendering, independent of Tk and report loading."""
 import numpy as np
 from matplotlib.ticker import MaxNLocator, FuncFormatter
-from matplotlib.lines import Line2D
-from functools import wraps
-from threading import RLock
+from motionstudio.core.kinematics import JOINTS
+from motionstudio.core.rendering import serialized_render
 from motionstudio.ui import theme
+from motionstudio.ui.charts import StackedPanels, chart_palette, joint_colors, retheme_figure
 
-# Matplotlib font/rendering state is shared even by independent figures.
-# PDF rendering takes this lock per page, never for an entire export.
-RENDER_LOCK = RLock()
-
-
-def serialized_render(function):
-    @wraps(function)
-    def wrapped(*args, **kwargs):
-        with RENDER_LOCK:
-            return function(*args, **kwargs)
-    return wrapped
-
-JOINTS = ('Base', 'Shoulder', 'Elbow', 'Wrist 1', 'Wrist 2', 'Wrist 3')
 METRICS = ('position', 'velocity', 'acceleration', 'current', 'torque', 'temperature', 'voltage', 'control_mode')
 METRIC_LABELS = {metric: metric.replace('_', ' ').title() for metric in METRICS}
 UNITS = {'position': 'rad', 'velocity': 'rad/s', 'acceleration': 'rad/s²', 'current': 'A',
          'torque': 'Nm', 'temperature': '°C', 'voltage': 'V', 'control_mode': 'code'}
-JOINT_COLORS = ('#53b8f2', '#e8ac58', '#ad91ef', '#66d3b4', '#ef819a', '#d7d676')
-LIGHT_JOINT_COLORS = ('#006da5', '#996000', '#7751b5', '#16765d', '#b53760', '#757314')
-
-
-def joint_colors():
-    return LIGHT_JOINT_COLORS if theme.MODE == 'light' else JOINT_COLORS
-
-
-def chart_palette():
-    """Snapshot the colors an interactive figure currently uses."""
-    palette = {name: getattr(theme, name) for name in
-               ('BACKGROUND', 'PANEL', 'FIELD', 'BORDER', 'INK', 'MUTED', 'ACTUAL', 'TARGET', 'DANGER')}
-    palette.update({f'joint{index}': color for index, color in enumerate(joint_colors())})
-    palette.update({f'log{index}': color for index, color in enumerate(theme.CHART_SERIES)})
-    return palette
-
-
-@serialized_render
-def retheme_figure(figure, previous):
-    """Recolor existing artists without replacing traces, limits or zoom history."""
-    from matplotlib.collections import Collection
-    from matplotlib.colors import to_rgb, to_rgba
-    from matplotlib.patches import Patch
-    from matplotlib.text import Text
-    current = chart_palette()
-    replacements = {to_rgb(color): current[name] for name, color in previous.items()}
-
-    def recolor(value):
-        try:
-            rgba = to_rgba(value)
-        except (ValueError, TypeError):
-            return value
-        replacement = replacements.get(rgba[:3])
-        if replacement is None:
-            return value
-        return replacement if isinstance(value, str) and rgba[3] == 1 else (*to_rgb(replacement), rgba[3])
-
-    for artist in figure.findobj():
-        if isinstance(artist, Text):
-            artist.set_color(recolor(artist.get_color()))
-        elif isinstance(artist, Line2D):
-            artist.set_color(recolor(artist.get_color()))
-            artist.set_markerfacecolor(recolor(artist.get_markerfacecolor()))
-            artist.set_markeredgecolor(recolor(artist.get_markeredgecolor()))
-        elif isinstance(artist, Collection):
-            artist.set_facecolors([recolor(color) for color in artist.get_facecolors()])
-            artist.set_edgecolors([recolor(color) for color in artist.get_edgecolors()])
-        elif isinstance(artist, Patch):
-            artist.set_facecolor(recolor(artist.get_facecolor()))
-            artist.set_edgecolor(recolor(artist.get_edgecolor()))
-    # New tick labels created after panning also need the active palette.
-    for axis in figure.axes:
-        axis.tick_params(colors=theme.MUTED, grid_color=theme.BORDER)
-    return current
-
-
 def series_label(report, metric, joint, target=False):
     if target:
         return 'Target'
@@ -151,7 +82,7 @@ def state_runs(report, field):
     return runs
 
 
-class FlightCharts:
+class FlightCharts(StackedPanels):
     """Keep full measured traces static; move only shared timeline artists."""
     def __init__(self, figure):
         self.figure = figure
@@ -288,21 +219,6 @@ class FlightCharts:
         colors = {color: self._palette[name] for name, color in previous.items()}
         self.legend = [(label, colors.get(color, color), dashed) for label, color, dashed in self.legend]
         self.backgrounds = None
-
-    def _layout(self):
-        height = max(150., self.figure.bbox.height)
-        key = (self.figure.bbox.width, self.figure.bbox.height, len(self.axes))
-        if key == self._layout_key:
-            return False
-        self._layout_key = key
-        bottom = min(.48, 46. / height)
-        top = 1 - min(.2, 34. / height)
-        # A fixed pixel gap keeps every card's title and time ticks clear of its neighbours.
-        count = len(self.axes)
-        room = max(40., (height * (top - bottom) - 58. * (count - 1)) / max(count, 1))
-        self.figure.subplots_adjust(left=min(.2, 78. / max(self.figure.bbox.width, 1.)), right=.985, top=top,
-                                    bottom=bottom, hspace=58. / room if count > 1 else .15)
-        return True
 
     @serialized_render
     def capture_background(self, canvas):

@@ -6,6 +6,8 @@ These dimensions do not include the individual robot's factory calibration.
 import math
 import numpy as np
 
+JOINTS = ("Base", "Shoulder", "Elbow", "Wrist 1", "Wrist 2", "Wrist 3")
+
 # a2, a3, d1, d4, d5, d6
 MODELS = {
     "UR15": (-.6475, -.5164, .2186, .1824, .1361, .1434),

@@ -7,7 +7,7 @@ import unittest
 from unittest.mock import patch
 
 from motionstudio.diagnostics.transfer import DiagnosticSourceJob
-from motionstudio.logs.transfer import LogConnection
+from motionstudio.remote.ssh_job import SshConnection
 from tests.test_flight_transfer import Remote, SFTP, Key, recording
 
 
@@ -24,7 +24,7 @@ class DiagnosticTransferTests(unittest.TestCase):
                                   'log_history.bak': b'previous log\n'})
 
     def make_job(self, **kwargs):
-        return DiagnosticSourceJob(connection=LogConnection('192.0.2.1', 'root', 'private-password'),
+        return DiagnosticSourceJob(connection=SshConnection('192.0.2.1', 'root', 'private-password'),
                 destination=self.destination, client_factory=self.remote.factory,
                 trust_path=self.destination / 'known_hosts', **kwargs)
 
@@ -70,7 +70,7 @@ class DiagnosticTransferTests(unittest.TestCase):
 
     def test_rotated_log_path_does_not_duplicate_backup_as_current(self):
         job = self.make_job()
-        job.connection = LogConnection('192.0.2.1', 'root', 'private-password', '/root/log_history.bak')
+        job.connection = SshConnection('192.0.2.1', 'root', 'private-password', '/root/log_history.bak')
         job.run()
         self.assertEqual((job.snapshot_path / 'logs/log_history.txt').read_bytes(), b'current log\n')
         self.assertEqual((job.snapshot_path / 'logs/log_history.bak').read_bytes(), b'previous log\n')

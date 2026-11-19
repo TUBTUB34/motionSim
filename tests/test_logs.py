@@ -7,7 +7,9 @@ import unittest
 from unittest.mock import MagicMock, call, patch
 
 from motionstudio.logs.data import MAX_LOG_BYTES, chart_series, load_log, select_events
-from motionstudio.logs.transfer import DOWNLOAD_IDLE_TIMEOUT, LogConnection, LogJob
+from motionstudio.logs.transfer import LogJob
+from motionstudio.remote.stream import DOWNLOAD_IDLE_TIMEOUT
+from motionstudio.remote.ssh_job import SshConnection
 
 
 def line(code='C153A0:6', day='2026-04-01', uptime='1s'):
@@ -187,12 +189,12 @@ class LogTests(unittest.TestCase):
 
     def test_invalid_connection_and_secret_repr(self):
         with self.assertRaises(ValueError):
-            LogConnection('bad', 'root', 'secret')
+            SshConnection('bad', 'root', 'secret')
         with self.assertRaises(ValueError):
-            LogConnection('127.0.0.1', 'root', '')
+            SshConnection('127.0.0.1', 'root', '')
         with self.assertRaises(ValueError):
-            LogConnection('127.0.0.1', 'root', 'secret', '../log')
-        self.assertNotIn('secret', repr(LogConnection('127.0.0.1', 'root', 'secret')))
+            SshConnection('127.0.0.1', 'root', 'secret', '../log')
+        self.assertNotIn('secret', repr(SshConnection('127.0.0.1', 'root', 'secret')))
 
     def make_job(self, content=None):
         client = MagicMock()
@@ -201,7 +203,7 @@ class LogTests(unittest.TestCase):
         sftp.open.side_effect = lambda *args: io.BytesIO(content or b'')
         folder = tempfile.TemporaryDirectory()
         self.addCleanup(folder.cleanup)
-        job = LogJob(connection=LogConnection('127.0.0.1', 'root', 'secret'), client_factory=lambda: client,
+        job = LogJob(connection=SshConnection('127.0.0.1', 'root', 'secret'), client_factory=lambda: client,
                      trust_path=Path(folder.name) / 'known_hosts')  # never the user's real trust file
         return job, client, sftp
 
@@ -265,7 +267,7 @@ class LogTests(unittest.TestCase):
 
     def test_remote_backup_path_loads_the_current_log_pair(self):
         job, _, sftp = self.make_job(line().encode())
-        job.connection = LogConnection('127.0.0.1', 'root', 'secret', '/root/log_history.bak')
+        job.connection = SshConnection('127.0.0.1', 'root', 'secret', '/root/log_history.bak')
         job.run()
         self.assertEqual(self.results(job)[-1][0], 'loaded')
         self.assertEqual(sftp.open.call_args_list,

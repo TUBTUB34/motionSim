@@ -7,9 +7,10 @@ import tempfile
 import numpy as np
 from matplotlib.backends.backend_pdf import PdfPages
 
-from motionstudio.flight.charts import RENDER_LOCK
-from motionstudio.flight.data import JOINTS, load_flight
-from motionstudio.flight.pdf import _Report, LEFT, RIGHT, PAGE_WIDTH, PAGE_HEIGHT, INK, MUTED
+from motionstudio.core.rendering import RENDER_LOCK
+from motionstudio.flight.data import load_flight
+from motionstudio.core.kinematics import JOINTS
+from motionstudio.reporting.pdf import ReportDocument, LEFT, RIGHT, PAGE_WIDTH, PAGE_HEIGHT, INK, MUTED
 from motionstudio.programs.pdf import deployment_follow_up, line_ranges
 
 NOTE = ('Local evidence-based review; hypotheses require verification. Controller detections do not alone prove '
@@ -181,8 +182,8 @@ def export_diagnostic_pdf(report, destination, check_cancel=None, *, metadata=No
             'Title': 'Robot Status', 'Author': metadata.get('prepared_by') or 'UR Motion Studio',
             'Subject': 'Recorded robot condition, joint assessments and program review priorities',
         }) as pdf:
-            document = _Report(pdf, metadata.get('robot_label', '').strip() or metadata.get('client', '').strip(),
-                               subtitle='ROBOT STATUS REPORT', note=NOTE)
+            document = ReportDocument(pdf, metadata.get('robot_label', '').strip() or metadata.get('client', '').strip(),
+                                      subtitle='ROBOT STATUS REPORT', note=NOTE)
             document.new_page('Robot Status')
             document.paragraph('Recorded condition and recommended next steps', size=11, color=MUTED)
             document.y += 12

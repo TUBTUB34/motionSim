@@ -253,7 +253,7 @@ class FlightRetrievalUITests(unittest.TestCase):
         self.assertTrue(self.window.retry_button.instate(['!disabled']))
 
     def test_host_key_prompt_always_releases_worker(self):
-        from motionstudio.live.session import HostKeyQuestion
+        from motionstudio.remote.ssh_trust import HostKeyQuestion
         question = HostKeyQuestion('192.0.2.1', 'SHA256:fixture', threading.Event())
         with patch('motionstudio.flight.retrieval_view.messagebox.askyesno', return_value=False):
             self.window._handle_event('host_key', question)

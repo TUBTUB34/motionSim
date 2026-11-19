@@ -33,13 +33,13 @@ def active_robot_settings(app):
 
 def transfer_connection(app, ip, username, password, path='/root/log_history.txt'):
     """Resolve credentials at action time; page fields cannot override a live robot."""
-    from motionstudio.logs.transfer import LogConnection
+    from motionstudio.remote.ssh_job import SshConnection
     settings = active_robot_settings(app)
     if settings is not None:
         if not settings.password:
             raise ValueError('The simulator connection has no SSH password. Add it in Simulator → Connection, then reconnect to download files.')
         ip, username, password = settings.ip, settings.username or 'root', settings.password
-    connection = LogConnection(ip.strip(), username.strip(), password, path)
+    connection = SshConnection(ip.strip(), username.strip(), password, path)
     remember = getattr(app, 'remember_address', None)
     if callable(remember):
         remember(connection.ip)
@@ -48,7 +48,7 @@ def transfer_connection(app, ip, username, password, path='/root/log_history.txt
 
 def robot_download_folder(app, name, ip):
     """Per-robot folder beside the flight library, e.g. .../URMotionStudio/Robot programs/<ip>."""
-    from motionstudio.flight.transfer import default_library
+    from motionstudio.core.paths import default_library
     library = Path(getattr(app, 'flight_library_root', None) or default_library())
     return library.parent / name / ip.replace(':', '-')
 
