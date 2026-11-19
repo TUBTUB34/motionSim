@@ -111,8 +111,9 @@ class SimulatorPopout(tk.Toplevel):
         selector.bind('<<ComboboxSelected>>', self.change_source)
         ttk.Button(bar, text='Flight reports', command=app.open_flights).pack(side='right')
         ttk.Button(bar, text='Reset camera', command=self.reset_camera).pack(side='right', padx=8)
-        from motionstudio.viewer.mounting import MountingControls, installation_shown
-        self.mounting_controls = MountingControls(self, lambda: installation_shown(app, self.source_mode.get(), self.source))
+        from motionstudio.viewer.mounting import MountingControls, installation_shown, robot_shown
+        self.mounting_controls = MountingControls(self, lambda: installation_shown(app, self.source_mode.get(), self.source),
+                                                  lambda: robot_shown(self.source_mode.get(), self.source))
         self.mounting_controls.pack(fill='x')
         self.holder = ttk.Frame(self)
         self.holder.pack(fill='both', expand=True)

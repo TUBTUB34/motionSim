@@ -1,4 +1,4 @@
-"""Mounting adjustment shared by every robot view; use MOTIONSIM_UI_TESTS=1."""
+"""Mounting adjustments shared by every view of the same robot; use MOTIONSIM_UI_TESTS=1."""
 import gc
 import math
 import os
@@ -13,6 +13,8 @@ import numpy as np
 from motionstudio.core.installation import InstallationData
 from motionstudio.core.kinematics import forward_kinematics, mounting_matrix
 from motionstudio.live.rtde_client import RobotSample
+from motionstudio.remote.connection import make_settings
+from motionstudio.viewer.robot_view import mounting_override
 from tests.test_flight_ui import flight
 
 SAMPLE = RobotSample(1, (.7, -1.2, 1, -.3, .5, 0), (.3, -.2, .7, 0, 0, 0), time.monotonic())
@@ -149,12 +151,50 @@ class SimulatorMountingTests(unittest.TestCase):
         for viewer in (app.recorded_panel.robot, source.robot, popout.recorded.robot):
             np.testing.assert_allclose(drawn_mounting(viewer), expected, atol=1e-9)
         self.assertEqual([v.get() for v in popout.mounting_controls.angles], ['225', '45'])
-        source.set_report(flight())
+        # The connected robot's views keep their own (unadjusted) mounting.
+        self.assertIsNone(mounting_override(self.root))
+        # Another robot's recording starts from its own installation, not this adjustment.
+        other = replace(flight('other-robot.csv'), installation=InstallationData(mounting=(0., math.radians(90))))
+        source.set_report(other)
+        self.root.update()
+        np.testing.assert_allclose(drawn_mounting(source.robot), mounting_matrix(0., math.radians(90)), atol=1e-9)
+        source.set_report(replace(flight(), installation=SAVED))
         self.root.update()
         np.testing.assert_allclose(drawn_mounting(source.robot), expected, atol=1e-9)
         popout.mounting_controls.reset.invoke()
-        np.testing.assert_allclose(drawn_mounting(app.recorded_panel.robot), np.eye(4))
-        self.assertEqual([v.get() for v in app.mounting_controls.angles], ['0', '0'])
+        np.testing.assert_allclose(drawn_mounting(app.recorded_panel.robot), mounting_matrix(*SAVED.mounting), atol=1e-9)
+        self.assertEqual([v.get() for v in app.mounting_controls.angles], ['270', '45'])
+
+    def test_flight_reports_page_adjusts_only_the_shown_recording(self):
+        app = self.app
+        app.open_flights()
+        source = app.flight_window
+        source.set_report(replace(flight(), installation=SAVED))
+        self.root.update()
+        controls = source.mounting_controls
+        self.assertEqual([v.get() for v in controls.angles], ['270', '45'])
+        self.assertIn('Saved installation', controls.state_text.get())
+        controls.step(0, 90)
+        np.testing.assert_allclose(drawn_mounting(source.robot), mounting_matrix(0., math.radians(45)), atol=1e-9)
+        self.assertIsNone(mounting_override(self.root))  # the connected robot is untouched
+        source.set_report(flight('other-robot.csv'))
+        self.root.update()
+        self.assertEqual([v.get() for v in controls.angles], ['0', '0'])
+        self.assertIn('upright', controls.state_text.get())
+
+    def test_live_adjustment_never_turns_a_recording_and_ends_with_a_new_robot(self):
+        from motionstudio.viewer.robot_view import set_mounting_override
+        app = self.app
+        set_mounting_override(self.root, (math.radians(180), 0.))
+        app.open_flights()
+        app.flight_window.set_report(replace(flight(), installation=SAVED))
+        self.root.update()
+        np.testing.assert_allclose(drawn_mounting(app.flight_window.robot), mounting_matrix(*SAVED.mounting), atol=1e-9)
+        app.settings = make_settings('192.0.2.1', 'root', '', '')
+        app.ip.set('192.0.2.2')
+        with patch('motionstudio.app.main_window.RobotSession'):
+            app.submit()
+        self.assertIsNone(mounting_override(self.root))
 
 
 if __name__ == '__main__':

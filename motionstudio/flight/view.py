@@ -188,6 +188,13 @@ class FlightWindow(WorkspacePanel):
         self.trail_combo = ttk.Combobox(trail, textvariable=self.trail_mode, values=TRAILS, state='readonly', width=15)
         self.trail_combo.pack(side='left')
         self.trail_combo.bind('<<ComboboxSelected>>', self.update_overlays)
+        # This recording's mounting: shown from the recording, adjustable for this recording only.
+        from motionstudio.viewer.mounting import MountingControls
+        from motionstudio.viewer.robot_view import recording_key
+        self.mounting_controls = MountingControls(
+            panel, lambda: self.report.installation if self.report else None,
+            lambda: recording_key(self.report) if self.report else 'recording:', compact=True)
+        self.mounting_controls.grid(row=1, column=0, columnspan=2, sticky='ew', pady=(8, 0))
         ttk.Separator(panel).grid(row=2, column=0, columnspan=2, sticky='ew', pady=10)
         self.evidence_title = ttk.Label(panel, text='Recorded events', style='Panel.TLabel', font=('TkDefaultFont', 10, 'bold'))
         self.evidence_title.grid(row=3, column=0, columnspan=2, sticky='w')
@@ -553,7 +560,7 @@ class FlightWindow(WorkspacePanel):
                     ('notes', 'Notes'))
         detail = '\n'.join(f'{caption}: {meta[key]}' for key, caption in captions if meta.get(key))
         mounting = report.installation.mounting if report.installation else None
-        detail += ('\nMounting: base {:.1f}°, tilt {:.1f}° (saved installation)'.format(*np.degrees(mounting))
+        detail += ('\nMounting: base {:.1f}°, tilt {:.1f}° ({})'.format(*np.degrees(mounting), report.installation.mounting_source)
                    if mounting else '\nMounting: not recorded; shown upright')
         self.metadata.set(' · '.join(filter(None, (
             report.model or 'Unknown model', meta.get('program'), f'{report.sample_count:,} samples',
@@ -565,6 +572,7 @@ class FlightWindow(WorkspacePanel):
         self.export_button.configure(state='disabled' if self.exporting else 'normal')
         self.loading = False
         self._load_robot(report)
+        self.mounting_controls.mounting_changed(restore=True)
         self._load_events(report)
         self.redraw_charts()
         self.update_time(0.)
@@ -588,9 +596,11 @@ class FlightWindow(WorkspacePanel):
             self.robot_notice.configure(text='Robot model unavailable in this recording; geometry cannot be inferred.')
             self.robot_notice.grid()
             return
-        from motionstudio.viewer.robot_view import RobotView
+        from motionstudio.viewer.robot_view import RobotView, recording_key
         self.robot_notice.grid_remove()
         self.robot = RobotView(self.robot_holder, report.model)
+        # This recording's own mounting (or its own adjustment), never the connected robot's.
+        self.robot.mounting_key = recording_key(report)
         self.robot.configure(width=200, height=160)
         self.robot.visibility['info'] = False
         self.robot.zoom = 1.7

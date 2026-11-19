@@ -1,6 +1,7 @@
 """Launch the read-only UR robot viewer with python main.py."""
 import math
 import queue
+import threading
 import time
 import tkinter as tk
 from dataclasses import replace
@@ -48,6 +49,23 @@ class HintEntry(ttk.Entry):
     def destroy(self):
         self.variable.trace_remove("write", self.trace)
         super().destroy()
+
+# Page modules and the heavy libraries they import, in the order people usually open them.
+WARM_UP = ('matplotlib.figure', 'matplotlib.backends.backend_tkagg', 'motionstudio.live.view',
+           'motionstudio.flight.view', 'motionstudio.logs.view', 'motionstudio.programs.view',
+           'motionstudio.diagnostics.view', 'motionstudio.backup.view', 'motionstudio.commissioning.view',
+           'motionstudio.flight.retrieval_view', 'motionstudio.app.help_view', 'matplotlib.backends.backend_pdf')
+
+
+def warm_up_pages():
+    """Import page code ahead of the first click. Imports only: no Tk calls happen off the main thread."""
+    import importlib
+    for name in WARM_UP:
+        try:
+            importlib.import_module(name)
+        except Exception:
+            pass  # the page imports it again when opened and reports any real error there
+        time.sleep(.05)  # let the UI thread run between modules
 
 class SimulatorApp:
     def __init__(self, root, *, preferences_path=None):
@@ -132,6 +150,8 @@ class SimulatorApp:
         self.show_setup()
         self.open_home()
         self.poll_id = self.root.after(33, self.poll)
+        # Once the window is up, load page code in the background so first visits only build widgets.
+        self.warm_up_id = self.root.after(1000, self._warm_up)
 
     def clear(self):
         popout = self.simulator_popout
@@ -473,9 +493,10 @@ class SimulatorApp:
         self.source_selector.bind('<<ComboboxSelected>>', self.select_simulator_source)
         ttk.Button(bar, text='Choose flight report…', command=self.open_flights).pack(side='right')
         ttk.Button(bar, text='Separate simulator', command=self.open_simulator_window).pack(side='right', padx=8)
-        from motionstudio.viewer.mounting import MountingControls, installation_shown
+        from motionstudio.viewer.mounting import MountingControls, installation_shown, robot_shown
         self.mounting_controls = MountingControls(self.simulator_tab, lambda: installation_shown(
-            self, self.simulator_source.get(), self.recorded_source))
+            self, self.simulator_source.get(), self.recorded_source),
+            lambda: robot_shown(self.simulator_source.get(), self.recorded_source))
         self.mounting_controls.pack(fill='x')
 
     def select_simulator_source(self, _event=None):
@@ -606,6 +627,7 @@ class SimulatorApp:
     def submit(self, _event=None):
         if self.session is not None:
             return
+        previous = self.settings.ip if self.settings else None
         try:
             self.settings = make_settings(self.ip.get().strip(),
                                           self.username.get().strip() or DEFAULT_USERNAME, self.password.get(),
@@ -623,6 +645,10 @@ class SimulatorApp:
                     entry.focus_set()
             return
         self.error.set("")
+        if previous is not None and previous != self.settings.ip:
+            # A mounting adjusted for the previous robot says nothing about this one.
+            from motionstudio.viewer.robot_view import set_mounting_override
+            set_mounting_override(self.root, None)
         self.remember_address(self.settings.ip)
         self.installation.set(self.settings.installation)
         self.directory.set(self.settings.directory)
@@ -930,6 +956,9 @@ class SimulatorApp:
         return (f"Slow link · No update for {age:.0f} s · Still connected, waiting for the robot "
                 f"(gives up after {DATA_TIMEOUT:.0f} s) · Last pose retained")
 
+    def _warm_up(self):
+        threading.Thread(target=warm_up_pages, name='warm-up', daemon=True).start()
+
     def maximize(self):
         """Fill the screen at launch; the window stays resizable and restorable."""
         try:
@@ -970,6 +999,7 @@ class SimulatorApp:
         if self.session:
             self.session.stop()
         self.root.after_cancel(self.poll_id)
+        self.root.after_cancel(self.warm_up_id)
         self.root.destroy()
 
 def main():

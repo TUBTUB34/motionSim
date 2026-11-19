@@ -33,6 +33,9 @@ class RobotSession:
         # While the stream is being reopened: why it was closed. None otherwise.
         self.reconnecting = None
         self._connected_at = 0.
+        # Set at a drop and cleared by the next received sample: a robot that accepts
+        # connections but closes them at once is not "reconnected" by connecting alone.
+        self._give_up_at = None
         self.transfer = transfer_factory()
         self.stop_event = threading.Event()
         self.events = queue.Queue()
@@ -73,6 +76,7 @@ class RobotSession:
                     continue
                 if self.stop_event.is_set():
                     break
+                self._give_up_at = None
                 with self.sample_lock:
                     self.latest = sample
                 sink = self.sink
@@ -104,10 +108,18 @@ class RobotSession:
         # reconnect means this link cannot carry it.
         if self.reconnects and dropped_at - self._connected_at < STEADY_AFTER and self.rate != RATES[-1]:
             self.rate = RATES[RATES.index(self.rate) + 1] if self.rate in RATES else RATES[-1]
-        self.reconnecting = reason
-        self.events.put(("reconnecting", reason))
-        deadline = dropped_at + DATA_TIMEOUT
+        if self.reconnecting is None:
+            self.reconnecting = reason
+            self.events.put(("reconnecting", reason))
+        if self._give_up_at is None:
+            self._give_up_at = dropped_at + DATA_TIMEOUT
+        deadline = self._give_up_at
+        # Never reconnect in a tight loop, even when the robot accepts and drops at once.
+        if dropped_at - self._connected_at < RETRY_EVERY and self.stop_event.wait(RETRY_EVERY):
+            return
         while True:
+            if time.monotonic() >= deadline:
+                raise ConnectionError(f"{reason} Reconnecting failed for {DATA_TIMEOUT:.0f} s.")
             self.client.close()
             client = self.client_factory(self.settings.ip)
             client.frequency = self.rate

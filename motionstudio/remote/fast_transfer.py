@@ -15,16 +15,16 @@ import asyncio
 from collections import deque
 import concurrent.futures
 import errno
+import importlib.util
 import threading
 import time
 from types import SimpleNamespace
 
 from motionstudio.remote.stream import DOWNLOAD_IDLE_TIMEOUT, SSH_TIMEOUT
 
-try:
-    import asyncssh
-except ImportError:  # pragma: no cover - the paramiko path still works
-    asyncssh = None
+# Imported when the first fast session opens: it takes a third of a second, and
+# pages that only might download should not pay for it when they open.
+asyncssh = None
 
 # 32 KiB is the request size every SFTP server accepts (older robot OpenSSH
 # builds cap larger ones); depth, not request size, is what fills a slow link.
@@ -35,7 +35,19 @@ COMPRESSION = ['zlib@openssh.com', 'zlib', 'none']
 
 
 def available():
-    return asyncssh is not None
+    """True when AsyncSSH is installed (without importing it)."""
+    try:
+        return asyncssh is not None or importlib.util.find_spec('asyncssh') is not None
+    except (ImportError, ValueError):
+        return False
+
+
+def _load():
+    global asyncssh
+    if asyncssh is None:
+        import asyncssh as module
+        asyncssh = module
+    return asyncssh
 
 
 def _run_loop(loop):
@@ -68,8 +80,10 @@ class FastSFTP:
 
 ``stop`` (a threading.Event) abandons a slow connection attempt promptly.
 """
-        if asyncssh is None:
-            raise RuntimeError('AsyncSSH is not installed.')
+        try:
+            _load()
+        except ImportError:
+            raise RuntimeError('AsyncSSH is not installed.') from None
         loop = asyncio.new_event_loop()
         thread = threading.Thread(target=_run_loop, args=(loop,), name='fast-sftp', daemon=True)
         thread.start()

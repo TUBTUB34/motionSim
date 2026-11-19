@@ -219,6 +219,15 @@ class KinematicsTests(unittest.TestCase):
                 up = mounting_matrix(math.radians(base), math.radians(tilt))[:3, :3].T @ [0, 0, 1]
                 np.testing.assert_allclose(up, np.array(gravity) / np.linalg.norm(gravity), atol=1e-9)
 
+    def test_mounting_from_gravity_inverts_mounting_matrix(self):
+        from motionstudio.core.kinematics import mounting_from_gravity
+        for base, tilt in ((270, 45), (180, 45), (90, 30), (10, 170)):
+            up = mounting_matrix(math.radians(base), math.radians(tilt))[:3, :3].T @ [0, 0, 1]
+            np.testing.assert_allclose(mounting_from_gravity(up * 9.82), (math.radians(base), math.radians(tilt)), atol=1e-9)
+        # Upright: gravity cannot show the base rotation, so the known one is kept.
+        self.assertEqual(mounting_from_gravity((0, 0, 9.82), base_angle=1.), (1., 0.))
+        self.assertIsNone(mounting_from_gravity((0, 0, 0)))
+
     def test_display_frame_alignment(self):
         mount = mounting_matrix(math.pi, math.pi/4)
         pose = [.3, -.2, .7, .4, -.5, 1.2]
@@ -349,16 +358,17 @@ class SessionTests(unittest.TestCase):
             made.append(clients.pop(0) if clients else ScriptedClient(10**9))
             return made[-1]
         session = RobotSession(make_settings("127.0.0.1", "", "", ""), factory, lambda: Mock())
-        session.start()
         events = []
-        deadline = time.monotonic() + 3
-        while time.monotonic() < deadline and not until(events, session):
-            try:
-                events.append(session.events.get(timeout=.05))
-            except Exception:
-                pass
-        session.stop()
-        session.threads[0].join(1)
+        with patch("motionstudio.live.session.RETRY_EVERY", .05):
+            session.start()
+            deadline = time.monotonic() + 3
+            while time.monotonic() < deadline and not until(events, session):
+                try:
+                    events.append(session.events.get(timeout=.05))
+                except Exception:
+                    pass
+            session.stop()
+            session.threads[0].join(1)
         return session, [kind for kind, _data in events], made
 
     def test_robot_closing_a_working_stream_reconnects_and_keeps_streaming(self):
@@ -382,6 +392,14 @@ class SessionTests(unittest.TestCase):
         _session, kinds, _made = self.run_session([ScriptedClient(0)], lambda events, s: "error" in [k for k, _ in events])
         self.assertIn("error", kinds)
         self.assertNotIn("reconnecting", kinds)
+
+    def test_a_robot_that_accepts_then_drops_at_once_is_not_hammered(self):
+        # Connects succeed but every stream closes before a sample: back off, then give up.
+        clients = [ScriptedClient(3)] + [ScriptedClient(0) for _ in range(200)]
+        with patch("motionstudio.live.session.DATA_TIMEOUT", .5):
+            _session, kinds, made = self.run_session(clients, lambda events, s: any(k == "error" for k, _ in events))
+        self.assertEqual(kinds[-1], "error")
+        self.assertLess(len(made), 15)  # about one attempt per 50 ms pause, not thousands
 
     def test_reconnecting_gives_up_after_the_data_timeout(self):
         clients = [ScriptedClient(3)] + [ScriptedClient(0, fail_connect=True) for _ in range(50)]

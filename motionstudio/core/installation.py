@@ -17,6 +17,8 @@ class InstallationData:
     mounting: tuple | None = None  # baseAngle, tiltAngle (radians)
     warnings: tuple = ()
     payload_name: str = ""
+    # Where ``mounting`` came from, as shown to the user.
+    mounting_source: str = 'saved installation'
 
 def tag(element):
     return element.tag.rsplit("}", 1)[-1].rsplit(".", 1)[-1].removesuffix("Impl").lower()

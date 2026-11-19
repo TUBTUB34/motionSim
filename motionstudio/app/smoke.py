@@ -78,6 +78,7 @@ def check(app):
         assert ProgramSourceJob, 'Bundled program retrieval module is missing'
         from motionstudio.remote import fast_transfer
         assert fast_transfer.available(), 'Bundled AsyncSSH is missing; robot downloads would fall back to paramiko'
+        import asyncssh  # noqa: F401 - bundled and importable, not only present
         program = Path(folder) / 'packaging.script'
         program.write_text(
             'set_payload(1, [0,0,.1])\n'
@@ -167,6 +168,7 @@ def check(app):
         app.root.update()
         viewer.update_robot(RobotSample(1, (0, -1, 1, 0, 0, 0), (.3, -.2, .7, 0, 0, 0), time.monotonic()), None)
         assert viewer.rendered_triangles > 100, 'Bundled robot assets or renderer failed'
+        viewer.mounting_key = app.mounting_controls.robot()  # follow the robot the controls adjust
         app.mounting_controls.step(1, 45)
         assert viewer.find_withtag('mounting'), 'Bundled mounting adjustment failed'
         app.mounting_controls.reset.invoke()

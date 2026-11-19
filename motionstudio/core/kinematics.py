@@ -49,6 +49,22 @@ def mounting_matrix(base_angle=0., tilt_angle=0.):
     """
     return pose_matrix((0, 0, 0, -tilt_angle, 0, 0)) @ pose_matrix((0, 0, 0, 0, 0, -base_angle))
 
+def mounting_from_gravity(gravity, base_angle=0.):
+    """(base, tilt) in radians from a program's set_gravity() vector, the inverse of mounting_matrix.
+
+    Gravity fixes the tilt, and the base rotation only while tilted; an upright robot
+    keeps ``base_angle``. None for a zero or non-finite vector.
+    """
+    up = np.asarray(gravity, dtype=float)
+    norm = np.linalg.norm(up) if up.shape == (3,) and np.isfinite(up).all() else 0.
+    if norm < 1e-9:
+        return None
+    x, y, z = up / norm
+    tilt = math.acos(max(-1., min(1., z)))
+    base = math.atan2(x, -y) % (2 * math.pi) if math.sin(tilt) > 1e-6 else base_angle
+    return base, tilt
+
+
 def forward_kinematics(model, joints, mounting=None):
     q = np.asarray(joints, dtype=float)
     if q.shape != (6,) or not np.isfinite(q).all():

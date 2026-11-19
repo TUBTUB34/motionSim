@@ -109,6 +109,11 @@ class LiveMonitorTests(unittest.TestCase):
         # The loopback robot streams actual_TCP_speed, so both tiles show values.
         self.pump(lambda: page.tiles['tcp_acceleration'].cget('text').endswith('m/s²'))
         self.assertTrue(page.tiles['tcp_speed'].cget('text').endswith('m/s'))
+        # The rotational part of the same stream, in degrees per second.
+        page.select_tcp_motion('rotation')
+        self.assertIn('rotation', page.charts.axes[-2].get_title(loc='left'))
+        self.pump(lambda: page.tiles['tcp_speed'].cget('text').endswith('°/s'))
+        page.select_tcp_motion('linear')
         # Older controllers omit it; the tiles must say so rather than show zero.
         self.assertEqual(page._tcp_readouts({}), ('Unavailable', 'Unavailable'))
 

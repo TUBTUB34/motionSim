@@ -165,6 +165,22 @@ class LiveChartsTests(unittest.TestCase):
         self.assertGreater(lines[3].get_linewidth(), lines[0].get_linewidth())
         self.assertIsNotNone(self.charts.axes[0].get_legend())
 
+    def test_tcp_panels_switch_to_rotational_speed_in_degrees(self):
+        from motionstudio.live.view import TCP_ROTATION
+        self.charts.configure(['tcp_speed', 'tcp_acceleration'], [], False, True, rotation=True)
+        self.assertTrue(set(TCP_ROTATION) <= set(self.charts.headers))
+        self.assertFalse(set(TCP_VELOCITY) & set(self.charts.headers))
+        self.assertIn('rotation', self.titles()[0])
+        self.assertIn('°/s', self.titles()[0])
+        self.assertIn('°/s²', self.titles()[1])
+        data = stream()
+        self.charts.update(10., data)
+        magnitude = np.linalg.norm(np.column_stack([data[header] for header in TCP_ROTATION]), axis=1)
+        np.testing.assert_allclose(np.max(self.charts.axes[0].lines[0].get_ydata()), np.degrees(magnitude).max(), rtol=1e-9)
+        self.assertTrue(self.charts.axes[0].get_title(loc='right').endswith(' °/s'))
+        self.charts.configure(['tcp_speed'], [], False, False, rotation=True)
+        self.assertIn('rad/s', self.titles()[0])
+
     def test_latest_value_shows_on_tcp_and_per_joint_panels(self):
         self.charts.configure(['position', 'tcp_speed'], [0, 1], False, True, separate=True)
         self.charts.update(10., stream())
@@ -184,6 +200,67 @@ class LiveChartsTests(unittest.TestCase):
         self.assertGreaterEqual(axis.get_ylim()[1], 2.)
         settle_limits(axis, 0., .2)
         self.assertLess(axis.get_ylim()[1], 1.)
+        # A flat signal (constant temperature, zero target) is not a change on every refresh.
+        self.assertTrue(settle_limits(axis, 3., 3.))
+        self.assertFalse(settle_limits(axis, 3., 3.))
+
+    def screen(self):
+        """RGBA rows of the on-screen panels, top to bottom."""
+        slots = [self.charts._slot(axis) for axis in self.charts.on_screen()]
+        height = int(self.figure.bbox.height)
+        top, bottom = max(slot.y1 for slot in slots), min(slot.y0 for slot in slots)
+        return np.asarray(self.figure.canvas.buffer_rgba())[height - int(top):height - int(bottom)].copy()
+
+    def assert_matches_full_draw(self, step):
+        partial = self.screen()
+        self.figure.canvas.draw()
+        np.testing.assert_array_equal(partial, self.screen(), err_msg=step)
+
+    def test_partial_repaints_match_a_full_draw(self):
+        """The cheap path must show exactly what a full render shows, in every situation it handles."""
+        self.charts.configure([*SIGNALS, *TCP_SIGNALS], list(range(6)), True, True, separate=True)
+        self.figure.set_size_inches(10, (len(self.charts.axes) * 160 + 60) / 100)
+        self.charts.band = (0., .12)
+        data = stream()
+        self.charts.update(30., data)
+        self.assertEqual(self.charts.paint(), 0)  # first paint is a full draw
+        self.assert_matches_full_draw('first draw')
+        later = stream()
+        for header in later:
+            if header not in ('Timestamp [s]', 'Safety mode'):
+                later[header] = np.roll(later[header], 200)  # new samples, same value range
+        self.charts.update(30., later)
+        self.assertFalse(self.charts._dirty & set(self.charts.on_screen()))
+        self.charts.paint(renders=0)  # only kept static images are used
+        self.assert_matches_full_draw('new data, kept static images')
+        self.charts.view(.45, .57)  # panels never drawn before scroll in
+        while self.charts.paint():
+            pass
+        self.assert_matches_full_draw('scrolled-in panels rendered one by one')
+        grown = dict(later)
+        grown['Actual position j3 [rad]'] = later['Actual position j3 [rad]'] * 40
+        self.charts.view(0., .12)
+        self.charts.update(30., grown)
+        self.assertTrue(self.charts._dirty)
+        while self.charts.paint():
+            pass
+        self.assert_matches_full_draw('y range grew')
+        self.charts.update(30., stream(stops=((300, 420),)))
+        while self.charts.paint():
+            pass
+        self.assert_matches_full_draw('protective stop shaded')
+        self.charts.update(30., stream())
+        while self.charts.paint():
+            pass
+        self.assert_matches_full_draw('stop shading cleared')
+        self.charts.view(.9, 1.)
+        missing = stream()
+        for header in TCP_VELOCITY:
+            missing[header] = np.full(len(missing['Timestamp [s]']), np.nan)
+        self.charts.update(30., missing)
+        while self.charts.paint():
+            pass
+        self.assert_matches_full_draw('TCP note shown')
 
     def test_stop_spans(self):
         x = np.arange(10.)

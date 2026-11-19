@@ -1,7 +1,7 @@
 """Full-size recorded robot playback in the application's main window."""
 import tkinter as tk
 from tkinter import ttk
-from motionstudio.viewer.robot_view import RobotView
+from motionstudio.viewer.robot_view import RobotView, recording_key
 from motionstudio.core.playback import sample_at
 
 
@@ -92,6 +92,7 @@ class RecordedPlayback(ttk.Frame):
                 self.robot = None
             if report.model:
                 self.robot = RobotView(self.holder, report.model)
+                self.robot.mounting_key = recording_key(report)
                 self.robot.grid(row=0, column=0, sticky='nsew')
                 self.change_mounting()
                 self.robot.set_stream_state('Recorded joint geometry')

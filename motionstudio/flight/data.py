@@ -3,20 +3,21 @@
 CSV header units are authoritative. Timestamps are controller uptime, not UTC.
 Archives are read in place; no member is extracted or executed.
 """
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from functools import cached_property, lru_cache
 from pathlib import Path
 import ast
 import csv
 import io
 import json
+import math
 import re
 import zipfile
 
 import numpy as np
 
 from motionstudio.core.installation import InstallationData, decode_installation
-from motionstudio.core.kinematics import JOINTS, MODELS
+from motionstudio.core.kinematics import JOINTS, MODELS, mounting_from_gravity, mounting_matrix
 
 TELEMETRY_MEMBER = "files/realtimedata.csv"
 MAX_TELEMETRY_BYTES = 256 * 1024 * 1024
@@ -180,6 +181,35 @@ def _installation(archive, summary, archive_metadata, warnings):
                             payload_cog=vector("payloadCog", 3), mounting=vector("mounting", 2))
 
 
+GRAVITY = re.compile(r"^\s*set_gravity\(\[\s*([^,\]]+),\s*([^,\]]+),\s*([^,\]]+)\s*\]\)", re.MULTILINE)
+
+
+def _program_mounting(installation, script, warnings):
+    """Mounting the recorded program actually ran with: its set_gravity(), PolyScope's own record of it.
+
+    Used when the recording saved no mounting, and in place of a saved mounting that
+    points the robot a different way (more than 2°) than the program did.
+    """
+    match = GRAVITY.search(script or "")
+    if match is None:
+        return installation
+    try:
+        gravity = [float(value) for value in match.groups()]
+    except ValueError:
+        return installation
+    saved = installation.mounting if installation else None
+    angles = mounting_from_gravity(gravity, saved[0] if saved else 0.)
+    if angles is None:
+        return installation
+    if saved is not None:
+        up = lambda mounting: mounting_matrix(*mounting)[:3, :3].T @ [0., 0., 1.]
+        if math.degrees(math.acos(max(-1., min(1., float(up(saved) @ up(angles)))))) <= 2:
+            return installation
+        warnings.append("The saved installation's mounting differs from the recorded program's set_gravity(); "
+                        "the robot is shown as the program ran it.")
+    return replace(installation or InstallationData(), mounting=angles, mounting_source="program set_gravity()")
+
+
 def _metadata(summary):
     labels = {"Incident Time": "incident_time", "Reporting Time": "reporting_time",
               "Serial number": "serial", "Version": "software_version",
@@ -309,6 +339,7 @@ def _load_cached(path_string, _modified, _size):
                         warnings.append("Archive metadata.json is malformed; telemetry remains available.")
                         archive_metadata = {}
                 installation = _installation(archive, summary, archive_metadata, warnings)
+                installation = _program_mounting(installation, script, warnings)
         except (zipfile.BadZipFile, RuntimeError) as error:
             raise ValueError(f"Cannot read flight ZIP: {error}") from error
     elif path.suffix.lower() == ".csv":

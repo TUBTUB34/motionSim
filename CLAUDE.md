@@ -13,6 +13,8 @@ Read-only Tkinter + matplotlib + numpy desktop app for Universal Robots: live RT
 - Tests must never write to real user files. Pass `trust_path=` (temp) to SSH jobs, and `preferences_path=` to `SimulatorApp`.
 - Credentials stay in memory only. Approved SSH host keys are saved to `~/.ssh/known_hosts` after a successful connect. A changed key always asks again.
 - Recordings hold real streamed channels only. Derived values (e.g. TCP acceleration) stay in the view.
+- Live charts refresh through `LiveCharts.paint` (cached per-panel strips, one panel per idle turn); a full `canvas.draw()` only on layout/size/window change. `tests/test_live_view` pixel test guards it; measure UI changes with a hidden-desktop probe, not by feel.
+- Mounting adjustments are per robot (`robot_view.LIVE` / `recording_key(report)`); a recording never takes the connected robot's angles.
 
 ## Code lookup order
 1. ECC memory: `ecc memory search "motionsim <topic>" --scope user` (tag `project-motionsim`).

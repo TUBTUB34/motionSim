@@ -21,15 +21,29 @@ DISPLAY_OPTIONS = {
     "info": "Viewport information",
 }
 
-def mounting_override(widget):
-    """Mounting adjusted in the app (base, tilt in radians), or None to use each installation's saved angles."""
-    return getattr(widget._root(), '_studio_mounting', None)
+# Mounting adjustments belong to one robot: the connected one (LIVE), or a recording
+# (recording_key). A recording is never drawn with the connected robot's angles.
+LIVE = 'live'
 
 
-def set_mounting_override(widget, angles):
-    """Draw every robot view with one mounting; None returns each view to its installation. Display only."""
+def recording_key(report):
+    return f'recording:{report.path}'
+
+
+def mounting_override(widget, key=LIVE):
+    """Mounting adjusted in the app for one robot (base, tilt in radians), or None to use its saved angles."""
+    return getattr(widget._root(), '_studio_mountings', {}).get(key)
+
+
+def set_mounting_override(widget, angles, key=LIVE):
+    """Draw every view of one robot with this mounting; None returns them to its installation. Display only."""
     root = widget._root()
-    root._studio_mounting = None if angles is None else tuple(angles)
+    mountings = dict(getattr(root, '_studio_mountings', {}))
+    if angles is None:
+        mountings.pop(key, None)
+    else:
+        mountings[key] = tuple(angles)
+    root._studio_mountings = mountings
 
     def walk(item):
         changed = getattr(item, 'mounting_changed', None)
@@ -58,6 +72,9 @@ def cylinder_geometry(length, radius, end_radius, bevel, segments=40):
     return vertices, normals, rings[[0, -1]]
 
 class RobotView(tk.Canvas):
+    # Whose mounting adjustment this view follows; recorded views set their recording_key.
+    mounting_key = LIVE
+
     def __init__(self, parent, model):
         super().__init__(parent, background=theme.PANEL, highlightthickness=0, width=700, height=560)
         self.model = model
@@ -367,7 +384,7 @@ class RobotView(tk.Canvas):
         frames = None
         data = self.installation
         if self.sample is not None:
-            adjusted = mounting_override(self)
+            adjusted = mounting_override(self, self.mounting_key)
             angles = adjusted or (data.mounting if data else None)
             mount = mounting_matrix(*angles) if angles is not None else np.eye(4)
             reference = self.tcp_view_reference if self.view_frame == "Live TCP" else self.sample.tcp_pose

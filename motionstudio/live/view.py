@@ -15,6 +15,8 @@ from tkinter import ttk, filedialog
 import numpy as np
 from matplotlib.collections import PolyCollection
 from matplotlib.figure import Figure
+from matplotlib.patches import Rectangle
+from matplotlib.transforms import Bbox, IdentityTransform
 
 from motionstudio.ui.charts import StackedPanels, joint_colors
 from motionstudio.core.kinematics import JOINTS
@@ -43,6 +45,12 @@ TCP_SIGNALS = {
 }
 # actual_TCP_speed is optional in RTDE; older controllers leave these columns NaN.
 TCP_VELOCITY = tuple(f'Actual TCP velocity {axis} [m/s]' for axis in 'xyz')
+# The same stream's rotational part; the TCP panels show one or the other.
+TCP_ROTATION = tuple(f'Actual TCP velocity {axis} [rad/s]' for axis in ('rx', 'ry', 'rz'))
+ROTATION_SIGNALS = {
+    'tcp_speed': ('TCP rotation speed', 'rad/s', '|ω|', ''),
+    'tcp_acceleration': ('TCP angular acceleration', 'rad/s²', '|α|', 'derived'),
+}
 WINDOWS = {'10 s': 10., '30 s': 30., '60 s': 60., '120 s': 120.}
 # Chart tabs, as in Flight reports; each shows a fixed set of panels.
 VIEWS = {'All readings': (*SIGNALS, *TCP_SIGNALS), 'Position': ('position',), 'Velocity': ('velocity',),
@@ -116,21 +124,25 @@ def tcp_colors():
 
 
 def settle_limits(axis, low, high):
-    """Grow the y range at once; shrink it only when the data uses under half of it.
+    """Grow the y range at once; shrink it only when the data uses under half of it. True when it changed.
 
     Rescaling on every refresh makes live lines jump even when nothing changed.
     """
     span = high - low
     pad = span * .08 if span > 0 else max(abs(high) * .05, 1e-3)
     current = getattr(axis, '_live_limits', None)
-    if current is not None and current[0] <= low and current[1] >= high and span > .5 * (current[1] - current[0]):
-        return
-    axis._live_limits = (low - pad, high + pad)
-    axis.set_ylim(*axis._live_limits)
+    target = (low - pad, high + pad)
+    if current is not None and (target == current or (
+            current[0] <= low and current[1] >= high and span > .5 * (current[1] - current[0]))):
+        return False
+    axis._live_limits = target
+    axis.set_ylim(*target)
+    return True
 
 
 # Decimals per unit, matching the joint table and the tiles.
-DECIMALS = {'°': 2, '°/s': 1, 'rad': 4, 'rad/s': 3, 'A': 2, 'Nm': 1, '°C': 1, 'm/s': 3, 'm/s²': 2}
+DECIMALS = {'°': 2, '°/s': 1, '°/s²': 1, 'rad': 4, 'rad/s': 3, 'rad/s²': 2, 'A': 2, 'Nm': 1, '°C': 1,
+            'm/s': 3, 'm/s²': 2}
 
 
 def latest_text(value, unit):
@@ -167,7 +179,13 @@ class LiveCharts(StackedPanels):
 
     Panels are (metric, joints): Combined overlays the selected joints, Separate
     joints gives each joint its own panel, and TCP panels are never per joint.
-    Only panels near the scrolled viewport are rendered, so many panels stay cheap.
+
+    Each panel owns a full-width strip of the figure (its slot). A full draw paints
+    only the static parts (axes, ticks, titles); the lines, stop shading and latest
+    value are animated artists. After any full draw the static image of every drawn
+    slot is kept, so ``paint`` restores a slot, draws its animated artists and copies
+    just that strip to the screen. A panel is re-rendered on its own when its scale
+    or note changes, or when it first scrolls into view; scrolling draws nothing.
     """
     def __init__(self, figure):
         self.figure = figure
@@ -176,19 +194,40 @@ class LiveCharts(StackedPanels):
         self.lines = []
         self.stops = []
         self.notes = []
+        self.readouts = []
+        self.values = {}
         self.headers = ()
+        self.tcp_headers = TCP_VELOCITY
         self.band = (0., 1.)
         self._stopped = False
         self._layout_key = None
+        self._dynamic = {}
+        self._backgrounds = {}
+        self._dirty = set()
+        self._drawn_size = None
+        self._window = None
+        self._hooked = None
+        # update() counts data versions; each panel remembers the version it shows.
+        self._version = 0
+        self._shown = {}
 
     @serialized_render
-    def configure(self, metrics, joints, show_target, degrees, separate=False, shared_scale=False, components=False):
-        """``components`` adds x, y and z to the TCP panels; the magnitude is always drawn."""
+    def configure(self, metrics, joints, show_target, degrees, separate=False, shared_scale=False, components=False,
+                  rotation=False):
+        """``components`` adds x, y and z to the TCP panels; the magnitude is always drawn.
+
+        ``rotation`` charts the TCP's rotational speed (°/s, or rad/s without ``degrees``)
+        and its derived angular acceleration instead of the linear ones.
+        """
+        self.tcp_headers = TCP_ROTATION if rotation else TCP_VELOCITY
         self.figure.clear()
         self.figure.set_facecolor(theme.BACKGROUND)
         self.axes, self.lines, self.stops, self.notes = [], [], [], []
+        self._dynamic, self._backgrounds, self._dirty, self._shown = {}, {}, set(), {}
+        self._drawn_size = self._window = None
         # (axis, line key, scale, unit): the latest value shown at the panel's top right.
         self.readouts = []
+        self.values = {}
         # Each axis's y-scale group: itself, or the first panel of its metric when scales are shared.
         self.scale_root = {}
         self._stopped, self._layout_key = False, None
@@ -210,18 +249,23 @@ class LiveCharts(StackedPanels):
             self.axes.append(axis)
             axis.set_facecolor(theme.BACKGROUND)
             if panel_joints is None:
-                title, unit, magnitude, note = TCP_SIGNALS[metric]
+                title, unit, magnitude, note = (ROTATION_SIGNALS if rotation else TCP_SIGNALS)[metric]
+                scale = 1.
+                if rotation and degrees:
+                    unit, scale = unit.replace('rad', '°'), 180 / np.pi
                 axis.set_title(' · '.join(filter(None, (title, unit, note))), color=theme.INK, loc='left',
                                fontsize=9, fontweight='bold', pad=6)
-                headers.extend(TCP_VELOCITY)
+                headers.extend(self.tcp_headers)
                 # The magnitude leads; components are thin and drawn underneath it.
-                for column, (name, color) in enumerate(zip(('x', 'y', 'z', magnitude), tcp_colors())):
+                names = ('rx', 'ry', 'rz') if rotation else ('x', 'y', 'z')
+                for column, (name, color) in enumerate(zip((*names, magnitude), tcp_colors())):
                     if column < 3 and not components:
                         continue
-                    self.lines.append(((metric, column), axis, 1., axis.plot(
+                    self.lines.append(((metric, column), axis, scale, axis.plot(
                         [], [], color=color, label=name, zorder=3 if column == 3 else 2,
                         linewidth=1.8 if column == 3 else .9, alpha=1. if column == 3 else .85)[0]))
-                self.readouts.append((axis, (metric, 3), 1., unit))
+                self.readouts.append((axis, (metric, 3), scale, unit))
+                self.values[axis] = axis.set_title('', loc='right', color=theme.MUTED, fontsize=9, pad=6)
                 if components:
                     # On the title line, between the name and the latest value, never over the data.
                     axis.legend(loc='lower center', bbox_to_anchor=(.5, 1.), ncol=4, frameon=False, fontsize=8,
@@ -235,6 +279,7 @@ class LiveCharts(StackedPanels):
                 if separate:
                     self.readouts.append((axis, actual.format(j=panel_joints[0]),
                                           180 / np.pi if angle and degrees else 1., unit))
+                    self.values[axis] = axis.set_title('', loc='right', color=theme.MUTED, fontsize=9, pad=6)
                 for joint in panel_joints:
                     for dashed, template in ((False, actual), (True, target if show_target else None)):
                         if template is None:
@@ -255,6 +300,12 @@ class LiveCharts(StackedPanels):
             axis.grid(color=theme.BORDER, linewidth=.6)
             for spine in axis.spines.values():
                 spine.set_edgecolor(theme.BORDER)
+            dynamic = [line for _key, owner, _scale, line in self.lines if owner is axis]
+            dynamic += [self.stops[-1]] + ([self.values[axis]] if axis in self.values else [])
+            for artist in dynamic:
+                artist.set_animated(True)
+            self._dynamic[axis] = sorted(dynamic, key=lambda artist: artist.get_zorder())
+        self._hook()
         if not self.axes:
             self.figure.text(.5, .5, 'Tick at least one signal to chart.', color=theme.MUTED, ha='center')
         else:
@@ -288,6 +339,7 @@ class LiveCharts(StackedPanels):
         times = data['Timestamp [s]']
         if not len(times) or not self.axes:
             return
+        self._version += 1
         x = times - times[-1]
         tcp = {}
         filled = set()
@@ -297,7 +349,7 @@ class LiveCharts(StackedPanels):
             else:
                 metric, column = key
                 if metric not in tcp:
-                    tcp[metric] = tcp_series(metric, times, np.column_stack([data[header] for header in TCP_VELOCITY]))
+                    tcp[metric] = tcp_series(metric, times, np.column_stack([data[header] for header in self.tcp_headers]))
                 values = tcp[metric][:, column]
             if not np.isfinite(values).any():
                 line.set_data([], [])
@@ -305,7 +357,9 @@ class LiveCharts(StackedPanels):
             filled.add(axis)
             line.set_data(*envelope(x, values * scale if scale != 1 else values))
         for axis, note in zip(self.axes, self.notes):
-            note.set_visible(axis not in filled)
+            if note.get_visible() != (axis not in filled):
+                note.set_visible(axis not in filled)
+                self._dirty.add(axis)
         latest = {}
         for key, _axis, scale, line in self.lines:
             latest[key] = (tcp[key[0]][:, key[1]] if not isinstance(key, str) else data[key]), scale
@@ -315,8 +369,7 @@ class LiveCharts(StackedPanels):
                 # The centred average is complete only half a window back from the newest sample.
                 values = values[times <= times[-1] - AVERAGE / 2]
             values = values[np.isfinite(values)]
-            axis.set_title(latest_text(values[-1] * scale, unit) if len(values) else '', loc='right',
-                           color=theme.MUTED, fontsize=9, pad=6)
+            self.values[axis].set_text(latest_text(values[-1] * scale, unit) if len(values) else '')
         stopped = data['Safety mode'] == PROTECTIVE_STOP
         if stopped.any() or self._stopped:
             # Shading uses only the streamed safety mode, as in Flight reports.
@@ -334,8 +387,118 @@ class LiveCharts(StackedPanels):
                 low, high = ranges.get(root, (np.inf, -np.inf))
                 ranges[root] = min(low, values.min()), max(high, values.max())
         for root, (low, high) in ranges.items():
-            settle_limits(root, low, high)
-        self.axes[0].set_xlim(-window, 0)
+            if settle_limits(root, low, high):
+                self._dirty.update(axis for axis in self.axes if self.scale_root[axis] is root)
+        if window != self._window:
+            self._window = window
+            self.axes[0].set_xlim(-window, 0)
+            self._drawn_size = None  # every panel's ticks change: the next paint is a full draw
+
+    # ------------------------------------------------------------ repainting
+    def _hook(self):
+        canvas = self.figure.canvas
+        if canvas is not None and self._hooked is not canvas:
+            canvas.mpl_connect('draw_event', self._drawn)
+            self._hooked = canvas
+
+    def _slot(self, axis):
+        """The panel's strip in display pixels: full width, halfway into the gaps to its neighbours."""
+        index = self.axes.index(axis)
+        height, width = self.figure.bbox.height, self.figure.bbox.width
+        box = axis.get_position()
+        top = height if index == 0 else round((box.y1 + self.axes[index - 1].get_position().y0) / 2 * height)
+        bottom = 0 if index == len(self.axes) - 1 else round((box.y0 + self.axes[index + 1].get_position().y1) / 2 * height)
+        return Bbox.from_extents(0, bottom, width, top)
+
+    def _draw_dynamic(self, axis):
+        for artist in self._dynamic[axis]:
+            if artist.get_visible():
+                axis.draw_artist(artist)
+
+    def _drawn(self, _event):
+        """After a full draw: keep each drawn panel's static image, then add its live artists."""
+        canvas = self.figure.canvas
+        self._backgrounds = {}
+        self._drawn_size = tuple(self.figure.bbox.size)
+        for axis in self.axes:
+            if axis.get_visible():
+                self._backgrounds[axis] = canvas.copy_from_bbox(self._slot(axis))
+                self._draw_dynamic(axis)
+                self._dirty.discard(axis)
+                self._shown[axis] = self._version
+
+    def _render_panel(self, axis):
+        """Draw one panel's strip from scratch without touching the rest of the figure."""
+        canvas = self.figure.canvas
+        renderer = canvas.get_renderer()
+        slot = self._slot(axis)
+        Rectangle((slot.x0, slot.y0), slot.width, slot.height, transform=IdentityTransform(), linewidth=0,
+                  facecolor=self.figure.get_facecolor(), edgecolor='none', antialiased=False).draw(renderer)
+        axis.set_visible(True)
+        axis.draw(renderer)
+        self._backgrounds[axis] = canvas.copy_from_bbox(slot)
+        self._dirty.discard(axis)
+        self._draw_dynamic(axis)
+        self._shown[axis] = self._version
+        canvas.blit(slot)
+
+    def on_screen(self):
+        """Panels whose strip overlaps the scrolled viewport band."""
+        top, bottom = self.band
+        height = max(self.figure.bbox.height, 1.)
+        low, high = (1 - bottom) * height, (1 - top) * height
+        return [axis for axis in self.axes if (slot := self._slot(axis)).y1 > low and slot.y0 < high]
+
+    @serialized_render
+    def paint(self, renders=1, ahead=True, updates=None):
+        """Show the latest data on on-screen panels; returns how many panels still wait for a render.
+
+        Panels with a kept static image are updated in place. At most ``renders``
+        panels are rendered from scratch per call, so a page can yield to input
+        between them. With ``ahead``, spare renders go to off-screen panels nearest
+        the viewport, so later scrolling finds them ready. ``updates`` likewise limits
+        in-place updates per call (None: all on-screen panels).
+        """
+        canvas = self.figure.canvas
+        if not self.axes or canvas is None:
+            return 0
+        self._hook()
+        if self._drawn_size != tuple(self.figure.bbox.size):
+            canvas.draw()
+            return 0
+        waiting = 0
+        for axis in self.on_screen():
+            if axis in self._backgrounds and axis not in self._dirty:
+                if self._shown.get(axis) == self._version:
+                    continue  # already showing this data, e.g. after a scroll
+                if updates is not None:
+                    if updates <= 0:
+                        waiting += 1
+                        continue
+                    updates -= 1
+                canvas.restore_region(self._backgrounds[axis])
+                self._draw_dynamic(axis)
+                self._shown[axis] = self._version
+                canvas.blit(self._slot(axis))
+            elif renders > 0:
+                self._render_panel(axis)
+                renders -= 1
+            else:
+                waiting += 1
+        if not ahead:
+            return waiting
+        on_screen = set(self.on_screen())
+        middle = sum(self.band) / 2 * self.figure.bbox.height
+        later = sorted((axis for axis in self.axes if axis not in on_screen
+                        and (axis not in self._backgrounds or axis in self._dirty)),
+                       key=lambda axis: abs(self.figure.bbox.height - (self._slot(axis).y0 + self._slot(axis).y1) / 2 - middle))
+        for axis in later:
+            if renders > 0:
+                self._render_panel(axis)
+                renders -= 1
+            else:
+                waiting += 1
+        return waiting
 
 
 class LivePage(ttk.Frame):
@@ -348,6 +511,7 @@ class LivePage(ttk.Frame):
         self.show_target = tk.BooleanVar(value=True)
         self.degrees = tk.BooleanVar(value=True)
         self.components = tk.BooleanVar(value=False)
+        self.tcp_motion = tk.StringVar(value='linear')
         self.window = tk.StringVar(value='30 s')
         self.graphs = tk.StringVar(value='Combined')
         self.shared_scale = tk.BooleanVar(value=False)
@@ -362,7 +526,12 @@ class LivePage(ttk.Frame):
         self.viewer = None
         self.viewer_identity = None
         self._last_sample = None
-        self._last_draw = self._last_text = 0.
+        self._last_draw = self._last_text = self._viewer_at = self._scrolled_at = 0.
+        # Seconds the last chart paint took; refreshes back off when painting is slow.
+        self.paint_seconds = 0.
+        self._paint_id = None
+        self._painted_at = 0.
+        self._viewer_joints = None
         self._record_state = None
         self._build()
         self.rebuild_charts()
@@ -456,8 +625,14 @@ class LivePage(ttk.Frame):
         ttk.Checkbutton(self.series_group, text='Degrees', variable=self.degrees,
                         command=self.rebuild_charts).pack(side='left', padx=(0, 8))
         self.tcp_group = tk.Frame(series, background=theme.BACKGROUND)
-        ttk.Checkbutton(self.tcp_group, text='TCP x, y, z', variable=self.components,
-                        command=self.rebuild_charts).pack(side='left')
+        ttk.Label(self.tcp_group, text='TCP', style='Muted.TLabel').pack(side='left', padx=(0, 6))
+        self.tcp_buttons = {}
+        for value in ('linear', 'rotation'):
+            self.tcp_buttons[value] = ttk.Button(self.tcp_group, style='Tab.TButton',
+                                                 command=lambda value=value: self.select_tcp_motion(value))
+            self.tcp_buttons[value].pack(side='left', padx=(0, 4))
+        ttk.Checkbutton(self.tcp_group, text='x, y, z', variable=self.components,
+                        command=self.rebuild_charts).pack(side='left', padx=(6, 0))
         self._arrange_options = flow(options, gap=16)
 
         chart_frame = tk.Frame(body, background=theme.BACKGROUND, highlightbackground=theme.BORDER, highlightthickness=1)
@@ -466,18 +641,19 @@ class LivePage(ttk.Frame):
         chart_frame.rowconfigure(0, weight=1)
         self.figure = Figure(figsize=(8, 5), dpi=100, facecolor=theme.BACKGROUND)
         self.charts = LiveCharts(self.figure)
-        # Many panels scroll in a viewport, as in Flight reports, instead of shrinking.
-        self.chart_viewport = tk.Canvas(chart_frame, background=theme.BACKGROUND, highlightthickness=0, height=180,
-                                        yscrollincrement=1)
-        self.chart_viewport.grid(row=0, column=0, sticky='nsew')
+        # Many panels scroll instead of shrinking. The chart canvas scrolls itself: Tk
+        # shows the scrolled part of the image, so scrolling renders nothing.
+        self.canvas = LiveCanvas(self.figure, master=chart_frame)
+        self.canvas.charts = self.charts
+        self.canvas.content_height = self._content_height
+        self.canvas.visible_region = self._viewport_region
+        plot = self.chart_viewport = self.canvas.get_tk_widget()
+        plot.configure(height=180, yscrollincrement=1)
+        plot.grid(row=0, column=0, sticky='nsew')
         scroll = ttk.Scrollbar(chart_frame, orient='vertical', command=self.scroll_chart)
         scroll.grid(row=0, column=1, sticky='ns')
-        self.chart_viewport.configure(yscrollcommand=scroll.set)
-        self.canvas = LiveCanvas(self.figure, master=self.chart_viewport)
-        self.canvas.charts = self.charts
-        self.plot_window = self.chart_viewport.create_window(0, 0, anchor='nw', window=self.canvas.get_tk_widget())
-        self.chart_viewport.bind('<Configure>', self._size_plot)
-        plot = self.canvas.get_tk_widget()
+        plot.configure(yscrollcommand=scroll.set)
+        plot.bind('<Configure>', lambda _event: self._show_band(), add='+')
         plot.bind('<MouseWheel>', self.wheel_chart)
         plot.bind('<Button-4>', lambda _event: self.scroll_chart('scroll', -48, 'units'))
         plot.bind('<Button-5>', lambda _event: self.scroll_chart('scroll', 48, 'units'))
@@ -535,14 +711,20 @@ class LivePage(ttk.Frame):
         self._sync_controls()
         self.draw_charts()
 
+    def select_tcp_motion(self, value):
+        self.tcp_motion.set(value)
+        self.rebuild_charts()
+
     def select_layout(self, name):
         self.graphs.set(name)
         self.rebuild_charts()
 
     def _sync_controls(self):
         metrics = VIEWS[self.view.get()]
+        for value, button in self.tcp_buttons.items():
+            button.configure(text='m/s' if value == 'linear' else '°/s' if self.degrees.get() else 'rad/s')
         for buttons, current in ((self.view_tabs, self.view.get()), (self.window_buttons, self.window.get()),
-                                 (self.layout_buttons, self.graphs.get())):
+                                 (self.layout_buttons, self.graphs.get()), (self.tcp_buttons, self.tcp_motion.get())):
             for name, button in buttons.items():
                 button.configure(style='TabActive.TButton' if name == current else 'Tab.TButton')
         joints = any(metric in SIGNALS for metric in metrics)
@@ -565,41 +747,63 @@ class LivePage(ttk.Frame):
         joints = [joint for joint, variable in enumerate(self.joints) if variable.get()]
         self.charts.configure(metrics, joints, self.show_target.get(), self.degrees.get(),
                               separate=self.graphs.get() == 'Separate joints', shared_scale=self.shared_scale.get(),
-                              components=self.components.get())
+                              components=self.components.get(), rotation=self.tcp_motion.get() == 'rotation')
         self.canvas.draw_seconds = 0.
         heading = 'Pos °' if self.degrees.get() else 'Pos rad'
         self.table.heading('position', text=heading)
         self.table.heading('speed', text='°/s' if self.degrees.get() else 'rad/s')
         self._last_text = 0.
+        self.canvas.fit_content()
         self.chart_viewport.yview_moveto(0)
-        self._size_plot()
+        self._show_band()
         self.draw_charts()
 
     def draw_charts(self):
         window = WINDOWS[self.window.get()]
         self.charts.update(window, self.capture.snapshot(window, self.charts.headers))
-        self.canvas.draw_idle()
+        self.paint_seconds = 0.  # summed over this update's panel-by-panel paints
+        self.paint_charts()
         self._last_draw = time.monotonic()
 
-    def _size_plot(self, _event=None):
-        width = self.chart_viewport.winfo_width()
-        if width < 2:
-            return
-        height = max(180, self.chart_viewport.winfo_height())
-        if len(self.charts.axes) > 1:
-            height = max(height, len(self.charts.axes) * PANEL_HEIGHT + 60)
-        self.chart_viewport.itemconfigure(self.plot_window, width=width, height=height)
-        self.chart_viewport.configure(scrollregion=(0, 0, width, height))
-        self._show_band()
+    def paint_charts(self):
+        """Repaint on-screen panels; panels that need a full render follow one per idle turn."""
+        if self._paint_id is not None:
+            self.after_cancel(self._paint_id)
+            self._paint_id = None
+        start = time.perf_counter()
+        scrolling = time.monotonic() - self._scrolled_at < .3
+        # One panel per turn: input and the robot view run between panels, never behind all of them.
+        waiting = self.charts.paint(ahead=not scrolling, updates=1)
+        self._painted_at = time.monotonic()
+        self.paint_seconds += time.perf_counter() - start
+        if waiting or scrolling:
+            # Off-screen panels render one per pause, so wheel and clicks are handled in between.
+            self._paint_id = self.after(10 if waiting else 300, self._paint_more)
+
+    def _paint_more(self):
+        self._paint_id = None
+        self.paint_charts()
+
+    def _viewport_region(self):
+        """The scrolled-in part of the tall chart image, in display coordinates."""
+        top, bottom = self.chart_viewport.yview()
+        width, height = self.figure.bbox.width, self.figure.bbox.height
+        return Bbox.from_extents(0, (1 - bottom) * height, width, (1 - top) * height)
+
+    def _content_height(self, viewport):
+        """Figure height for a viewport: the viewport itself, or a fixed height per panel when they do not fit."""
+        height = max(180, viewport)
+        return max(height, len(self.charts.axes) * PANEL_HEIGHT + 60) if len(self.charts.axes) > 1 else height
 
     def _show_band(self):
-        # Panels outside the viewport are not rendered; render when one scrolls into view.
-        if self.charts.view(*self.chart_viewport.yview()):
-            self.canvas.draw_idle()
+        # Scrolling only moves the image; panels new to the viewport are painted after the scroll.
+        self.charts.view(*self.chart_viewport.yview())
+        if self._paint_id is None:
+            self._paint_id = self.after_idle(self._paint_more)
 
     def scroll_chart(self, *args):
         self.chart_viewport.yview(*args)
-        self.canvas.refresh_pixels()
+        self._scrolled_at = time.monotonic()
         self._show_band()
         return 'break'
 
@@ -782,10 +986,19 @@ class LivePage(ttk.Frame):
             self.viewer.visibility['info'] = False
             self.viewer.pack(fill='both', expand=True)
             self.viewer_identity = identity
-            self._last_sample = None
+            self._last_sample = self._viewer_joints = None
         sample = app.last_sample
-        if sample is not None and sample is not self._last_sample:
-            self.viewer.update_robot(sample, app.installation_data)
+        now = time.monotonic()
+        # The side view is a glance, not the Simulator: at most 5 frames a second, only when the
+        # robot moved, never in the same turn as a chart paint, and paused while scrolling.
+        if (sample is not None and sample is not self._last_sample and now - self._viewer_at >= .2
+                and now - self._scrolled_at >= .25 and now - self._painted_at >= .02):
+            joints = np.asarray(sample.joints)
+            if (self._viewer_joints is None or np.abs(joints - self._viewer_joints).max() > 1e-4
+                    or self.viewer.installation is not app.installation_data):
+                self.viewer.update_robot(sample, app.installation_data)
+                self._viewer_joints = joints
+                self._viewer_at = now
             self._last_sample = sample
 
     def _update_readouts(self):
@@ -815,18 +1028,24 @@ class LivePage(ttk.Frame):
             self.table.item(name, values=row)
 
     def _tcp_readouts(self, values):
-        """Latest TCP speed and derived acceleration magnitudes as tile text."""
+        """Latest TCP speed and derived acceleration magnitudes as tile text, linear or rotational as charted."""
         speed = values.get('actual_TCP_speed')
         if speed is None:
             return 'Unavailable', 'Unavailable'
-        data = self.capture.snapshot(.3, TCP_VELOCITY)
-        velocity = np.column_stack([data[header] for header in TCP_VELOCITY])
+        rotation = self.tcp_motion.get() == 'rotation'
+        headers = TCP_ROTATION if rotation else TCP_VELOCITY
+        data = self.capture.snapshot(.3, headers)
+        velocity = np.column_stack([data[header] for header in headers])
         times = data['Timestamp [s]']
         magnitude = tcp_series('tcp_acceleration', times, velocity)[:, 3]
         # Read half an averaging window back, where the centred average is complete.
         magnitude = magnitude[np.isfinite(magnitude) & (times <= times[-1] - AVERAGE / 2)] if len(times) else magnitude
-        return (f'{math.hypot(*speed[:3]):.3f} m/s',
-                f'{magnitude[-1]:.2f} m/s²' if len(magnitude) else '—')
+        if not rotation:
+            return (latest_text(math.hypot(*speed[:3]), 'm/s'),
+                    latest_text(magnitude[-1], 'm/s²') if len(magnitude) else '—')
+        scale, unit = (180 / math.pi, '°/s') if self.degrees.get() else (1., 'rad/s')
+        return (latest_text(math.hypot(*speed[3:6]) * scale, unit),
+                latest_text(magnitude[-1] * scale, unit + '²') if len(magnitude) else '—')
 
     def refresh(self, force=False):
         """Called from the application's poll loop; cheap unless the page is visible."""
@@ -838,10 +1057,12 @@ class LivePage(ttk.Frame):
         self._update_viewer()
         now = time.monotonic()
         streaming = self.app.session is not None
-        # Wait at least twice the last render, so drawing never takes more than a
-        # third of the UI thread and controls stay responsive on slow machines.
-        interval = max(.12, 2 * self.canvas.draw_seconds)
-        if force or (streaming and not self.frozen and now - max(self._last_draw, self.canvas.drawn_at) >= interval):
+        # Wait at least three times the last paint, so drawing never takes more than a
+        # quarter of the UI thread and controls stay responsive on slow machines.
+        interval = max(.1, 3 * self.paint_seconds)
+        scrolling = now - self._scrolled_at < .3  # new data waits until the wheel stops
+        if force or (streaming and not self.frozen and not scrolling
+                     and now - max(self._last_draw, self.canvas.drawn_at) >= interval):
             self.draw_charts()
         if force or now - self._last_text >= .2:
             self._update_readouts()

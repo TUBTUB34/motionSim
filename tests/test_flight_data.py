@@ -73,6 +73,28 @@ class FlightDataTests(unittest.TestCase):
         self.assertTrue(any("installation could not be read" in warning for warning in report.warnings))
         self.assertIsNone(load_flight(self.recording(headers, rows, name="none.zip")).installation)
 
+    def test_mounting_follows_the_recorded_programs_set_gravity(self):
+        import math
+        headers, rows = ["Timestamp [s]", "Actual position j0 [rad]"], [[1, 0], [1.002, 0]]
+        script = "def cell():\n  set_gravity([-6.943788591251896, 1.2755532708348815E-15, 6.943788591251898])\nend\n"
+        program = "files/polyscope.in.memory.program.script"
+        # No saved installation: the program's gravity gives base 270°, tilt 45°.
+        report = load_flight(self.recording(headers, rows, name="gravity.zip", context={program: script}))
+        np.testing.assert_allclose(report.installation.mounting, (math.radians(270), math.radians(45)), atol=1e-9)
+        self.assertEqual(report.installation.mounting_source, "program set_gravity()")
+        # A saved mounting the program agrees with is kept as saved.
+        saved = {program: script, "metadata.json": '{"installation": {"mounting": [4.71238898, 0.78539816]}}'}
+        report = load_flight(self.recording(headers, rows, name="agrees.zip", context=saved))
+        self.assertEqual(report.installation.mounting_source, "saved installation")
+        # A saved mounting that disagrees is replaced by how the program ran, with a warning.
+        upright = {program: script, "metadata.json": '{"installation": {"mounting": [0, 0]}}'}
+        report = load_flight(self.recording(headers, rows, name="disagrees.zip", context=upright))
+        np.testing.assert_allclose(report.installation.mounting, (math.radians(270), math.radians(45)), atol=1e-9)
+        self.assertTrue(any("set_gravity" in warning for warning in report.warnings))
+        # Without set_gravity nothing changes.
+        self.assertIsNone(load_flight(self.recording(headers, rows, name="plain.zip",
+                                                     context={program: "def cell():\nend\n"})).installation)
+
     def test_missing_and_malformed_measurements_preserve_gaps(self):
         path = self.recording(["Timestamp [s]", "Actual current j0 [A]"],
                               [[1, 2], [2, "bad"], [3], [4, "inf"], [5, 7]])
