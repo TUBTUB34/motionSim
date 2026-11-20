@@ -78,7 +78,7 @@ class RecordedPlayback(ttk.Frame):
                 self.robot.destroy()
                 self.robot = None
             self.caption.set('No recording loaded')
-            self.note.set('Choose a report in the current flight working folder.')
+            self.note.set('Choose a report in the current flight-report folder.')
             self.notice.configure(text='Load a recording in Flight reports.')
             self.notice.grid()
             self.play.configure(text='Play', state='disabled')

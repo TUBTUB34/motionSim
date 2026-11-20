@@ -1,5 +1,7 @@
 """Launch the read-only UR robot viewer with python main.py."""
 import math
+from pathlib import Path
+import sys
 import queue
 import threading
 import time
@@ -20,6 +22,8 @@ from motionstudio.app.model_catalog import model_summary, show_catalog
 from motionstudio.ui import theme
 from motionstudio.ui.theme import ScrollableFrame, style_text, status_color
 from motionstudio.app.preferences import Preferences
+from motionstudio.core.paths import (DEFAULT_PROJECT, app_data_folder, create_project, default_workspace,
+                                     project_folder, start_folder)
 from motionstudio.ui.address_book import SavedAddressCombobox, refresh_address_fields
 from motionstudio.live.recorder import LiveCapture
 from motionstudio.live.rtde_client import DATA_TIMEOUT, STALE_AFTER
@@ -71,6 +75,15 @@ class SimulatorApp:
     def __init__(self, root, *, preferences_path=None):
         self.root = root
         self.preferences = Preferences(preferences_path)
+        # A test or smoke run that brings its own preferences file also keeps its projects beside it.
+        self.workspace = self.preferences.workspace or (
+            Path(preferences_path).parent / 'Projects' if preferences_path is not None else default_workspace())
+        self.project = self.preferences.project or DEFAULT_PROJECT
+        self.project_root = self.workspace / self.project
+        self.flight_library_root = project_folder(self, 'flights')
+        # Where earlier versions kept flight reports and downloads (Settings offers to move them).
+        self.legacy_base = Path(preferences_path).parent if preferences_path is not None else app_data_folder()
+        self.settings_page = None
         self.dark_mode = tk.BooleanVar(value=self.preferences.theme == 'dark')
         self.address_notice = tk.StringVar(value=self.preferences.load_error or 'Type or choose an IP. Save IP keeps it for your next visit.')
         self.log_window = None
@@ -99,7 +112,8 @@ class SimulatorApp:
                                  ('<Control-Key-4>', self.open_program_check),
                                  ('<Control-Key-5>', self.open_backups),
                                  ('<Control-Key-6>', self.open_checklist),
-                                 ('<Control-Key-7>', self.open_live)):
+                                 ('<Control-Key-7>', self.open_live),
+                                 ('<Control-comma>', self.open_settings)):
             root.bind_all(sequence, lambda event, action=action: self.workspace_shortcut(action), add='+')
         self.session = None
         self.settings = None
@@ -111,6 +125,7 @@ class SimulatorApp:
         self.program_text = tk.StringVar(value="Waiting for program telemetry…")
         from motionstudio.ui.theme import apply_theme
         apply_theme(root, self.preferences.theme)
+        theme.set_text_scale(root, self.preferences.text_scale)
         root.title("UR Motion Studio")
         root.geometry("1440x900")
         root.minsize(1120, 740)
@@ -337,6 +352,71 @@ class SimulatorApp:
     def toggle_theme(self):
         self.set_theme('dark' if self.dark_mode.get() else 'light')
 
+    def set_text_scale(self, percent):
+        try:
+            self.preferences.set_text_scale(percent)
+        except (ValueError, OSError) as error:
+            messagebox.showerror('Could not save text size', str(error), parent=self.root)
+            return False
+        theme.set_text_scale(self.root, percent)
+        return True
+
+    def busy_pages(self):
+        """Pages with a transfer, export or recording that is still writing into the project."""
+        busy = []
+        for name, panel in (('Flight reports', self.flight_window), ('Flight downloads', self.flight_retrieval_window),
+                            ('Logs', self.log_window), ('Program check', self.program_check_window),
+                            ('Robot Status', self.diagnostic_window), ('Backups', self.backup_page)):
+            if panel is None:
+                continue
+            is_busy = getattr(panel, 'is_busy', None)
+            if ((callable(is_busy) and is_busy()) or getattr(panel, 'busy', False) is True
+                    or getattr(panel, 'loading', False) or getattr(panel, 'exporting', False)
+                    or getattr(panel, 'job', None) is not None):
+                busy.append(name)
+        recording = self.live_capture.recording
+        if recording is not None and recording.active:
+            busy.append('Live monitor recording')
+        if getattr(self.settings_page, 'moving', False):
+            busy.append('Moving earlier files (Settings)')
+        return busy
+
+    def set_project(self, workspace, project, *, create=False):
+        """Switch every page to another project folder; refused while anything is still saving."""
+        busy = self.busy_pages()
+        if busy:
+            messagebox.showwarning('Project not changed', 'Finish or cancel the work in progress first: '
+                                   + ', '.join(busy) + '.', parent=self.root)
+            return False
+        workspace = Path(workspace)
+        try:
+            if create:
+                project = create_project(workspace, project).name
+            self.preferences.set_project(workspace, project)
+        except (ValueError, OSError) as error:
+            messagebox.showerror('Could not change project', str(error), parent=self.root)
+            return False
+        self.workspace, self.project = workspace, project
+        self.project_root = workspace / project
+        self.flight_library_root = project_folder(self, 'flights')
+        for page in (self.flight_window, self.flight_retrieval_window):
+            if page is not None:
+                page.set_library(self.flight_library_root, notify=False)
+        for page in (self.log_window, self.backup_page):
+            changed = getattr(page, 'project_changed', None)
+            if callable(changed):
+                changed()
+        self._charts_follow_project()
+        self.shell.update_project()
+        return True
+
+    def _charts_follow_project(self):
+        """Start chart-toolbar Save in the project too (Matplotlib keeps that folder in rcParams)."""
+        if 'matplotlib' in sys.modules:  # never import it just for this
+            folder = start_folder(self, 'reports', create=False)
+            if folder:
+                sys.modules['matplotlib'].rcParams['savefig.directory'] = folder
+
     def _select_page(self, name):
         self.active_page = name
         self.shell.show(name)
@@ -349,7 +429,7 @@ class SimulatorApp:
         actions = {'home': self.open_home, 'simulator': self.show_workspace, 'live': self.open_live,
                    'flights': self.open_flight_page,
                    'logs': self.open_logs, 'backups': self.open_backups, 'reports': self.open_reports,
-                   'checklist': self.open_checklist}
+                   'checklist': self.open_checklist, 'settings': self.open_settings}
         actions[name]()
 
     def navigate_panel(self, panel):
@@ -389,6 +469,14 @@ class SimulatorApp:
             self.live_page.pack(fill='both', expand=True)
         self._select_page('live')
         self.live_page.refresh(force=True)
+
+    def open_settings(self):
+        if self.settings_page is None:
+            from motionstudio.app.settings_view import SettingsPage
+            self.settings_page = SettingsPage(self, self.shell.pages['settings'])
+            self.settings_page.pack(fill='both', expand=True)
+        self.settings_page.refresh()
+        self._select_page('settings')
 
     def open_checklist(self):
         if self.checklist_page is None:
@@ -566,6 +654,7 @@ class SimulatorApp:
             from motionstudio.flight.view import FlightWindow
             self.flight_window = FlightWindow(self, parent=self.flight_host)
             self.flight_window.pack(fill='both', expand=True)
+            self._charts_follow_project()
         return self.flight_window
 
     def _ensure_flight_retrieval(self):
@@ -609,6 +698,7 @@ class SimulatorApp:
             from motionstudio.logs.view import LogWindow
             self.log_window = LogWindow(self, parent=self.shell.pages['logs'])
             self.log_window.pack(fill='both', expand=True)
+            self._charts_follow_project()
         self._select_page('logs')
 
     def open_backups(self):
@@ -766,14 +856,14 @@ class SimulatorApp:
         self.sidebar_scroll.grid_propagate(False)
         sidebar = self.sidebar_scroll.content
         ttk.Label(sidebar, text="Joint positions (degrees)", style='Section.Panel.TLabel').pack(anchor="w")
-        ttk.Label(sidebar, textvariable=self.joints, style='Panel.TLabel', font=("TkFixedFont", 10), justify="left").pack(anchor="w", pady=(8, 12))
+        ttk.Label(sidebar, textvariable=self.joints, style='Panel.TLabel', font=theme.font(10, mono=True), justify="left").pack(anchor="w", pady=(8, 12))
         ttk.Label(sidebar, text="Live TCP in robot base (m / rad)", style='Section.Panel.TLabel', wraplength=235).pack(anchor="w")
         ttk.Label(sidebar, textvariable=self.tcp_text, style='Panel.TLabel', justify="left", wraplength=235).pack(anchor="w", pady=(8, 12))
         ttk.Label(sidebar, text="Installation", style='Section.Panel.TLabel').pack(anchor="w")
         ttk.Label(sidebar, text=self.settings.remote_path, style='Muted.Panel.TLabel', wraplength=235).pack(anchor="w", pady=6)
         self.details_view = ScrolledText(sidebar, width=28, height=4, wrap="word",
                                          background=theme.FIELD, foreground=theme.INK,
-                                         font=("TkDefaultFont", 10), relief="flat", padx=6, pady=6)
+                                         font=theme.font(10), relief="flat", padx=6, pady=6)
         self.details_view.pack(fill="both", expand=True, pady=6)
         style_text(self.details_view)
         self.update_details()
@@ -1004,9 +1094,7 @@ class SimulatorApp:
 
 def main():
     """Start the desktop app; ``--smoke-test`` checks a packaged build and exits."""
-    import sys
     from contextlib import nullcontext
-    from pathlib import Path
     from tempfile import TemporaryDirectory
     smoke = '--smoke-test' in sys.argv
     # A packaged smoke run must never replace the user's saved addresses/theme.

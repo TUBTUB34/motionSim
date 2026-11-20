@@ -21,6 +21,7 @@ from motionstudio.ui.address_book import SavedAddressCombobox
 from motionstudio.ui.charts import chart_palette, retheme_figure
 from motionstudio.ui.workspace_panel import WorkspacePanel
 from motionstudio.ui import theme
+from motionstudio.core.paths import start_folder
 from motionstudio.ui.theme import style_toolbar, style_tree, status_color
 from motionstudio.remote.ssh_trust import host_key_prompt
 
@@ -254,7 +255,7 @@ class LogWindow(WorkspacePanel):
         if messagebox.askyesno('Save robot logs?', 'Would you also like to save the downloaded log files on this PC?', parent=self):
             save_path = filedialog.asksaveasfilename(
                 parent=self, title='Save robot logs', initialfile='log_history.txt',
-                initialdir=str(self.save_directory) if self.save_directory else None,
+                initialdir=self._start_folder('logs'),
                 defaultextension='.txt', filetypes=[('Robot log', '*.txt')]) or None
             if save_path:
                 partner = Path(save_path).with_suffix('.bak')
@@ -265,7 +266,6 @@ class LogWindow(WorkspacePanel):
                         'Replace saved backup log?', f'Also replace {partner} if the robot has a backup log?',
                         parent=self, default='no'):
                     return
-                self.save_directory = Path(save_path).parent
         self.begin(LogJob(connection=settings, save_path=save_path))
 
     def make_backup(self, *, full=False):
@@ -289,17 +289,23 @@ class LogWindow(WorkspacePanel):
             return
         if full:
             folder = filedialog.askdirectory(parent=self, title='Save full robot backup in folder',
-                initialdir=str(self.save_directory) if self.save_directory else None, mustexist=True)
+                initialdir=str(self.save_directory) if self.save_directory else self._start_folder('backups'), mustexist=True)
             if not folder:
                 self.status.set('Full backup cancelled · No robot archive created.')
                 return
             self.save_directory = Path(folder)
         self.begin(job)
 
+    def _start_folder(self, kind, create=True):
+        return start_folder(self.app, kind, create=create)
+
+    def project_changed(self):
+        self.save_directory = None  # backups go to the new project's folder unless chosen again
+
     def open_file(self):
         if self.job:
             return
-        path = filedialog.askopenfilename(parent=self, title='Open robot log',
+        path = filedialog.askopenfilename(parent=self, title='Open robot log', initialdir=self._start_folder('logs', False),
                                           filetypes=[('Robot logs', '*.txt *.bak *.log'), ('All files', '*')])
         if path:
             self.begin(LogJob(path=path))
@@ -369,6 +375,7 @@ class LogWindow(WorkspacePanel):
                             else:
                                 value.path = filedialog.asksaveasfilename(
                                     parent=self, title='Save robot backup', initialfile=value.filename,
+                                    initialdir=self._start_folder('backups'),
                                     defaultextension='.tar', filetypes=[('Tar archive', '*.tar')]) or None
                                 if value.path:
                                     self.save_directory = Path(value.path).parent
@@ -509,6 +516,7 @@ class LogWindow(WorkspacePanel):
 
     def export_csv(self):
         path = filedialog.asksaveasfilename(parent=self, title='Save filtered incidents', defaultextension='.csv',
+                                           initialdir=self._start_folder('reports'),
                                            initialfile='robot-incidents.csv', filetypes=[('CSV', '*.csv')])
         if not path:
             return

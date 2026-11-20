@@ -44,13 +44,13 @@ class HelpWindow(tk.Toplevel):
         self.topic = tk.StringVar()
         ttk.Label(content, textvariable=self.topic, style='Title.TLabel').grid(row=0, column=0, sticky='w', pady=(0, 12))
         self.text = tk.Text(content, wrap='word', width=35, height=10, padx=16, pady=12,
-                            spacing1=3, spacing3=10, font=('TkDefaultFont', 10), relief='flat')
+                            spacing1=3, spacing3=10, font=theme.font(10), relief='flat')
         style_text(self.text)
         self.text.grid(row=1, column=0, sticky='nsew')
         bar = ttk.Scrollbar(content, orient='vertical', command=self.text.yview)
         bar.grid(row=1, column=1, sticky='ns')
         self.text.configure(yscrollcommand=bar.set)
-        self.text.tag_configure('section', foreground=theme.ACCENT, font=('TkDefaultFont', 11, 'bold'), spacing1=12)
+        self.text.tag_configure('section', foreground=theme.ACCENT, font=theme.font(11, 'bold'), spacing1=12)
         self.text.tag_configure('body', foreground=theme.INK)
         ttk.Label(self, text='Offline guide · F1 opens help · Search matches topic titles and instructions',
                   style='Muted.TLabel', padding=(18, 10)).grid(row=2, column=0, columnspan=2, sticky='ew')

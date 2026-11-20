@@ -8,6 +8,7 @@ import tkinter as tk
 from tkinter import ttk, filedialog
 
 from motionstudio.backup.transfer import BackupJob
+from motionstudio.core.paths import project_folder
 from motionstudio.remote.connection import active_robot_settings, transfer_connection, simulator_connection_text
 from motionstudio.ui.address_book import SavedAddressCombobox
 from motionstudio.ui.workspace_panel import WorkspacePanel
@@ -40,7 +41,8 @@ class BackupPage(WorkspacePanel):
         self.ip = tk.StringVar()
         self.username = tk.StringVar(value='root')
         self.password = tk.StringVar()
-        self.directory = tk.StringVar()
+        self._project_backups = str(project_folder(app, 'backups'))
+        self.directory = tk.StringVar(value=self._project_backups)
         self.project_name = tk.StringVar()
         self.remote_log = tk.StringVar(value='/root/log_history.txt')
         self.remote_flights = tk.StringVar(value='/root/flightreports')
@@ -220,8 +222,15 @@ class BackupPage(WorkspacePanel):
         (self.advanced.grid if self.advanced_visible else self.advanced.grid_remove)()
         self.advanced_button.configure(text='Hide robot paths' if self.advanced_visible else 'Robot paths…')
 
+    def project_changed(self):
+        """Follow the new project unless a different destination was chosen by hand."""
+        previous, self._project_backups = self._project_backups, str(project_folder(self.app, 'backups'))
+        if self.directory.get().strip() in ('', previous):
+            self.directory.set(self._project_backups)
+
     def choose_folder(self):
-        path = filedialog.askdirectory(parent=self, title='Save robot backups in folder', mustexist=True)
+        path = filedialog.askdirectory(parent=self, title='Save robot backups in folder', mustexist=True,
+                                       initialdir=self.directory.get() if Path(self.directory.get()).is_dir() else None)
         if path:
             self.directory.set(path)
 
@@ -254,6 +263,8 @@ class BackupPage(WorkspacePanel):
                 self.status.set('Choose a destination before creating a backup.')
                 return
             destination = Path(self.directory.get()).expanduser()
+            if str(destination) == self._project_backups:
+                destination.mkdir(parents=True, exist_ok=True)  # the project's own folder appears on first use
             if not destination.is_dir():
                 raise ValueError('Choose an existing local destination folder.')
             job = BackupJob(connection=connection, full=self.full.get(), contents=self.selected_contents(),

@@ -675,7 +675,7 @@ class LivePage(ttk.Frame):
             tile = ttk.Frame(side, style='Card.TFrame', padding=(12, 8))
             tile.grid(row=1 + index // 2, column=index % 2, sticky='ew', pady=(8, 0), padx=(0, 4) if index % 2 == 0 else (4, 0))
             ttk.Label(tile, text=caption, style='Section.Panel.TLabel').pack(anchor='w')
-            value = self.tiles[key] = ttk.Label(tile, text='—', style='Panel.TLabel', font=('TkDefaultFont', 11, 'bold'),
+            value = self.tiles[key] = ttk.Label(tile, text='—', style='Panel.TLabel', font=theme.font(11, 'bold'),
                                                 wraplength=150)
             value.pack(anchor='w', pady=(4, 0))
         columns = ('position', 'speed', 'current', 'temperature')

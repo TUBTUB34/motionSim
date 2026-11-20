@@ -47,10 +47,9 @@ def transfer_connection(app, ip, username, password, path='/root/log_history.txt
 
 
 def robot_download_folder(app, name, ip):
-    """Per-robot folder beside the flight library, e.g. .../URMotionStudio/Robot programs/<ip>."""
-    from motionstudio.core.paths import default_library
-    library = Path(getattr(app, 'flight_library_root', None) or default_library())
-    return library.parent / name / ip.replace(':', '-')
+    """Per-robot folder in the active project, e.g. <project>/Robot programs/<ip>."""
+    from motionstudio.core.paths import project_folder
+    return project_folder(app) / name / ip.replace(':', '-')
 
 
 def should_select_robot(previous_ip, settings):

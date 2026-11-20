@@ -95,7 +95,7 @@ class RobotFlightWindow(WorkspacePanel):
         ttk.Label(settings, text='Robot folder').grid(row=1, column=0, sticky='w', pady=(8, 0))
         self.directory_entry = ttk.Entry(settings, textvariable=self.directory)
         self.directory_entry.grid(row=1, column=1, columnspan=3, sticky='ew', pady=(8, 0))
-        ttk.Label(settings, text='Working folder').grid(row=2, column=0, sticky='w', pady=(8, 0))
+        ttk.Label(settings, text='Save in').grid(row=2, column=0, sticky='w', pady=(8, 0))
         ttk.Entry(settings, textvariable=self.library, state='readonly').grid(row=2, column=1, columnspan=2, sticky='ew', padx=(0, 12), pady=(8, 0))
         self.folder_button = ttk.Button(settings, text='Choose folder…', command=self.choose_folder)
         self.folder_button.grid(row=2, column=3, sticky='e', pady=(8, 0))
@@ -298,9 +298,9 @@ class RobotFlightWindow(WorkspacePanel):
 
     def choose_folder(self):
         if self.is_busy():
-            self.status.set('Wait for retrieval to finish or cancel it before changing the working folder.')
+            self.status.set('Wait for retrieval to finish or cancel it before changing the flight-report folder.')
             return
-        path = filedialog.askdirectory(parent=self, title='Choose flight-report working folder',
+        path = filedialog.askdirectory(parent=self, title='Open another flight-report folder',
                                        initialdir=self.library.get(), mustexist=True)
         if path:
             self.set_library(path)
@@ -318,12 +318,12 @@ class RobotFlightWindow(WorkspacePanel):
         self.app.flight_library_root = path
         self.entries.clear()
         self.tree.delete(*self.tree.get_children())
-        self.summary.set('Refresh to check downloaded reports in this working folder.')
+        self.summary.set('Refresh to check downloaded reports in this folder.')
         self.file_progress.configure(value=0)
         self.overall_progress.configure(value=0)
         self.file_progress_text.set('No transfer running')
         self.overall_progress_text.set('0 files · 0 bytes')
-        self.status.set('Working folder changed · Refresh to check which reports are already downloaded here.')
+        self.status.set('Folder changed · Refresh to check which reports are already downloaded here.')
         if notify:
             viewer = getattr(self.app, 'flight_window', None)
             if viewer is not None and viewer.winfo_exists():

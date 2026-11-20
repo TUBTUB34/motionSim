@@ -44,7 +44,7 @@ class StatusView(ttk.Frame):
         horizontal.grid(row=1, column=0, sticky="ew")
         body.rowconfigure(0, weight=1)
         body.columnconfigure(0, weight=1)
-        self.tree.tag_configure("group", background=theme.SELECTED, foreground=theme.INK, font=("TkDefaultFont", 10, "bold"))
+        self.tree.tag_configure("group", background=theme.SELECTED, foreground=theme.INK, font=theme.font(10, 'bold'))
         self.tree.tag_configure("unavailable", foreground=theme.MUTED)
         self.fields = BASE_FIELDS + STATUS_FIELDS
         self.previous = {}

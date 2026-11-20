@@ -103,7 +103,8 @@ class PreferencesUITests(unittest.TestCase):
         self.assertFalse(self.app.dark_mode.get())
         self.assertEqual(self.app.password.get(), '')
         self.assertNotIn('never-save-this', self.path.read_text())
-        self.assertEqual(set(json.loads(self.path.read_text())), {'version', 'theme', 'addresses'})
+        self.assertEqual(set(json.loads(self.path.read_text())),
+                         {'version', 'theme', 'addresses', 'workspace', 'project', 'text_scale'})
         self.assertIsNone(self.app.session)
 
     def test_existing_ip_selectors_share_saved_choices_without_overwriting_typed_values(self):
@@ -184,7 +185,8 @@ class PreferencesUITests(unittest.TestCase):
         before = self.path.read_bytes()
         with patch('motionstudio.app.preferences.os.replace', side_effect=PermissionError('Read-only folder')), \
                 patch('motionstudio.app.main_window.messagebox.showerror') as error:
-            self.app.shell.theme_toggle.invoke()
+            self.app.open_settings()
+            self.app.settings_page.theme_buttons['Light'].invoke()
             error.assert_called_once()
         self.assertTrue(self.app.dark_mode.get())
         self.assertEqual(self.root._studio_theme_mode, 'dark')
@@ -195,16 +197,16 @@ class PreferencesUITests(unittest.TestCase):
         self.app.ip.set('192.0.2.10')
         self.assertTrue(self.root.bind('<Return>'))
         with patch('motionstudio.app.main_window.RobotSession') as robot:
-            for control in (self.app.save_address_button, self.app.forget_address_button,
-                            self.app.shell.theme_toggle):
+            for control in (self.app.save_address_button, self.app.forget_address_button):
                 control.focus_force()
                 self.settle()
                 control.event_generate('<KeyPress-Return>')
                 self.settle()
                 robot.assert_not_called()
         self.assertEqual(self.app.preferences.addresses, ())
-        self.assertEqual(self.app.preferences.theme, 'light')
         self.assertIsNone(self.app.session)
+        self.app.open_settings()  # Return on the Settings page never connects either
+        self.assertFalse(self.root.bind('<Return>'))
 
     def test_theme_changes_keep_loaded_pages_flight_position_draft_and_active_job(self):
         from motionstudio.logs.data import load_log

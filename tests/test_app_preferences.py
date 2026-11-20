@@ -36,7 +36,7 @@ class PreferencesTests(unittest.TestCase):
         self.assertEqual(reopened.addresses, ('192.168.0.10', '2001:db8::1'))
         self.assertEqual(reopened.theme, 'light')
         saved = json.loads(self.path.read_text())
-        self.assertEqual(set(saved), {'version', 'theme', 'addresses'})
+        self.assertEqual(set(saved), {'version', 'theme', 'addresses', 'workspace', 'project', 'text_scale'})
         self.assertNotIn('must-not-be-saved', self.path.read_text())
         self.assertFalse(hasattr(reopened, 'password'))
 
@@ -127,6 +127,35 @@ class PreferencesTests(unittest.TestCase):
         self.assertFalse(hasattr(preferences, 'password'))
         preferences.set_theme('dark')
         self.assertNotIn('password', json.loads(self.path.read_text()))
+
+    def test_project_and_text_size_survive_reopen_with_addresses_and_theme(self):
+        preferences = Preferences(self.path)
+        self.assertEqual((preferences.workspace, preferences.project, preferences.text_scale), (None, None, 100))
+        preferences.add_address('192.168.0.10')
+        workspace = Path(self.temp.name) / 'Jobs'
+        preferences.set_project(workspace, ' Cell 4 ')
+        preferences.set_text_scale(130)
+        reopened = Preferences(self.path)
+        self.assertEqual((reopened.workspace, reopened.project, reopened.text_scale), (workspace, 'Cell 4', 130))
+        self.assertEqual(reopened.addresses, ('192.168.0.10',))
+        before = self.path.read_bytes()
+        for change in (lambda: preferences.set_text_scale(120), lambda: preferences.set_text_scale('100'),
+                       lambda: preferences.set_project('relative/path', 'Cell 5'),
+                       lambda: preferences.set_project(workspace, 'bad/name')):
+            with self.subTest(change=change), self.assertRaises(ValueError):
+                change()
+        self.assertEqual(self.path.read_bytes(), before)
+
+    def test_unusable_optional_fields_fall_back_alone_and_keep_saved_robots(self):
+        self.path.parent.mkdir()
+        self.path.write_text(json.dumps({'version': 1, 'theme': 'light', 'addresses': ['192.168.0.10'],
+                                         'workspace': 'relative', 'project': 'CON', 'text_scale': 77}))
+        preferences = Preferences(self.path)
+        self.assertEqual(preferences.load_error, '')
+        self.assertEqual((preferences.theme, preferences.addresses), ('light', ('192.168.0.10',)))
+        self.assertEqual((preferences.workspace, preferences.project, preferences.text_scale), (None, None, 100))
+        self.path.write_text(json.dumps({'version': 1, 'theme': 'light', 'addresses': [], 'text_scale': True}))
+        self.assertEqual(Preferences(self.path).text_scale, 100)
 
     def test_platform_paths_are_user_local_and_ignore_relative_xdg_directory(self):
         home = Path(self.temp.name) / 'home'

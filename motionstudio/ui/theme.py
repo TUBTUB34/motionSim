@@ -5,7 +5,7 @@ accents. PDF export deliberately keeps its separate print palette.
 """
 import sys
 import tkinter as tk
-from tkinter import font, ttk
+from tkinter import font as font_module, ttk
 from PIL import Image, ImageDraw, ImageTk
 
 PALETTES = {
@@ -47,15 +47,65 @@ CONTROL_HEIGHT = 34
 TYPE_SIZE = {'small': 9, 'body': 10, 'section': 9, 'title': 17, 'hero': 23}
 # The references use borders and active outlines, not drop shadows.
 SHADOW = None
+TEXT_SCALE = 1.  # the Settings text size; every font below follows it
+_FONTS = {}  # named font -> (designed size in points, weight, monospaced)
+_FONT_ROOT = None
+
+
+def font(size, weight='normal', mono=False):
+    """Name of a shared font that follows the text-size setting; use it instead of a (family, size) tuple."""
+    name = f'Studio{"Mono" if mono else ""}{size}{"Bold" if weight == "bold" else ""}'
+    if name not in _FONTS:
+        _FONTS[name] = (size, weight, mono)
+        if _FONT_ROOT is not None:
+            try:
+                _configure_font(_FONT_ROOT, name)
+            except tk.TclError:
+                pass  # that window was closed; the next apply_theme creates every registered font
+    return name
+
+
+def _configure_font(root, name):
+    size, weight, mono = _FONTS[name]
+    family = (font_module.nametofont('TkFixedFont', root=root).actual('family') if mono
+              else getattr(root, '_studio_font_family', 'TkDefaultFont'))
+    options = ('-family', family, '-size', max(6, round(size * TEXT_SCALE)), '-weight', weight)
+    # Created through Tcl so Tk owns the font: a tkinter Font object deletes its font when garbage-collected.
+    exists = name in root.tk.splitlist(root.tk.call('font', 'names'))
+    root.tk.call('font', 'configure' if exists else 'create', name, *options)
+
+
+def _apply_fonts(root):
+    global _FONT_ROOT
+    _FONT_ROOT = root
+    if not hasattr(root, '_studio_font_family'):
+        available = set(font_module.families(root))
+        root._studio_font_family = next((name for name in ('Segoe UI', 'Noto Sans', 'DejaVu Sans')
+                                         if name in available), 'TkDefaultFont')
+    body = max(6, round(TYPE_SIZE['body'] * TEXT_SCALE))
+    for name in ('TkDefaultFont', 'TkTextFont'):
+        font_module.nametofont(name, root=root).configure(family=root._studio_font_family, size=body)
+    for name in _FONTS:
+        _configure_font(root, name)
+
+
+def _row_height(root):
+    # Keeps the designed 30 px rows at 100 % and grows them with larger text.
+    return max(30, font_module.nametofont('TkDefaultFont', root=root).metrics('linespace') + 12)
+
+
+def set_text_scale(root, percent):
+    """Resize every application font in place; open pages, documents and connections are kept."""
+    global TEXT_SCALE
+    root = root._root()
+    TEXT_SCALE = percent / 100
+    _apply_fonts(root)
+    ttk.Style(root).configure('Treeview', rowheight=_row_height(root))
 
 
 def _build_theme(root, style):
     """Create one palette's native styles and image elements exactly once."""
-    available = set(font.families(root))
-    family = next((name for name in ('Segoe UI', 'Noto Sans', 'DejaVu Sans') if name in available), 'TkDefaultFont')
-    font.nametofont('TkDefaultFont', root=root).configure(family=family, size=TYPE_SIZE['body'])
-    font.nametofont('TkTextFont', root=root).configure(family=family, size=TYPE_SIZE['body'])
-    style.configure('.', background=BACKGROUND, foreground=INK, font=(family, TYPE_SIZE['body']),
+    style.configure('.', background=BACKGROUND, foreground=INK, font='TkDefaultFont',
                     bordercolor=BORDER, lightcolor=BORDER, darkcolor=BORDER,
                     focuscolor=ACCENT, troughcolor=FIELD, selectbackground=SELECTED,
                     selectforeground=INK, insertcolor=INK)
@@ -109,7 +159,7 @@ def _build_theme(root, style):
         style.layout(name, [(background, {'sticky': 'nsew', 'children': [
             ('Button.padding', {'sticky': 'nsew', 'children': [('Button.label', {'sticky': 'nsew'})]})]})])
         style.configure(name, padding=(13, 13), borderwidth=0, anchor='center', background=PANEL,
-                        foreground=color, font=(family, 11, 'bold'))
+                        foreground=color, font=font(11, 'bold'))
         style.map(name, foreground=[('active', INK)], background=[('!disabled', PANEL)])
     # Card tabs choose the charted reading; the current one carries the accent stripe.
     element('Studio.cardtab', surface(PANEL, BORDER), ('disabled', disabled), ('pressed', surface(PRESSED, ACCENT)),
@@ -119,7 +169,7 @@ def _build_theme(root, style):
         style.layout(name, [(background, {'sticky': 'nsew', 'children': [
             ('Button.padding', {'sticky': 'nsew', 'children': [('Button.label', {'sticky': 'nsew'})]})]})])
         style.configure(name, padding=(11, 7), borderwidth=0, anchor='center', background=BACKGROUND,
-                        foreground=color, font=(family, 9, 'bold'))
+                        foreground=color, font=font(9, 'bold'))
         style.map(name, foreground=[('disabled', DISABLED), ('active', INK)], background=[('!disabled', BACKGROUND)])
     element('Studio.field', surface(FIELD, BORDER), ('disabled', disabled),
             ('invalid', surface(FIELD, DANGER)), ('focus', surface(FIELD, ACCENT)),
@@ -173,24 +223,24 @@ def _build_theme(root, style):
         style.configure(name, background=PANEL)
     style.configure('Card.TFrame', background=PANEL, borderwidth=1, relief='solid')
     style.configure('TLabelframe', background=BACKGROUND, borderwidth=1, relief='solid', bordercolor=BORDER)
-    style.configure('TLabelframe.Label', background=BACKGROUND, foreground=MUTED, font=(family, 9, 'bold'))
-    style.configure('Title.TLabel', font=(family, TYPE_SIZE['title'], 'bold'), foreground=INK)
-    style.configure('Hero.TLabel', font=(family, TYPE_SIZE['hero'], 'bold'), foreground=INK)
+    style.configure('TLabelframe.Label', background=BACKGROUND, foreground=MUTED, font=font(9, 'bold'))
+    style.configure('Title.TLabel', font=font(TYPE_SIZE['title'], 'bold'), foreground=INK)
+    style.configure('Hero.TLabel', font=font(TYPE_SIZE['hero'], 'bold'), foreground=INK)
     style.configure('Muted.TLabel', foreground=MUTED)
     style.configure('Hint.TLabel', background=FIELD, foreground=MUTED)
-    style.configure('Section.TLabel', font=(family, TYPE_SIZE['section'], 'bold'), foreground=MUTED)
+    style.configure('Section.TLabel', font=font(TYPE_SIZE['section'], 'bold'), foreground=MUTED)
     for base, color, size in (('', INK, 10), ('Muted.', MUTED, 10), ('Title.', INK, 17), ('Section.', MUTED, 9)):
         for name in {f'{base}Panel.TLabel', f'Panel.{base}TLabel'}:
             style.configure(name, background=PANEL, foreground=color,
-                            font=(family, size, 'bold') if base in ('Title.', 'Section.') else (family, size))
+                            font=font(size, 'bold' if base in ('Title.', 'Section.') else 'normal'))
     for name, color in (('Warning.TLabel', WARNING), ('Error.TLabel', DANGER), ('Success.TLabel', SUCCESS)):
         style.configure(name, foreground=color)
-    style.configure('Treeview', rowheight=30, background=FIELD, fieldbackground=FIELD,
+    style.configure('Treeview', background=FIELD, fieldbackground=FIELD,
                     foreground=INK, borderwidth=1, relief='solid', bordercolor=BORDER)
     style.map('Treeview', background=[('selected', SELECTED)], foreground=[('selected', INK)],
               bordercolor=[('focus', ACCENT)])
     style.configure('Treeview.Heading', padding=(9, 8), relief='flat', background=PANEL,
-                    foreground=MUTED, font=(family, 9, 'bold'), borderwidth=1)
+                    foreground=MUTED, font=font(9, 'bold'), borderwidth=1)
     style.map('Treeview.Heading', background=[('active', HOVER)], foreground=[('active', INK)])
     style.configure('TSeparator', background=BORDER)
     style.configure('TScrollbar', background=BORDER, troughcolor=FIELD, arrowcolor=MUTED,
@@ -318,6 +368,8 @@ def apply_theme(root, mode=None):
     """
     root = root._root()
     previous = getattr(root, '_studio_theme_mode', None)
+    if previous is None:
+        _apply_fonts(root)
     mode = mode or previous or 'dark'
     if mode not in PALETTES:
         raise ValueError('Choose dark or light appearance.')
@@ -333,6 +385,8 @@ def apply_theme(root, mode=None):
         themes[mode] = _build_theme(root, style)
     else:
         style.theme_use(name)
+    # Style options belong to one ttk theme, so the other palette gets the current text size here.
+    style.configure('Treeview', rowheight=_row_height(root))
     root._studio_themes = themes
     root._studio_theme_images = themes[mode]
     root._studio_theme_mode = mode
@@ -360,7 +414,7 @@ def style_text(widget):
 def style_tree(tree):
     tree.tag_configure('odd', background=FIELD)
     tree.tag_configure('even', background=PANEL)
-    tree.tag_configure('group', background=SELECTED, foreground=INK, font=('TkDefaultFont', 10, 'bold'))
+    tree.tag_configure('group', background=SELECTED, foreground=INK, font=font(10, 'bold'))
     tree.tag_configure('unavailable', foreground=MUTED)
     return tree
 

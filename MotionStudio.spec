@@ -1,13 +1,27 @@
 # Build on Windows: python -m PyInstaller --noconfirm MotionStudio.spec
 from pathlib import Path
+import re
 import sys
 from zipfile import ZipFile
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 from PyInstaller.config import CONF
+from PyInstaller.utils.win32.versioninfo import (FixedFileInfo, StringFileInfo, StringStruct, StringTable,
+                                                   VarFileInfo, VarStruct, VSVersionInfo)
 
 root = Path(SPECPATH)
 if not (root / 'motionstudio' / 'app' / 'main_window.py').is_file():
     raise RuntimeError('Missing the motionstudio package next to MotionStudio.spec.')
+# The built file is ArmChair-v<version>.exe; the app itself is still UR Motion Studio.
+version = re.search(r"__version__ = '([0-9.]+)'", (root / 'motionstudio' / '__init__.py').read_text()).group(1)
+name = f'ArmChair-v{version}'
+numbers = (*map(int, version.split('.')), 0)
+file_version = VSVersionInfo(
+    ffi=FixedFileInfo(filevers=numbers, prodvers=numbers),
+    kids=[StringFileInfo([StringTable('040904B0', [
+              StringStruct('ProductName', 'UR Motion Studio'), StringStruct('FileDescription', 'UR Motion Studio'),
+              StringStruct('ProductVersion', version), StringStruct('FileVersion', version),
+              StringStruct('InternalName', 'ArmChair'), StringStruct('OriginalFilename', f'{name}.exe')])]),
+          VarFileInfo([VarStruct('Translation', [1033, 1200])])])
 # Python 3.14 on Windows ships Tcl/Tk scripts in ZIPs, rather than the
 # directories collected by the standard hook. Supply the runtime directories.
 tk_data = []
@@ -35,6 +49,6 @@ a = Analysis(
     runtime_hooks=[], excludes=['pytest', 'IPython', 'trimesh', 'collada', 'fast_simplification', 'scipy', 'yaml'], noarchive=False,
 )
 pyz = PYZ(a.pure)
-exe = EXE(pyz, a.scripts, a.binaries, a.datas, [], name='URMotionStudio',
+exe = EXE(pyz, a.scripts, a.binaries, a.datas, [], name=name, version=file_version,
           debug=False, bootloader_ignore_signals=False, strip=False, upx=False,
           console=False)

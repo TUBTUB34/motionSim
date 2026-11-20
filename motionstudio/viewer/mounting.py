@@ -3,6 +3,7 @@ import math
 import tkinter as tk
 from tkinter import ttk
 
+from motionstudio.ui import theme
 from motionstudio.viewer.robot_view import LIVE, mounting_override, recording_key, set_mounting_override
 
 STEP = 45  # degrees, as PolyScope's Installation → Mounting arrows
@@ -43,7 +44,7 @@ class MountingControls(ttk.Frame):
             return line
         heading = row()
         ttk.Label(heading, text='Mounting', style='Panel.TLabel',
-                  font=('TkDefaultFont', 10, 'bold') if compact else None).pack(side='left', padx=(0, 10))
+                  font=theme.font(10, 'bold') if compact else None).pack(side='left', padx=(0, 10))
         for index, name in enumerate(('Base', 'Tilt')):
             line = row()
             ttk.Label(line, text=name, style='Muted.Panel.TLabel', width=5 if compact else 0).pack(side='left', padx=(0, 6))

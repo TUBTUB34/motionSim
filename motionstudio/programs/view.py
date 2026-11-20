@@ -8,6 +8,7 @@ import tkinter as tk
 from tkinter import ttk, filedialog
 from motionstudio.programs.check import discover_programs, review_program, ProgramPair, ProgramSource, REFERENCES
 from motionstudio.ui.theme import style_text
+from motionstudio.core.paths import start_folder
 from motionstudio.remote.connection import (active_robot_settings, robot_download_folder, should_select_robot,
                         simulator_connection_text, transfer_connection)
 from motionstudio.remote.ssh_trust import host_key_prompt
@@ -269,7 +270,8 @@ class ProgramCheckWindow(WorkspacePanel):
                 self.status.set(f'Cannot create {destination}: {exc}')
                 return
         else:
-            destination = filedialog.askdirectory(parent=self, title='Choose where to save the robot programs folder', mustexist=True)
+            destination = filedialog.askdirectory(parent=self, title='Choose where to save the robot programs folder', mustexist=True,
+                                                 initialdir=start_folder(self.app, 'programs'))
             if not destination:
                 return
         from motionstudio.programs.transfer import ProgramSourceJob
@@ -361,19 +363,22 @@ class ProgramCheckWindow(WorkspacePanel):
                                        if pair.urp or Path(path).suffix.lower() == '.script'])
 
     def choose_folder(self):
-        path = filedialog.askdirectory(parent=self, title='Choose folder containing URP, script and installation files', mustexist=True)
+        path = filedialog.askdirectory(parent=self, title='Choose folder containing URP, script and installation files', mustexist=True,
+                                       initialdir=start_folder(self.app, 'programs', create=False))
         if path:
             self.scan(path)
 
     def choose_zip(self):
         path = filedialog.askopenfilename(parent=self, title='Select robot backup or configuration archive',
+                                        initialdir=start_folder(self.app, 'backups', create=False),
                                         filetypes=[('Robot archives', '*.zip *.tar *.tar.gz *.tgz'),
                                                    ('TAR backup', '*.tar *.tar.gz *.tgz'), ('ZIP archive', '*.zip')])
         if path:
             self.scan(path)
 
     def choose_files(self):
-        paths = filedialog.askopenfilenames(parent=self, title='Select a URP and its saved script (or either file)', filetypes=[('UR program source', '*.urp *.script')])
+        paths = filedialog.askopenfilenames(parent=self, title='Select a URP and its saved script (or either file)',
+                                             initialdir=start_folder(self.app, 'programs', create=False), filetypes=[('UR program source', '*.urp *.script')])
         if not paths:
             return
         if len(paths) == 1:
@@ -519,7 +524,7 @@ class ProgramCheckWindow(WorkspacePanel):
         if not self.review or self.busy:
             return
         review = self.review
-        destination = filedialog.asksaveasfilename(parent=self, title='Export Program Check PDF', defaultextension='.pdf', initialfile=f'{review.pair.name}_program_check.pdf', filetypes=[('PDF report', '*.pdf')])
+        destination = filedialog.asksaveasfilename(parent=self, title='Export Program Check PDF', defaultextension='.pdf', initialdir=start_folder(self.app, 'reports'), initialfile=f'{review.pair.name}_program_check.pdf', filetypes=[('PDF report', '*.pdf')])
         if destination:
             from motionstudio.programs.pdf import export_program_pdf
             self.cancellable = False

@@ -13,7 +13,9 @@ from motionstudio.ui.address_book import SavedAddressCombobox
 from motionstudio.diagnostics.analysis import analyze_directory
 from motionstudio.diagnostics.status import build_robot_status
 from motionstudio.remote.ssh_trust import host_key_prompt
+from motionstudio.ui import theme
 from motionstudio.ui.theme import style_text
+from motionstudio.core.paths import start_folder
 from motionstudio.ui.workspace_panel import WorkspacePanel
 from motionstudio.ui import dialogs as messagebox
 
@@ -127,10 +129,10 @@ class DiagnosticWindow(WorkspacePanel):
         body = ttk.Frame(panes, padding=(14, 0, 0, 0))
         body.rowconfigure(0, weight=1)
         body.columnconfigure(0, weight=1)
-        self.details = tk.Text(body, wrap='word', padx=18, pady=14, font=('TkDefaultFont', 11), spacing3=9)
+        self.details = tk.Text(body, wrap='word', padx=18, pady=14, font=theme.font(11), spacing3=9)
         style_text(self.details)
-        self.details.tag_configure('title', font=('TkDefaultFont', 19, 'bold'), spacing1=4, spacing3=15)
-        self.details.tag_configure('heading', font=('TkDefaultFont', 12, 'bold'), spacing1=16, spacing3=8)
+        self.details.tag_configure('title', font=theme.font(19, 'bold'), spacing1=4, spacing3=15)
+        self.details.tag_configure('heading', font=theme.font(12, 'bold'), spacing1=16, spacing3=8)
         self.details.grid(row=0, column=0, sticky='nsew')
         scroll = ttk.Scrollbar(body, command=self.details.yview)
         scroll.grid(row=0, column=1, sticky='ns')
@@ -211,7 +213,8 @@ class DiagnosticWindow(WorkspacePanel):
         if self.busy:
             return
         if self.source_mode.get() == 'Local folder':
-            path = filedialog.askdirectory(parent=self, title='Folder with robot logs and flight recordings')
+            path = filedialog.askdirectory(parent=self, title='Folder with robot logs and flight recordings',
+                                           initialdir=start_folder(self.app, 'status', create=False))
             if path:
                 self.analyze(path)
             return
@@ -221,7 +224,8 @@ class DiagnosticWindow(WorkspacePanel):
                 destination = robot_download_folder(self.app, 'Robot Status', connection.ip)
                 destination.mkdir(parents=True, exist_ok=True)
             else:
-                destination = filedialog.askdirectory(parent=self, title='Save a new robot diagnostic dataset in…')
+                destination = filedialog.askdirectory(parent=self, title='Save a new robot diagnostic dataset in…',
+                                                      initialdir=start_folder(self.app, 'status'))
                 if not destination:
                     return
             job = DiagnosticSourceJob(connection=connection, destination=destination, flight_directory=self.flight_path.get().strip())
@@ -348,7 +352,7 @@ class DiagnosticWindow(WorkspacePanel):
         if self.report is None or self.busy:
             return
         destination = filedialog.asksaveasfilename(parent=self, title='Export Robot Status report',
-                      initialfile='robot_status_report.pdf', defaultextension='.pdf', filetypes=[('PDF report', '*.pdf')])
+                      initialfile='robot_status_report.pdf', initialdir=start_folder(self.app, 'reports'), defaultextension='.pdf', filetypes=[('PDF report', '*.pdf')])
         if destination:
             from motionstudio.diagnostics.pdf import export_diagnostic_pdf
             report = self.report

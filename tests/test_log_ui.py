@@ -98,7 +98,7 @@ class HeadlessLogUITests(unittest.TestCase):
                 window.set_data.assert_not_called()
                 self.assertIs(window.data, original_data)
 
-    def test_fetch_optional_save_remembers_folder(self):
+    def test_fetch_optional_save_starts_in_project_logs_and_keeps_backup_folder(self):
         from unittest.mock import Mock
         from motionstudio.logs.view import LogWindow
         for accept, filename in ((False, ''), (True, ''), (True, '/tmp/log_history.txt')):
@@ -113,8 +113,12 @@ class HeadlessLogUITests(unittest.TestCase):
                         'motionstudio.logs.view.LogJob') as factory:
                     LogWindow.fetch(window)
                 self.assertEqual(dialog.call_count, int(accept))
+                if accept:
+                    self.assertIs(dialog.call_args.kwargs['initialdir'], window._start_folder.return_value)
+                    window._start_folder.assert_called_with('logs')
                 self.assertEqual(factory.call_args.kwargs['save_path'], filename or None)
-                self.assertEqual(window.save_directory, Path('/tmp') if filename else None)
+                # A saved log no longer decides where the next backup archive goes.
+                self.assertIsNone(window.save_directory)
                 window.begin.assert_called_once()
 
     def test_backup_reuses_folder_without_overwriting_existing_archive(self):

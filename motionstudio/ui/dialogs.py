@@ -38,7 +38,7 @@ class MessageDialog(tk.Toplevel):
         content = str(message) + ('\n\n'+str(detail) if detail else '')
         lines = sum(max(1, len(textwrap.wrap(line, 72))) for line in content.splitlines())
         self.message = tk.Text(body, wrap='word', width=68, height=min(18, max(3, lines+1)),
-                               font=('TkDefaultFont', 10), takefocus=True)
+                               font=theme.font(10), takefocus=True)
         style_text(self.message)
         scroll = ttk.Scrollbar(body, orient='vertical', command=self.message.yview)
         self.message.configure(yscrollcommand=scroll.set)

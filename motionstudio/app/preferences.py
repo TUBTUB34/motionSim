@@ -1,4 +1,4 @@
-"""Small local preferences store: saved robot addresses and display theme only."""
+"""Small local preferences store: saved robot addresses, appearance and the working folder."""
 from ipaddress import ip_address
 import json
 import os
@@ -6,10 +6,13 @@ from pathlib import Path
 import sys
 import tempfile
 
+from motionstudio.core.paths import validate_project_name
+
 
 MAX_ADDRESSES = 50
 MAX_FILE_BYTES = 64 * 1024
 THEMES = ('dark', 'light')
+TEXT_SCALES = (90, 100, 115, 130, 150)  # percent of the designed text size
 
 
 def default_preferences_path():
@@ -48,8 +51,7 @@ class Preferences:
     """
     def __init__(self, path=None):
         self.path = Path(path) if path is not None else default_preferences_path()
-        self._addresses = ()
-        self._theme = 'dark'
+        self._state = {'theme': 'dark', 'addresses': (), 'workspace': None, 'project': None, 'text_scale': 100}
         self.load_error = ''
         try:
             with self.path.open('rb') as stream:
@@ -67,7 +69,17 @@ class Preferences:
             normalized = tuple(dict.fromkeys(normalize_address(address) for address in addresses))
             if len(normalized) > MAX_ADDRESSES:
                 raise ValueError(f'more than {MAX_ADDRESSES} saved addresses')
-            self._addresses, self._theme = normalized, theme
+            self._state.update(theme=theme, addresses=normalized)
+            # Optional later fields: an unusable one falls back alone and never costs the saved robots.
+            workspace = value.get('workspace')
+            if isinstance(workspace, str) and '\x00' not in workspace and Path(workspace).is_absolute():
+                self._state['workspace'] = workspace
+            try:
+                self._state['project'] = validate_project_name(value.get('project'))
+            except ValueError:
+                pass
+            if value.get('text_scale') in TEXT_SCALES and type(value.get('text_scale')) is int:
+                self._state['text_scale'] = value['text_scale']
         except FileNotFoundError:
             pass
         except (OSError, ValueError, UnicodeError, RecursionError) as error:
@@ -76,11 +88,24 @@ class Preferences:
 
     @property
     def addresses(self):
-        return self._addresses
+        return self._state['addresses']
 
     @property
     def theme(self):
-        return self._theme
+        return self._state['theme']
+
+    @property
+    def workspace(self):
+        """The chosen working folder, or None for the default."""
+        return Path(self._state['workspace']) if self._state['workspace'] else None
+
+    @property
+    def project(self):
+        return self._state['project']
+
+    @property
+    def text_scale(self):
+        return self._state['text_scale']
 
     def add_address(self, address):
         address = normalize_address(address)
@@ -89,25 +114,40 @@ class Preferences:
             if len(addresses) >= MAX_ADDRESSES:
                 raise ValueError(f'You have {MAX_ADDRESSES} saved addresses. Remove one before adding another.')
             addresses += (address,)
-        self._commit(addresses, self.theme)
+        self._commit(addresses=addresses)
         return address
 
     def remove_address(self, address):
         address = normalize_address(address)
         if address not in self.addresses:
             return False
-        self._commit(tuple(item for item in self.addresses if item != address), self.theme)
+        self._commit(addresses=tuple(item for item in self.addresses if item != address))
         return True
 
     def set_theme(self, theme):
         if theme not in THEMES:
             raise ValueError('Choose dark or light mode.')
-        self._commit(self.addresses, theme)
+        self._commit(theme=theme)
 
-    def _commit(self, addresses, theme):
+    def set_text_scale(self, scale):
+        if scale not in TEXT_SCALES:
+            raise ValueError('Choose one of the listed text sizes.')
+        self._commit(text_scale=scale)
+
+    def set_project(self, workspace, project):
+        """Save the working folder and the project inside it together."""
+        workspace = Path(workspace)
+        if not workspace.is_absolute():
+            raise ValueError('Choose a working folder with a full path.')
+        self._commit(workspace=str(workspace), project=validate_project_name(project))
+
+    def _commit(self, **changes):
+        state = {**self._state, **changes}
         # This fixed projection cannot accidentally serialize credentials or
         # unrelated connection settings attached by a caller.
-        text = json.dumps({'version': 1, 'theme': theme, 'addresses': list(addresses)}, indent=2) + '\n'
+        text = json.dumps({'version': 1, 'theme': state['theme'], 'addresses': list(state['addresses']),
+                           'workspace': state['workspace'], 'project': state['project'],
+                           'text_scale': state['text_scale']}, indent=2) + '\n'
         temporary = None
         try:
             self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -127,5 +167,6 @@ class Preferences:
                     temporary.unlink(missing_ok=True)
                 except OSError:
                     pass
-        self._addresses, self._theme = tuple(addresses), theme
+        state['addresses'] = tuple(state['addresses'])
+        self._state = state
         self.load_error = ''

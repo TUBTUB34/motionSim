@@ -38,12 +38,13 @@ class ConnectionSharingTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'Simulator → Connection'):
             transfer_connection(app, '192.0.2.9', 'other', 'old-secret')
 
-    def test_report_downloads_default_to_a_per_robot_folder_beside_the_flight_library(self):
-        app = SimpleNamespace(flight_library_root=Path('data', 'URMotionStudio', 'flightreports'))
+    def test_report_downloads_default_to_a_per_robot_folder_in_the_active_project(self):
+        app = SimpleNamespace(project_root=Path('work', 'Cell 4'),
+                              flight_library_root=Path('elsewhere', 'flights'))  # an opened folder does not move downloads
         self.assertEqual(robot_download_folder(app, 'Robot programs', '192.0.2.8'),
-                         Path('data', 'URMotionStudio', 'Robot programs', '192.0.2.8'))
+                         Path('work', 'Cell 4', 'Robot programs', '192.0.2.8'))
         self.assertEqual(robot_download_folder(app, 'Robot Status', 'fe80::1'),
-                         Path('data', 'URMotionStudio', 'Robot Status', 'fe80--1'))
+                         Path('work', 'Cell 4', 'Robot Status', 'fe80--1'))
         self.assertEqual(robot_download_folder(SimpleNamespace(), 'Robot Status', '192.0.2.8'),
                          default_library().parent / 'Robot Status' / '192.0.2.8')
 
@@ -172,7 +173,7 @@ class SharedCredentialUITests(unittest.TestCase):
             self.assertEqual(self.app.log_window.ip.get(), '192.0.2.10')
 
     def test_report_downloads_share_the_simulator_identity(self):
-        self.app.flight_library_root = Path(self.folder.name) / 'flightreports'
+        self.app.project_root = Path(self.folder.name)
         self.connect()
         program, status = self.app.program_check_window, self.app.diagnostic_window
         program.robot_password.set('stale')

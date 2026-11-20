@@ -20,7 +20,7 @@ from motionstudio.flight.stats import STATE_FIELDS, protective_stops, state_chan
 from motionstudio.ui.chart_canvas import ChartCanvas
 from motionstudio.ui.workspace_panel import WorkspacePanel
 from motionstudio.flight.transfer import discover_library
-from motionstudio.core.paths import default_library
+from motionstudio.core.paths import default_library, start_folder
 from motionstudio.ui import theme
 from motionstudio.ui.theme import ScrollableFrame, flow, style_text, style_toolbar, status_color
 
@@ -31,7 +31,7 @@ EVIDENCE_WINDOW = .25
 def label(parent, text=None, variable=None, *, muted=False, size=10, bold=False, **kwargs):
     kwargs.setdefault('anchor', 'w')
     return tk.Label(parent, text=text, textvariable=variable, background=parent.cget('background'),
-                    foreground=theme.MUTED if muted else theme.INK, font=('TkDefaultFont', size, 'bold' if bold else 'normal'),
+                    foreground=theme.MUTED if muted else theme.INK, font=theme.font(size, 'bold' if bold else 'normal'),
                     **kwargs)
 
 
@@ -196,7 +196,7 @@ class FlightWindow(WorkspacePanel):
             lambda: recording_key(self.report) if self.report else 'recording:', compact=True)
         self.mounting_controls.grid(row=1, column=0, columnspan=2, sticky='ew', pady=(8, 0))
         ttk.Separator(panel).grid(row=2, column=0, columnspan=2, sticky='ew', pady=10)
-        self.evidence_title = ttk.Label(panel, text='Recorded events', style='Panel.TLabel', font=('TkDefaultFont', 10, 'bold'))
+        self.evidence_title = ttk.Label(panel, text='Recorded events', style='Panel.TLabel', font=theme.font(10, 'bold'))
         self.evidence_title.grid(row=3, column=0, columnspan=2, sticky='w')
         self.evidence_combo = ttk.Combobox(panel, textvariable=self.evidence_choice, state='disabled')
         self.evidence_combo.grid(row=4, column=0, columnspan=2, sticky='ew', pady=(6, 6))
@@ -339,7 +339,7 @@ class FlightWindow(WorkspacePanel):
         heading = tk.Frame(script, background=theme.PANEL, padx=12, pady=6)
         heading.grid(row=0, column=0, sticky='ew')
         tk.Label(heading, text='SYNCHRONIZED SCRIPT', background=theme.PANEL, foreground=theme.ACCENT,
-                 font=('TkDefaultFont', 8, 'bold')).grid(row=0, column=0, sticky='w')
+                 font=theme.font(8, 'bold')).grid(row=0, column=0, sticky='w')
         self.script_heading = label(heading, 'No program script in this recording', size=10, bold=True)
         self.script_heading.grid(row=1, column=0, sticky='w')
         heading.columnconfigure(1, weight=1)
@@ -347,7 +347,7 @@ class FlightWindow(WorkspacePanel):
         ttk.Checkbutton(heading, text='Follow script', variable=self.follow_script, style='Panel.TCheckbutton',
                         command=lambda: self.show_script_line(force=True)).grid(row=0, column=2, rowspan=2)
         self.script = tk.Text(script, background=theme.BACKGROUND, foreground=theme.INK, relief='flat',
-                              wrap='none', height=4, width=32, font=('TkFixedFont', 10),
+                              wrap='none', height=4, width=32, font=theme.font(10, mono=True),
                               state='disabled', padx=12, pady=6)
         self.script.grid(row=1, column=0, sticky='ew')
         style_text(self.script)
@@ -398,9 +398,9 @@ class FlightWindow(WorkspacePanel):
     def choose_folder(self):
         retrieval = getattr(self.app, 'flight_retrieval_window', None)
         if retrieval is not None and retrieval.winfo_exists() and retrieval.is_busy():
-            self.status.set('Wait for retrieval to finish or cancel it before changing the working folder.')
+            self.status.set('Wait for retrieval to finish or cancel it before changing the flight-report folder.')
             return
-        path = filedialog.askdirectory(parent=self, title='Choose flight-report working folder',
+        path = filedialog.askdirectory(parent=self, title='Open another flight-report folder',
                                        initialdir=self.library.get(), mustexist=True)
         if path:
             self.set_library(path)
@@ -424,7 +424,7 @@ class FlightWindow(WorkspacePanel):
         self._refresh_choices()
         for control in (self.play_button, self.restart_button, self.scrubber, self.export_button):
             control.configure(state='disabled')
-        self.metadata.set('Choose a flight report from this working folder.')
+        self.metadata.set('Choose a flight report from this folder.')
         self.clock.set('0.000 / 0.000 s')
         self._clear_report_views()
         self.empty('Loading reports in the selected folder…')
@@ -469,7 +469,7 @@ class FlightWindow(WorkspacePanel):
             self.load_path(self.paths[index])
 
     def open_file(self):
-        name = filedialog.askopenfilename(parent=self, title='Open flight recording',
+        name = filedialog.askopenfilename(parent=self, title='Open flight recording', initialdir=self.library.get(),
                                           filetypes=[('Flight recordings', '*.zip *.csv'), ('All files', '*.*')])
         if name:
             self.load_path(Path(name))
@@ -730,9 +730,9 @@ class FlightWindow(WorkspacePanel):
         for text, color, dashed in (self.charts.legend if self.report is not None else ()):
             chip = tk.Frame(self.legend_bar, background=theme.PANEL, highlightbackground=theme.BORDER, highlightthickness=1)
             tk.Label(chip, text='┄' if dashed else '●', foreground=color, background=theme.PANEL,
-                     font=('TkDefaultFont', 9)).pack(side='left', padx=(8, 2))
+                     font=theme.font(9)).pack(side='left', padx=(8, 2))
             tk.Label(chip, text=text, foreground=theme.INK, background=theme.PANEL,
-                     font=('TkDefaultFont', 9)).pack(side='left', padx=(0, 8), pady=2)
+                     font=theme.font(9)).pack(side='left', padx=(0, 8), pady=2)
         # Arranged once Tk has measured the new chips; flushing idle work here would run stale scale callbacks.
         self._arrange_legend()
 
@@ -983,6 +983,7 @@ class FlightWindow(WorkspacePanel):
         report = self.report
         path = filedialog.asksaveasfilename(parent=self, title='Export complete flight report',
                                             defaultextension='.pdf', initialfile=f'{report.path.stem}_report.pdf',
+                                            initialdir=start_folder(self.app, 'reports'),
                                             filetypes=[('PDF report', '*.pdf')])
         if not path:
             return
@@ -1010,7 +1011,7 @@ class FlightWindow(WorkspacePanel):
                 if self.paths and self.report is None and not self.loading:
                     self.load_path(self.paths[0])
                 elif not self.paths and self.report is None and not self.loading:
-                    self.empty('No flight recordings in this folder. Choose folder… to find your reports.')
+                    self.empty('No flight recordings in this project yet. Download or record one, or choose Folder… to open another folder.')
             elif event[0] == 'discovery_error' and event[1] == self.discovery_generation:
                 self.library_summary.set('Could not read this folder · Choose another folder or reload.')
                 self.status.set(f'Could not find recordings: {event[2]}')

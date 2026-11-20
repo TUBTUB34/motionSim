@@ -20,6 +20,11 @@ def check(app):
     from motionstudio.app.preferences import Preferences
     saved = Preferences(app.preferences.path)
     assert saved.theme == 'light' and saved.addresses == ('192.0.2.42',), 'Preferences did not survive reload'
+    assert app.set_text_scale(115) and app.set_project(app.workspace, 'Smoke project', create=True), 'Settings change failed'
+    app.open_settings()
+    assert app.active_page == 'settings' and app.flight_library_root.parent.name == 'Smoke project', 'Project switch failed'
+    saved = Preferences(app.preferences.path)
+    assert (saved.text_scale, saved.project) == (115, 'Smoke project'), 'Settings did not survive reload'
     app.open_logs()
     with tempfile.TemporaryDirectory(prefix='ur-smoke-') as folder:
         app.open_checklist()

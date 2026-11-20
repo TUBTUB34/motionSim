@@ -158,6 +158,8 @@ class CompactDesignTests(unittest.TestCase):
             previous.write_bytes(b'existing archive')
             self.app.make_full_backup()
             window = self.app.backup_page
+            self.assertEqual(Path(window.directory.get()), Path(self.app.project_root) / 'Backups')  # project default
+            window.folder_button.invoke()  # choosing another folder still works
             window.project_name.set('Fixture project')
             self.settle()
             start.assert_not_called()
@@ -189,6 +191,7 @@ class CompactDesignTests(unittest.TestCase):
         with patch('motionstudio.backup.transfer.BackupJob.start') as start, patch(
                 'motionstudio.backup.view.filedialog.askdirectory', return_value=''):
             self.app.make_full_backup()
+            self.app.backup_page.directory.set('')  # destination cleared by hand, then the chooser is cancelled
             self.app.backup_page.project_name.set('Fixture project')
             self.app.backup_page.make_backup()
             start.assert_not_called()

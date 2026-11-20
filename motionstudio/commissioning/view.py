@@ -8,6 +8,7 @@ from motionstudio.commissioning.records import (DEPLOYMENT_CHECKS, METADATA_FIEL
                            export_record_csv, load_record, new_record, review_summary,
                            save_record, today_utc)
 from motionstudio.ui import theme
+from motionstudio.core.paths import start_folder
 from motionstudio.ui.theme import ScrollableFrame, style_text, style_tree
 from motionstudio.ui.workspace_panel import WorkspacePanel
 from motionstudio.ui import dialogs as messagebox
@@ -123,7 +124,7 @@ class CommissioningPage(WorkspacePanel):
         self.state_selector.pack(side='left')
         ttk.Label(detail, text='Evidence, action owner and follow-up\n(no passwords)', style='Muted.Panel.TLabel').pack(
             anchor='w', pady=(10, 5))
-        self.notes = style_text(tk.Text(detail, width=32, height=5, wrap='word', undo=True, font=('TkDefaultFont', 10)))
+        self.notes = style_text(tk.Text(detail, width=32, height=5, wrap='word', undo=True, font=theme.font(10)))
         self.notes.pack(fill='x')
         self.notes.bind('<<Modified>>', self._notes_changed)
         ttk.Label(detail, textvariable=self.sources, style='Muted.Panel.TLabel', wraplength=400).pack(
@@ -259,7 +260,7 @@ class CommissioningPage(WorkspacePanel):
             self._replace(new_record())
 
     def open(self):
-        path = filedialog.askopenfilename(parent=self, title='Open checklist',
+        path = filedialog.askopenfilename(parent=self, title='Open checklist', initialdir=start_folder(self.app, 'checklists', create=False),
             filetypes=(('UR review checklist', '*.json'), ('All files', '*.*')))
         if not path:
             return
@@ -277,6 +278,7 @@ class CommissioningPage(WorkspacePanel):
         if path is None or force_dialog:
             path = filedialog.asksaveasfilename(parent=self, title='Save checklist', defaultextension='.json',
                 initialfile=path.name if path else 'robot-review.json',
+                initialdir=str(path.parent) if path else start_folder(self.app, 'checklists'),
                 filetypes=(('UR review checklist', '*.json'),))
         if not path:
             return False
@@ -295,7 +297,8 @@ class CommissioningPage(WorkspacePanel):
     def export(self):
         self._sync()
         path = filedialog.asksaveasfilename(parent=self, title='Export review checklist', defaultextension='.csv',
-            initialfile='robot-review.csv', filetypes=(('CSV spreadsheet', '*.csv'),))
+            initialfile='robot-review.csv', initialdir=start_folder(self.app, 'reports'),
+            filetypes=(('CSV spreadsheet', '*.csv'),))
         if not path:
             return
         try:

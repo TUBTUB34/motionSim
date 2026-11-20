@@ -12,7 +12,7 @@ class WorkspaceShell(ttk.Frame):
     """Top navigation, one persistent page per workflow, and a status footer."""
     PAGES = (('home', 'Home'), ('simulator', 'Simulator'), ('live', 'Live monitor'),
              ('flights', 'Flight reports'), ('logs', 'Logs'), ('reports', 'Reports'),
-             ('backups', 'Backups'), ('checklist', 'Checklist'))
+             ('backups', 'Backups'), ('checklist', 'Checklist'), ('settings', 'Settings'))
 
     def __init__(self, app):
         super().__init__(app.root)
@@ -46,14 +46,18 @@ class WorkspaceShell(ttk.Frame):
         self.summary = tk.StringVar()
         ttk.Label(footer, textvariable=self.summary, style='Muted.Panel.TLabel', anchor='center').grid(
             row=0, column=2, sticky='ew', padx=16)
-        self.theme_toggle = ttk.Checkbutton(footer, text='Dark mode', variable=app.dark_mode,
-                                            command=app.toggle_theme, style='Panel.TCheckbutton')
-        self.theme_toggle.grid(row=0, column=3, padx=(0, 18))
-        self.theme_toggle.bind('<Return>', lambda _event: (self.theme_toggle.invoke(), 'break')[1])
+        # Where saves go is always visible; clicking it opens Settings to switch projects.
+        self.project_label = ttk.Label(footer, style='Muted.Panel.TLabel', cursor='hand2')
+        self.project_label.grid(row=0, column=3, padx=(0, 18))
+        self.project_label.bind('<Button-1>', lambda _event: app.open_settings())
+        self.update_project()
         ttk.Label(footer, text='UR MOTION STUDIO', style='Section.Panel.TLabel').grid(row=0, column=4)
         self.pages = {name: ttk.Frame(self.content) for name, _label in self.PAGES}
         self.active = None
         self._dot_state = None
+
+    def update_project(self):
+        self.project_label.configure(text=f'Project · {self.app.project}')
 
     def show(self, name):
         if self.active != name:

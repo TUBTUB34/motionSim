@@ -12,12 +12,16 @@ rem Use a fresh work directory so locked files from a previous build cannot bloc
 set "MOTIONSIM_BUILD_ID="
 for /f %%G in ('.venv-build\Scripts\python -c "import uuid; print(uuid.uuid4().hex)"') do set "MOTIONSIM_BUILD_ID=%%G"
 if not defined MOTIONSIM_BUILD_ID goto :failed
+rem The built file is named after the version in motionstudio\__init__.py (see MotionStudio.spec).
+set "MOTIONSIM_EXE="
+for /f "usebackq" %%G in (`.venv-build\Scripts\python -c "import motionstudio as m; print(f'ArmChair-v{m.__version__}.exe')"`) do set "MOTIONSIM_EXE=%%G"
+if not defined MOTIONSIM_EXE goto :failed
 .venv-build\Scripts\python -m PyInstaller --noconfirm --workpath "build\runs\%MOTIONSIM_BUILD_ID%" MotionStudio.spec
 if errorlevel 1 goto :failed
 rem Smoke-test on a hidden desktop so its windows do not take over the screen.
-.venv-build\Scripts\python scripts\run_hidden.py dist\URMotionStudio.exe --smoke-test
+.venv-build\Scripts\python scripts\run_hidden.py dist\%MOTIONSIM_EXE% --smoke-test
 if errorlevel 1 goto :failed
-echo Ready: dist\URMotionStudio.exe
+echo Ready: dist\%MOTIONSIM_EXE%
 popd
 exit /b 0
 :failed

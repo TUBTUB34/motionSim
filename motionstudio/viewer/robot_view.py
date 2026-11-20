@@ -220,7 +220,7 @@ class RobotView(tk.Canvas):
             return
         xy, _ = self.project([point])
         self.create_text(*xy[0], text=text, fill=color, anchor="sw",
-                         font=("TkDefaultFont", 10), tags="scene")
+                         font=theme.font(10), tags="scene")
 
     def cylinder(self, start, end, radius, color, end_radius=None, bevel=True, segments=40):
         """Shaded, bevelled housing with vectorized lighting and face culling."""
@@ -415,7 +415,7 @@ class RobotView(tk.Canvas):
         if self.sample is None:
             self.itemconfigure("mesh", state="hidden")
             self.create_text(self.w/2, self.h/2, text="Waiting for live joint positions…",
-                             fill=theme.INK, font=("TkDefaultFont", 13), tags="scene")
+                             fill=theme.INK, font=theme.font(13), tags="scene")
             return
         points = np.array([f[:3, 3] for f in frames])
         if self.visibility["grid"] and abs(mount[2, 2] - 1) < 1e-6 and self.view_frame != "Live TCP":
@@ -472,6 +472,6 @@ class RobotView(tk.Canvas):
         if not self.visibility["info"]:
             return
         self.create_text(18, 18, text=f"{self.model} · {model_family(self.model)}   •   {self.stream_state}   •   {self.view_frame}",
-                         fill=theme.INK, anchor="nw", font=("TkDefaultFont", 11, "bold"), tags="scene")
+                         fill=theme.INK, anchor="nw", font=theme.font(11, 'bold'), tags="scene")
         self.create_text(18, self.h-18, text="Left-drag to rotate  ·  Right-drag to pan  ·  Scroll to zoom",
                          fill=theme.MUTED, anchor="sw", tags="scene")
