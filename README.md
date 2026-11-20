@@ -1,4 +1,6 @@
-# UR Motion Studio
+# ArmChair
+
+Formerly UR Motion Studio. Settings and the working folder keep the old names (`URMotionStudio`, `Documents\UR Motion Studio`) so saved data stays found.
 
 One desktop application for the existing UR simulator and native log analysis.
 Charts open inside the application; no browser, web server or internet connection
@@ -206,7 +208,7 @@ on Linux.
 Use a local Windows project folder for builds and tests; loading Python libraries
 through a WSL/network share can be much slower.
 
-The result is **`dist\URMotionStudio.exe`**, a single executable containing Python,
+The result is **`dist\ArmChair-v<version>.exe`**, a single executable containing Python,
 Tk, chart libraries and robot assets. Copy it to a Windows PC; the target does
 not need Python or a browser. First launch/first simulator rendering can take
 longer while libraries unpack and the renderer compiles. Keep the generated
@@ -216,7 +218,7 @@ display (for example 175 %) it is as sharp and compact as under WSL instead of b
 stretched by Windows.
 The build runs an offline smoke check of the packaged log and flight workspaces,
 PDF export, retrieval controls, transfer helper and robot renderer. You can repeat
-it with `URMotionStudio.exe --smoke-test` (exit code 0
+it with `ArmChair-v<version>.exe --smoke-test` (exit code 0
 means success). It never connects to a robot and uses temporary preferences, leaving
 your saved addresses and appearance intact.
 The desktop log parser is included in `motionstudio/logs/parser.py`; no separate

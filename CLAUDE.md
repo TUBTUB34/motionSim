@@ -35,10 +35,10 @@ Put new shared code in the lowest package that fits instead of importing across 
 - `core/`: `about.py` (APP_NAME), `kinematics.py` (MODELS, JOINTS), `telemetry.py`, `installation.py`, `robot_assets.py`, `tooling.py`, `playback.py` (recorded-motion timeline), `paths.py` (working folder, projects, `project_folder`, earlier-data move), `rendering.py` (RENDER_LOCK).
 - `ui/`: `theme.py` (tokens, `flow()`, `status_color`), `dialogs.py`, `workspace_panel.py`, `address_book.py`, `charts.py` (joint colours, palette, `StackedPanels`), `chart_canvas.py` (ChartCanvas).
 - `remote/`: `connection.py` (settings, `active_robot_settings`, `transfer_connection`, `robot_download_folder`), `ssh_trust.py` (prompt, HostKeyQuestion, ConfirmHostKey, saving keys), `ssh_job.py` (SshConnection, SshJob: verified connect, `open_bulk`), `fast_transfer.py` (AsyncSSH), `stream.py` (`copy_remote`, SSH_TIMEOUT), `installation_transfer.py` (SCP).
-- `reporting/pdf.py`: ReportDocument (A4 frame for every PDF).
+- `reporting/pdf.py`: ReportDocument (A4 frame for every PDF: APEX logo header `apex_logo.png`, `table`/`tiles`/`banner`/`start_section`).
 - `viewer/`: `robot_view.py` (RobotView), `rasterizer.py`, `mounting.py`, `playback.py`.
 - `live/`: `rtde_client.py` (CONNECT_TIMEOUT / DATA_TIMEOUT / STALE_AFTER), `session.py` (RobotSession, auto-reconnect), `recorder.py` (LiveCapture), `view.py` (Live monitor).
 - `flight/`: `data.py`, `stats.py`, `charts.py`, `pdf.py`, `transfer.py`, `view.py`, `retrieval_view.py`. `logs/`: `parser.py`, `data.py`, `transfer.py` (LogJob), `view.py`.
-- `programs/`: `check.py`, `motion.py`, `pdf.py`, `transfer.py`, `view.py`. `diagnostics/` (Robot Status): `analysis.py`, `status.py`, `guidance.py`, `pdf.py`, `transfer.py`, `view.py`.
+- `programs/`: `check.py`, `motion.py`, `findings.py` (grouping, P-IDs, severity, fixes, score; Robot Status cites these), `pdf.py`, `transfer.py`, `view.py`. `diagnostics/` (Robot Status): `analysis.py`, `status.py`, `health.py` (findings, severity/trend rules, joint dashboard, hot spots), `guidance.py`, `pdf.py`, `transfer.py` (reuses project Backups tars / Flight reports library / Logs / earlier datasets before downloading), `view.py`.
 - `backup/`: `transfer.py`, `view.py`. `commissioning/` (Checklist): `records.py`, `view.py`.
 - Elsewhere: `samples/` (example installation and log), `docs/upgrade-2026-11-12.md` (historical code map, pre-package names).

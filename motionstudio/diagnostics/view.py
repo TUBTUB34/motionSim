@@ -5,7 +5,8 @@ import threading
 import tkinter as tk
 from tkinter import ttk, filedialog
 
-from motionstudio.diagnostics.pdf import incident_sections, unique_text
+from motionstudio.diagnostics.health import METHOD
+from motionstudio.diagnostics.pdf import APPENDIX_ALL_INCIDENTS, clean_warnings, incident_sections, unique_text
 from motionstudio.diagnostics.transfer import DiagnosticSourceJob
 from motionstudio.remote.connection import (active_robot_settings, robot_download_folder, should_select_robot,
                         simulator_connection_text, transfer_connection)
@@ -15,7 +16,8 @@ from motionstudio.diagnostics.status import build_robot_status
 from motionstudio.remote.ssh_trust import host_key_prompt
 from motionstudio.ui import theme
 from motionstudio.ui.theme import style_text
-from motionstudio.core.paths import start_folder
+from motionstudio.backup.transfer import backup_filename
+from motionstudio.core.paths import project_folder, start_folder
 from motionstudio.ui.workspace_panel import WorkspacePanel
 from motionstudio.ui import dialogs as messagebox
 from motionstudio.core.about import APP_NAME
@@ -229,14 +231,16 @@ class DiagnosticWindow(WorkspacePanel):
                                                       initialdir=start_folder(self.app, 'status'))
                 if not destination:
                     return
-            job = DiagnosticSourceJob(connection=connection, destination=destination, flight_directory=self.flight_path.get().strip())
+            project = project_folder(self.app)
+            job = DiagnosticSourceJob(connection=connection, destination=destination, flight_directory=self.flight_path.get().strip(),
+                                      project=project, archive_name=backup_filename(project.name))
         except Exception as error:
             self.status.set(f'Cannot collect robot evidence: {error}')
             return
         self.cancelled.clear()
         self._reset_report()
         self.set_busy(True)
-        self.notice.set('Collecting a read-only snapshot. Existing files on the robot are retained.')
+        self.notice.set('Files already saved in this project are reused; only what is missing is downloaded. Files on the robot are not changed.')
         self.folder.set(str(destination))
         self.status.set(f'Connecting to robot… Saving into {destination}')
         self.download_job = job
@@ -260,11 +264,11 @@ class DiagnosticWindow(WorkspacePanel):
                 self.events.put(('cancelled' if self.cancelled.is_set() else 'error', str(error)))
         self.executor.submit(task)
 
-    def analyze(self, path):
+    def analyze(self, path, collected=''):
         self._reset_report()
         self.folder.set(str(path))
         self.notice.set('Comparing controller events with compatible recordings. Missing evidence will be identified in the review.')
-        self.status.set('Analyzing local evidence…')
+        self.status.set((collected + ' ' if collected else '') + 'Analyzing local evidence…')
         log_utc_offset = self.log_utc_offset.get().strip()
         self._submit('report', lambda: analyze_directory(path, check_cancel=self._check_cancel,
                      log_utc_offset=log_utc_offset,
@@ -273,21 +277,27 @@ class DiagnosticWindow(WorkspacePanel):
     def set_report(self, report):
         self.report = report
         self.robot_status = build_robot_status(report)
+        health = self.robot_status.health
         self.folder.set(str(report.source))
         self.cases.delete(*self.cases.get_children())
         self.cases.insert('', 'end', iid='overview', text='Overall assessment')
-        self.cases.insert('', 'end', iid='joints', text='Joint condition', open=True)
+        self.cases.insert('', 'end', iid='joints', text='Joint health', open=True)
         for index, joint in enumerate(self.robot_status.joints):
             self.cases.insert('joints', 'end', iid=f'joint-{index}', text=f'{joint.joint} · {joint.status}')
-        self.cases.insert('', 'end', iid='programs', text='Program areas to review')
-        self.cases.insert('', 'end', iid='actions', text='Recommended action plan')
+        self.cases.insert('', 'end', iid='findings', text=f'Findings ({len(health.findings)})', open=False)
+        for index, finding in enumerate(health.findings):
+            self.cases.insert('findings', 'end', iid=f'finding-{index}', text=f'{finding.id} · {finding.severity} · {finding.title}')
+        self.cases.insert('', 'end', iid='programs', text='Where the program struggles')
+        self.cases.insert('', 'end', iid='timeline', text='Event timeline')
+        self.cases.insert('', 'end', iid='actions', text='Recommendations')
         self.cases.insert('', 'end', iid='evidence', text='Technical incident evidence', open=False)
         for index, incident in enumerate(report.incidents):
-            self.cases.insert('evidence', 'end', iid=str(index), text=f'{incident.id} · {incident.title}')
+            if len(report.incidents) <= APPENDIX_ALL_INCIDENTS or incident.flight_names:
+                self.cases.insert('evidence', 'end', iid=str(index), text=f'{incident.id} · {incident.title}')
         self.cases.insert('', 'end', iid='sources', text='Coverage & sources')
         self.cases.selection_set('overview')
         self.notice.set('Recorded evidence supports this assessment. It does not replace a physical inspection or establish remaining joint life.')
-        self.status.set(f'Robot Status ready · {self.robot_status.overall_status}' + (' · Coverage warnings: see assessment' if report.warnings else ''))
+        self.status.set(f'Robot Status ready · {self.robot_status.overall_status}' + (' · Coverage warnings: see Coverage & sources' if clean_warnings(report.warnings) else ''))
         self.set_busy(False)
         self.show_selection()
 
@@ -310,37 +320,82 @@ class DiagnosticWindow(WorkspacePanel):
             return
         selected = self.cases.selection()[0]
         status = self.robot_status
+        health = status.health
         if selected == 'overview':
-            self._display('Overall Assessment', [(status.overall_status, status.assessment),
-                          ('Joint condition at a glance', [f'{joint.joint}: {joint.status}. {joint.summary}' for joint in status.joints]),
-                          ('Evidence qualifications', status.limitations + self.report.warnings)])
+            numbers = []
+            if health.findings:
+                concern = [row.joint for row in health.joints if row.status in ('Critical', 'Attention required')]
+                numbers = [f'{health.bursts:,} logged events from {health.period}; {len(concern)} of 6 joints need attention; '
+                           f'{health.matched_recordings} of {self.report.recording_count} recordings matched to events.',
+                           'Findings by severity: ' + ' · '.join(f'{name} {count}' for name, count in health.counts())]
+            gaps = clean_warnings(self.report.warnings)
+            if len(gaps) > 3:
+                gaps = gaps[:3] + [f'{len(gaps)-3} more in Coverage & sources.']
+            self._display('Overall Assessment', [(status.overall_status, status.assessment), ('Key numbers', numbers),
+                          ('Top risks', [f'{f.id} · {f.severity} · {f.title}: {f.what}' for f in health.findings[:3]]),
+                          ('Gaps in the data', gaps)])
         elif selected == 'joints':
-            self._display('Joint condition', [(f'{joint.joint} · {joint.status}', [joint.summary]) for joint in status.joints])
+            rows = {row.joint: row for row in health.joints}
+            self._display('Joint health', [(f'{joint.joint} · {joint.status}', [
+                (rows[joint.joint].notes if joint.joint in rows else joint.summary) +
+                (f' · {rows[joint.joint].events} events, trend {rows[joint.joint].trend.lower()}' if rows.get(joint.joint) and rows[joint.joint].events else '')])
+                for joint in status.joints])
         elif selected.startswith('joint-'):
             joint = status.joints[int(selected.split('-')[1])]
+            row = next((r for r in health.joints if r.joint == joint.joint), None)
+            own = [f for f in health.findings if f.joint == joint.joint]
             self._display(f'{joint.joint} · {joint.status}', [('Assessment', [joint.summary]),
-                          ('Supporting evidence', joint.evidence), ('Recommended checks', joint.recommendations),
-                          ('Limits of this assessment', joint.limitations), ('Related incidents', joint.incident_ids)])
+                          ('Findings', [f'{f.id} · {f.severity} · {f.category}: {f.count} events, {f.period}, trend {f.trend.lower()}. Where: {f.where}' for f in own]),
+                          ('Recorded metrics', row.metrics if row else []),
+                          ('Recommended checks', joint.recommendations), ('Limits of this assessment', joint.limitations)])
+        elif selected == 'findings':
+            self._display('Findings', [(f'{f.id} · {f.severity}', [f'{f.title}: {f.count} events, trend {f.trend.lower()}. {f.where}'])
+                                       for f in health.findings] or [('None', ['No classified controller warnings in these records.'])])
+        elif selected.startswith('finding-'):
+            f = health.findings[int(selected.split('-')[1])]
+            info = f.info
+            sections = [('What', [f.what]), ('Where', [f.where])]
+            if info:
+                sections += [('Likely cause', [info[2]]), ('Why it matters', [info[3]]),
+                             ('Recommended fix', [' '.join(t for t in (info[4], info[6], info[5]) if t)])]
+            sections += [('Evidence', [f'Codes: {", ".join(f.codes)}', f'Trend: {f.trend} ({f.trend_counts[0]} → {f.trend_counts[1]} events, first → second half)'
+                                       if f.trend in ('Rising', 'Falling', 'Stable') else '', *(f'Recording: {n}' for n in f.recordings)]),
+                         ('Basis', [f.basis + (f'. Reference: {info[7]} ({info[8]})' if info else '')])]
+            self._display(f'{f.id} · {f.title}', sections)
         elif selected == 'programs':
-            sections = []
-            for area in status.program_areas:
-                context = [f'Program: {area.program or "Not identified"} · {area.priority}', area.summary,
-                           f'Association: {area.association}']
-                if area.script_lines:
-                    from motionstudio.programs.pdf import line_ranges
-                    context.append('Recorded script context: lines ' + line_ranges(area.script_lines) + '. This is an execution reference, not proof of cause.')
-                sections.append((area.area, context + area.evidence + area.recommendations))
-            self._display('Program areas to review', sections or [('More evidence needed',
-                          ['No specific program area is established by these files. Obtain matching recorded program context before changing a command.'])])
+            sections = [(f'{h.rank}. {h.location} · {h.count} events', [h.types, 'Likely cause: ' + h.cause, 'Findings: ' + ', '.join(h.findings)
+                                                                        + (' · Program Check: ' + ', '.join(h.program_refs) if h.program_refs else '')])
+                        for h in health.hot_spots]
+            for check in health.program_checks:
+                sections.append((f'Program Check of {check["program"]} · score {check["score"]}/100',
+                                 [f'Program saved in {check["recording"]}.'] +
+                                 [f'{f["id"]} · {f["severity"]} · {f["category"]} · {f["location"]}: {f["issue"]}' for f in check['findings']]))
+            if not health.hot_spots:
+                sections += [(area.area, [f'Program: {area.program or "Not identified"}', area.summary] + area.recommendations)
+                             for area in status.program_areas]
+            self._display('Where the program struggles', sections or [('More evidence needed',
+                          ['No program location is established by these files. A flight recording at the time of an event is needed.'])])
+        elif selected == 'timeline':
+            self._display('Event timeline', [(when, [f'{what} · {detail}' + (f' · {finding}' if finding else '')])
+                                             for when, what, detail, finding in health.timeline]
+                          or [('No events', ['No dated controller events in these records.'])])
         elif selected == 'actions':
-            self._display('Recommended action plan', [('Next checks', [f'{index}. {value}' for index, value in enumerate(status.actions, 1)]),
-                          ('Scope of the assessment', status.coverage), ('Evidence still needed', status.limitations)])
+            groups = [('Program changes', health.program), ('Maintenance and hardware', health.maintenance),
+                      ('Application and environment', health.application), ('Further data needed', health.data_needed),
+                      ('Monitoring', health.monitoring)]
+            if not any(values for _, values in groups):
+                groups = [('Next checks', status.actions)]
+            self._display('Recommendations', [(title, [f'{n}. {v}' for n, v in enumerate(values, 1)]) for title, values in groups])
         elif selected == 'evidence':
+            shown = len(self.cases.get_children('evidence'))
             self._display('Technical incident evidence', [('Supporting detail',
-                          ['Select an incident to inspect its controller messages, measurements and matching confidence. This detail is optional in the client PDF.']),
-                          ('Cases', [f'{incident.id}: {incident.title}' for incident in self.report.incidents])])
+                          ['Select an incident to inspect its controller messages, measurements and matching confidence. This detail is optional in the client PDF.',
+                           f'{shown} of {len(self.report.incidents)} incidents are listed' + (' (those with a flight recording); the rest are counted in Findings.'
+                                                                                               if shown < len(self.report.incidents) else '.')])])
         elif selected == 'sources':
-            self._display('Coverage & sources', [('Coverage', status.coverage + self.report.coverage + self.report.warnings),
+            self._display('Coverage & sources', [('Coverage', status.coverage + self.report.coverage),
+                          ('Gaps in the data', clean_warnings(self.report.warnings)),
+                          ('How findings are rated', METHOD),
                           ('Evidence files', self.report.sources), ('Technical references',
                            [f'{ref.get("title", "Reference")}\n{ref.get("url", "")}' for ref in self.report.references])])
         else:
@@ -392,7 +447,7 @@ class DiagnosticWindow(WorkspacePanel):
                     if path:
                         self.folder.set(str(path))
                     if kind == 'collected' and not self.cancelled.is_set():
-                        self.analyze(path)
+                        self.analyze(path, collected=result.get('message', ''))
                     else:
                         self.set_busy(False)
                         self.status.set(result.get('message') or 'Collection stopped.')

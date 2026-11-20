@@ -1,13 +1,11 @@
 """Dedicated backup workspace; navigation never starts a robot operation."""
 from pathlib import Path
-from datetime import datetime, timezone
-import re
 from uuid import uuid4
 import queue
 import tkinter as tk
 from tkinter import ttk, filedialog
 
-from motionstudio.backup.transfer import BackupJob
+from motionstudio.backup.transfer import BackupJob, backup_filename
 from motionstudio.core.paths import project_folder
 from motionstudio.remote.connection import active_robot_settings, transfer_connection, simulator_connection_text
 from motionstudio.ui.address_book import SavedAddressCombobox
@@ -16,17 +14,6 @@ from motionstudio.ui.theme import style_text
 from motionstudio.ui import dialogs as messagebox
 from motionstudio.remote.ssh_trust import host_key_prompt
 from motionstudio.core.about import APP_NAME
-
-
-def backup_filename(project, date=None):
-    """A portable project/date name; the caller handles existing destinations."""
-    name = re.sub(r'[<>:"/\\|?*\x00-\x1f\x7f]+', '-', project.strip()).strip(' .-')
-    if not name:
-        raise ValueError('Enter a project name for this backup.')
-    # Leave room for the date and collision suffix under common filename limits.
-    while len(name.encode('utf-8')) > 140:
-        name = name[:-1]
-    return f'{name}-{date or datetime.now(timezone.utc).date().isoformat()}.tar'
 
 
 class BackupPage(WorkspacePanel):

@@ -6,6 +6,7 @@ import math
 import threading
 import tkinter as tk
 from tkinter import ttk, filedialog
+from motionstudio.programs.findings import program_report
 from motionstudio.programs.check import discover_programs, review_program, ProgramPair, ProgramSource, REFERENCES
 from motionstudio.ui.theme import style_text
 from motionstudio.core.paths import start_folder
@@ -475,7 +476,9 @@ class ProgramCheckWindow(WorkspacePanel):
         self.filter_findings()
         flagged = [finding for finding in review.findings if finding.status == 'Review recommended']
         manual = sum(status == 'Manual review' for _, status in review.checklist)
-        self.status.set(f'{review.pair.name} · {len(flagged)} recommendations · {manual} checks need manual review · Export this report or choose another URP.')
+        report = program_report(review)
+        self.status.set(f'{review.pair.name} · health score {report.score}/100 · {len(report.findings)} findings · '
+                        f'{manual} checks need manual review · Export this report or choose another URP.')
         warnings = []
         if not review.metadata.get('reviewInstallation'):
             warnings.append('Installation unavailable: ' + review.metadata.get('reviewInstallationNote', 'No matching installation in the selected files.') + ' Report generated without installation settings.')
@@ -483,8 +486,9 @@ class ProgramCheckWindow(WorkspacePanel):
             warnings.append('Matching .script missing; only a limited metadata review is available.')
         self.warning.set(' '.join(warnings))
         self.source.set(f'{(review.pair.urp or review.pair.script).identity} · Installation: {review.metadata.get("reviewInstallation", "not matched")}')
-        highlights = '\n'.join(f'Line {finding.line or "—"}: {finding.detail}' for finding in flagged[:3])
-        self.set_details(f'Review complete · {len(flagged)} findings need attention.\n\n' + (self.warning.get() + '\n\n' if warnings else '') + (highlights + '\n\n' if highlights else '') + 'Select a check or expand it to inspect the source evidence.\n\n' + review.profile + '\n\nManual review means the source cannot establish the result. Recommendations are not safety limits or certification.')
+        highlights = '\n'.join(f'{f.id} · {f.severity} · {f.location}: {f.issue}\nFix: {f.fix}' for f in report.findings[:3])
+        self.set_details(f'Review complete · program health score {report.score}/100 · ' + ' · '.join(f'{n} {c}' for n, c in report.counts() if c) +
+                         f' · {len(flagged)} source lines need attention.\n\n' + (self.warning.get() + '\n\n' if warnings else '') + (highlights + '\n\n' if highlights else '') + 'Select a check or expand it to inspect the source evidence.\n\n' + review.profile + '\n\nManual review means the source cannot establish the result. Recommendations are not safety limits or certification.')
 
     def filter_findings(self, _event=None):
         self.tree.delete(*self.tree.get_children())

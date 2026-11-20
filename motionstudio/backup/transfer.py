@@ -1,9 +1,11 @@
 """Create a robot archive and remove it only after an atomic local save."""
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 import errno
 import os
 import posixpath
 from pathlib import Path, PurePosixPath
+import re
 import shlex
 import stat
 import tempfile
@@ -25,7 +27,83 @@ class BackupDestination:
 CONTENTS = ('programs', 'apps', 'logs', 'flights')
 
 
-class BackupJob(SshJob):
+def backup_filename(project, date=None):
+    """A portable project/date name; the caller handles existing destinations."""
+    name = re.sub(r'[<>:"/\\|?*\x00-\x1f\x7f]+', '-', project.strip()).strip(' .-')
+    if not name:
+        raise ValueError('Enter a project name for this backup.')
+    # Leave room for the date and collision suffix under common filename limits.
+    while len(name.encode('utf-8')) > 140:
+        name = name[:-1]
+    return f'{name}-{date or datetime.now(timezone.utc).date().isoformat()}.tar'
+
+
+class RobotArchive:
+    """Make a tar of robot paths in a private temporary folder and download it.
+
+    The host class is an SshJob that sets ``remote_path`` and provides ``events``,
+    ``stopped``, ``check_cancel`` and ``open_bulk``.
+    """
+    def create_archive(self, client, sources):
+        self.events.put(('status', f'Creating backup of {" and ".join(sources)} on robot…'))
+        channel = client.get_transport().open_session(timeout=SSH_TIMEOUT)
+        output = bytearray()
+        try:
+            channel.set_combine_stderr(True)
+            arguments = ' '.join(shlex.quote(path) for path in sources)
+            channel.exec_command(f'tar -P -cf {shlex.quote(self.remote_path)} {arguments}')
+            while True:
+                self.check_cancel()
+                if channel.recv_ready():
+                    output.extend(channel.recv(65536))
+                    del output[:-4096]
+                elif channel.exit_status_ready():
+                    break
+                else:
+                    # tar can be silent for a long time on large robot archives.
+                    self.stopped.wait(.1)
+            status = channel.recv_exit_status()
+            if status != 0:
+                detail = output.decode('utf-8', errors='replace').strip()
+                raise OSError(f'Robot tar exited with status {status}: {detail or "archive incomplete"}')
+        finally:
+            channel.close()
+
+    def save_archive(self, sftp, destination, size):
+        """Stage beside the destination so replacement stays on one filesystem."""
+        temporary = None
+        started = last_report = time.monotonic()
+
+        def progress(total):
+            nonlocal last_report
+            now = time.monotonic()
+            if now - last_report >= .2 or total == size:
+                rate = total / max(now - started, .001) / 1048576
+                eta = (size - total) / max(rate * 1048576, 1)
+                self.events.put(('progress', total / size))
+                self.events.put(('status', f'Downloading backup · {total / 1048576:.2f} / '
+                                 f'{size / 1048576:.2f} MiB · {rate:.2f} MiB/s · {eta:.0f}s remaining · {self.engine_label}'))
+                last_report = now
+
+        try:
+            with tempfile.NamedTemporaryFile(prefix='.ur-backup-', suffix='.part',
+                                             dir=destination.parent, delete=False) as local:
+                temporary = Path(local.name)
+                # tar output is uncompressed, so zlib on the wire helps slow links most here.
+                with self.open_bulk(sftp, self.remote_path, compress=True, size=size) as remote:
+                    copy_remote(remote, local, size, check_cancel=self.check_cancel, progress=progress)
+                if sftp.stat(self.remote_path).st_size != size:
+                    raise OSError('Robot archive changed during download. Please retry.')
+                local.flush()
+                os.fsync(local.fileno())
+            self.check_cancel()
+            os.replace(temporary, destination)
+        finally:
+            if temporary is not None:
+                temporary.unlink(missing_ok=True)
+
+
+class BackupJob(RobotArchive, SshJob):
     """Archive robot data. ``contents`` picks any of CONTENTS; ``full`` means all.
 
     ``sources`` remains for callers that select the two program folders by path.
@@ -101,64 +179,6 @@ class BackupJob(SshJob):
             raise OSError('No backup sources found; all requested paths are missing.' if self.by_content else
                           'No backup folders found: /programs and /data/apps are missing.')
         return sources
-
-    def create_archive(self, client, sources):
-        self.events.put(('status', f'Creating backup of {" and ".join(sources)} on robot…'))
-        channel = client.get_transport().open_session(timeout=SSH_TIMEOUT)
-        output = bytearray()
-        try:
-            channel.set_combine_stderr(True)
-            arguments = ' '.join(shlex.quote(path) for path in sources)
-            channel.exec_command(f'tar -P -cf {shlex.quote(self.remote_path)} {arguments}')
-            while True:
-                self.check_cancel()
-                if channel.recv_ready():
-                    output.extend(channel.recv(65536))
-                    del output[:-4096]
-                elif channel.exit_status_ready():
-                    break
-                else:
-                    # tar can be silent for a long time on large robot archives.
-                    self.stopped.wait(.1)
-            status = channel.recv_exit_status()
-            if status != 0:
-                detail = output.decode('utf-8', errors='replace').strip()
-                raise OSError(f'Robot tar exited with status {status}: {detail or "archive incomplete"}')
-        finally:
-            channel.close()
-
-    def save_archive(self, sftp, destination, size):
-        """Stage beside the destination so replacement stays on one filesystem."""
-        temporary = None
-        started = last_report = time.monotonic()
-
-        def progress(total):
-            nonlocal last_report
-            now = time.monotonic()
-            if now - last_report >= .2 or total == size:
-                rate = total / max(now - started, .001) / 1048576
-                eta = (size - total) / max(rate * 1048576, 1)
-                self.events.put(('progress', total / size))
-                self.events.put(('status', f'Downloading backup · {total / 1048576:.2f} / '
-                                 f'{size / 1048576:.2f} MiB · {rate:.2f} MiB/s · {eta:.0f}s remaining · {self.engine_label}'))
-                last_report = now
-
-        try:
-            with tempfile.NamedTemporaryFile(prefix='.ur-backup-', suffix='.part',
-                                             dir=destination.parent, delete=False) as local:
-                temporary = Path(local.name)
-                # tar output is uncompressed, so zlib on the wire helps slow links most here.
-                with self.open_bulk(sftp, self.remote_path, compress=True, size=size) as remote:
-                    copy_remote(remote, local, size, check_cancel=self.check_cancel, progress=progress)
-                if sftp.stat(self.remote_path).st_size != size:
-                    raise OSError('Robot archive changed during download. Please retry.')
-                local.flush()
-                os.fsync(local.fileno())
-            self.check_cancel()
-            os.replace(temporary, destination)
-        finally:
-            if temporary is not None:
-                temporary.unlink(missing_ok=True)
 
     def run(self):
         created = False

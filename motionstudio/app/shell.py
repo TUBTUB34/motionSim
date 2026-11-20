@@ -52,7 +52,7 @@ class WorkspaceShell(ttk.Frame):
         self.project_label.grid(row=0, column=3, padx=(0, 18))
         self.project_label.bind('<Button-1>', lambda _event: app.open_settings())
         self.update_project()
-        ttk.Label(footer, text='UR MOTION STUDIO', style='Section.Panel.TLabel').grid(row=0, column=4)
+        ttk.Label(footer, text=APP_NAME.upper(), style='Section.Panel.TLabel').grid(row=0, column=4)
         self.pages = {name: ttk.Frame(self.content) for name, _label in self.PAGES}
         self.active = None
         self._dot_state = None

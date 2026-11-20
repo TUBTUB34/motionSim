@@ -25,7 +25,10 @@ MAX_FILES = 500
 MAX_FLIGHTS = 40
 MAX_TOTAL_BYTES = 512 * 1024 * 1024
 MAX_SCAN_ENTRIES = 20_000
-MAX_ANALYSIS_BYTES = 128 * 1024 * 1024
+MAX_ANALYSIS_BYTES = 768 * 1024 * 1024
+# A loaded recording keeps about half its uncompressed CSV size in arrays (measured on
+# UR10e e-Series recordings); one times the CSV size leaves a twofold margin.
+ANALYSIS_BYTES_PER_CSV_BYTE = 1
 MATCH_SECONDS = 2.0
 BURST_SECONDS = 2.0
 
@@ -116,6 +119,8 @@ class DiagnosticReport:
     robot_context: list[dict[str, str]] = field(default_factory=list)
     log_source_count: int = 0
     recording_count: int = 0
+    # Program Check of the program saved in a recording: dicts with program, recording, score and findings.
+    program_checks: list[dict] = field(default_factory=list)
 
 
 def _unique(values):
@@ -280,7 +285,19 @@ def _log_uptime(value):
     return value if math.isfinite(value) else None
 
 
-def _log_anchor(flight, group, incident):
+def _same_controller(flight, group, sole_serial=""):
+    """'same' when both sources name the robot's serial (one controller clock); 'assumed' when the
+    log names none but every recording supplied names this one robot; otherwise ''."""
+    serial = str(flight.metadata.get("serial", "")).strip()
+    if not serial:
+        return ""
+    serials = {str(e.get("serial", "")).strip() for e in group}
+    if serials == {serial}:
+        return "same"
+    return "assumed" if serials == {""} and sole_serial == serial else ""
+
+
+def _log_anchor(flight, group, incident, *, controller_clock=False):
     """Use log uptime only after unique wall-time/identity/session agreement."""
     current_marker, reason = _marker(flight)
     if current_marker is not None or not reason.startswith("No explicit incident uptime"):
@@ -289,7 +306,7 @@ def _log_anchor(flight, group, incident):
     if not serial or any(str(e.get("serial", "")).strip() != serial for e in group):
         incident.missing_evidence.append("Logged uptime was not used to locate the fault because both sources do not carry the same nonempty robot serial.")
         return flight
-    if any(_date(e.get("time")) is None or _date(e.get("time")).tzinfo is None for e in group):
+    if any(_date(e.get("time")) is None or (_date(e.get("time")).tzinfo is None and not controller_clock) for e in group):
         incident.missing_evidence.append("Logged uptime was not used to locate the fault because the log wall-clock timezone is unconfirmed.")
         return flight
     uptimes = [_log_uptime(e.get("uptime")) for e in group]
@@ -300,7 +317,7 @@ def _log_anchor(flight, group, incident):
     if not flight.sample_count or not flight.timestamps[0] <= uptime <= flight.timestamps[-1]:
         incident.missing_evidence.append("Logged fault uptime is outside this recording's controller-uptime span; a boot or clock mismatch is possible, so no marker was inferred.")
         return flight
-    basis = ("Explicit fault uptime from the log, after a unique zoned wall-clock match, equal robot serial, "
+    basis = ("Explicit fault uptime from the log, after a unique " + ("controller wall-clock" if controller_clock else "zoned wall-clock") + " match, equal robot serial, "
              "one non-conflicting log session and an uptime inside the recording. This locates the logged event, not a proven initiating cause.")
     incident.provenance.append("Fault marker: logged controller uptime " + group[0]["uptime"] + " from " + group[0]["_provenance"][0])
     return replace(flight, metadata={**flight.metadata, "incident_uptime": str(uptime), "incident_uptime_basis": basis})
@@ -463,7 +480,8 @@ def analyze_data(logs, flights, source="Provided data", *, log_utc_offset=""):
     report.log_source_count = sum(isinstance(log, LogData) for log in logs)
     if not report.log_source_count:
         report.log_source_count = len({log.get('source_path', 'Provided log') for log in logs if isinstance(log, dict)})
-    events, report.warnings = _events(logs, _log_zone(log_utc_offset))
+    log_zone = _log_zone(log_utc_offset)
+    events, report.warnings = _events(logs, log_zone)
     groups = _groups(events)
     unique_flights = {}
     for flight in flights:
@@ -477,6 +495,10 @@ def analyze_data(logs, flights, source="Provided data", *, log_utc_offset=""):
         for context in contexts) if items]
     candidates = {}
     ambiguous = set()
+    clock_matches = set()
+    assumed_matches = set()
+    recorded_serials = [str(f.metadata.get("serial", "")).strip() for f in flights]
+    sole_serial = recorded_serials[0] if recorded_serials and len(set(recorded_serials)) == 1 else ""
     for fi, flight in enumerate(flights):
         stamp = _date(flight.metadata.get("incident_time"))
         identity = _identity(flight.metadata)
@@ -488,6 +510,17 @@ def analyze_data(logs, flights, source="Provided data", *, log_utc_offset=""):
             deltas = [_delta(stamp, _date(e.get("time"))) for e in group]
             if any(delta is not None and abs(delta) <= MATCH_SECONDS for delta in deltas):
                 matches.append(gi)
+            elif (log_zone is None and stamp is not None and stamp.tzinfo is not None
+                  and (controller := _same_controller(flight, group, sole_serial))):
+                # The log states no zone, but the same controller wrote both files: compare
+                # its local wall time as printed in the recording (correct across DST changes).
+                local = stamp.replace(tzinfo=None)
+                if any((delta := _delta(local, _date(e.get("time")))) is not None and abs(delta) <= MATCH_SECONDS
+                       for e in group):
+                    matches.append(gi)
+                    clock_matches.add((gi, fi))
+                    if controller == "assumed":
+                        assumed_matches.add((gi, fi))
         if len(matches) == 1:
             candidates.setdefault(matches[0], []).append(fi)
         elif len(matches) > 1:
@@ -518,10 +551,13 @@ def analyze_data(logs, flights, source="Provided data", *, log_utc_offset=""):
             incident.confidence = "Wall-clock association; cause unconfirmed"
             incident.association_verified = bool(_identity(flight.metadata) and group[0].get('robot_id')
                                                  and _identity(flight.metadata) == group[0]['robot_id'])
-            incident.observations.append(f"Flight incident wall time agrees with this fault burst within {MATCH_SECONDS:g} seconds. This is an association, not a conversion of controller uptime to UTC.")
+            incident.observations.append(f"Flight incident wall time agrees with this fault burst within {MATCH_SECONDS:g} seconds. This is an association, not a conversion of controller uptime to UTC."
+                                         + (" Both files carry the same robot serial, so the recording's local controller time was compared with the unzoned log time." if (gi, fi) in clock_matches else ""))
             if not (_identity(flight.metadata) and group[0].get("robot_id")):
                 incident.missing_evidence.append("Robot identity is missing from one source; wall-clock association is provisional and requires operator confirmation that both files came from the same robot.")
-            _measure(_log_anchor(flight, group, incident), incident)
+            if (gi, fi) in assumed_matches:
+                incident.missing_evidence.append(f"The log names no robot serial. It was matched on the controller clock because every recording supplied names robot {sole_serial}; confirm the log came from that robot.")
+            _measure(_log_anchor(flight, group, incident, controller_clock=(gi, fi) in clock_matches), incident)
             if flight.metadata.get("program"):
                 program_groups[(re.sub(r"A\d+$", "", incident.primary_code), flight.metadata["program"])] += 1
         else:
@@ -547,6 +583,9 @@ def analyze_data(logs, flights, source="Provided data", *, log_utc_offset=""):
     report.coverage = [f"{len(events)} unique diagnostic log events grouped into {len(groups)} controller-event bursts; {len(flights)} recordings reviewed, {len(used)} uniquely associated.", "Only supplied files are analyzed. Missing log history is not evidence of fault-free operation; counts are not normalized by operating hours. Unrecognized codes require manual classification and are not automatically proof of a fault."]
     if str(log_utc_offset).strip():
         report.coverage.append(f"Operator-supplied UTC offset {str(log_utc_offset).strip()} was applied only to log timestamps without a timezone. Already-zoned timestamps were preserved; confirm the offset for each recording date, including daylight-saving changes.")
+    elif clock_matches:
+        report.coverage.append(f"Log times carry no time zone. {len(clock_matches)} recording(s) were matched on the controller's local wall-clock time printed in the recording, because both files name the same robot serial and so share one controller clock."
+                               + (f" For {len(assumed_matches)} of them the log names no serial; every recording supplied names robot {sole_serial}, so the log is assumed to come from it (provisional)." if assumed_matches else ""))
     else:
         report.coverage.append("No log timezone was assumed. Zoned flight incident times cannot match unzoned log times; supply the historical log UTC offset in Advanced options when needed.")
     if events:
@@ -592,6 +631,34 @@ def _digest(path, check_cancel):
                 check_cancel()
             value.update(chunk)
     return value.hexdigest()
+
+
+def _program_checks(flights):
+    """Program Check of the program each recording saved, newest recording per program."""
+    from motionstudio.programs.check import discover_programs, review_program
+    from motionstudio.programs.findings import program_report
+    newest = {}
+    for flight in flights:
+        program = flight.metadata.get("program")
+        if program and str(flight.path).lower().endswith(".zip"):
+            stamp = _date(flight.metadata.get("incident_time"))
+            key = stamp.timestamp() if stamp is not None and stamp.tzinfo else 0
+            if program not in newest or key >= newest[program][0]:
+                newest[program] = (key, flight)
+    checks, warnings = [], []
+    for program, (_key, flight) in sorted(newest.items()):
+        try:
+            pairs = [pair for pair in discover_programs(flight.path) if pair.script]
+            if len(pairs) != 1:
+                raise ValueError("the recording does not hold exactly one saved program script")
+            result = program_report(review_program(pairs[0]))
+        except Exception as error:  # a program that cannot be read must not stop the robot review
+            warnings.append(f"Program Check of {program} from {flight.name} failed ({error}).")
+            continue
+        checks.append(dict(program=program, recording=flight.name, score=result.score,
+                           findings=[dict(id=f.id, severity=f.severity, category=f.category, location=f.location, issue=f.issue)
+                                     for f in result.findings]))
+    return checks, warnings
 
 
 def analyze_directory(path, check_cancel=None, progress=None, *, log_utc_offset=""):
@@ -677,7 +744,7 @@ def analyze_directory(path, check_cancel=None, progress=None, *, log_utc_offset=
                     telemetry_size = archive.getinfo(TELEMETRY_MEMBER).file_size
             else:
                 telemetry_size = size
-            if analysis_bytes + telemetry_size * 4 > MAX_ANALYSIS_BYTES:
+            if analysis_bytes + telemetry_size * ANALYSIS_BYTES_PER_CSV_BYTE > MAX_ANALYSIS_BYTES:
                 warnings.append(f"{item.name}: bounded telemetry memory budget exceeded; omitted.")
                 continue
             if len(flights) >= MAX_FLIGHTS:
@@ -689,7 +756,7 @@ def analyze_directory(path, check_cancel=None, progress=None, *, log_utc_offset=
             if not _identity(context) and _identity(manifest):
                 context["robot_id"] = _identity(manifest)
             flights.append(replace(flight, metadata=context))
-            analysis_bytes += telemetry_size * 4
+            analysis_bytes += telemetry_size * ANALYSIS_BYTES_PER_CSV_BYTE
         except InterruptedError:
             raise
         except (OSError, ValueError, zipfile.BadZipFile, RuntimeError) as error:
@@ -715,13 +782,15 @@ def analyze_directory(path, check_cancel=None, progress=None, *, log_utc_offset=
         except OSError as error:
             warnings.append(f"{directory.name}: could not parse logs ({error}).")
     report = analyze_data(logs, flights, source=str(root), log_utc_offset=log_utc_offset)
+    report.program_checks, check_warnings = _program_checks(flights)
+    warnings.extend(check_warnings)
     for incident in report.incidents:
         for chart in incident.charts:
             chart.source_sha256 = source_hashes.get(str(Path(chart.flight_path).resolve()), "")
     report.warnings.extend(warnings)
     report.coverage.extend(coverage)
     report.coverage.append(f"Input bounds: {MAX_FLIGHTS} recordings, {MAX_FILES} candidate files, 512 MiB total source bytes. {len(log_paths)} log files read.")
-    report.coverage.append("Telemetry memory budget: 128 MiB using a conservative four-times-uncompressed-input estimate. Files beyond a bound are explicitly listed as omitted.")
+    report.coverage.append(f"Telemetry memory budget: {MAX_ANALYSIS_BYTES // 1048576} MiB, counting each recording at its full uncompressed size (about twice what it occupies once loaded). Files beyond a bound are explicitly listed as omitted.")
     if not log_paths:
         report.warnings.append("No log_history.txt or rotated backup was found; flight-only evidence cannot reconstruct the controller fault sequence.")
     return report

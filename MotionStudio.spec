@@ -40,7 +40,8 @@ robot_assets = [(str(p), 'assets/robots') for p in (root / 'assets' / 'robots').
                 if p.suffix in ('.npz', '.json', '.txt', '.md')]
 a = Analysis(
     [str(root / 'main.py')], pathex=[str(root)],
-    binaries=[], datas=robot_assets + tk_data + collect_data_files('numba'),
+    binaries=[], datas=robot_assets + tk_data + collect_data_files('numba')
+        + [(str(root / 'motionstudio' / 'reporting' / 'apex_logo.png'), 'motionstudio/reporting')],  # PDF header
     hiddenimports=['matplotlib.backends.backend_tkagg', 'matplotlib.backends.backend_pdf',
                    'PIL._tkinter_finder', 'PIL._imagingtk', *collect_submodules('asyncssh'),
                    # Pages are imported when first opened; collect every module explicitly.

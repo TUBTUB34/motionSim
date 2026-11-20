@@ -91,6 +91,38 @@ class RobotDiagnosticTests(unittest.TestCase):
             wrong = analyze_directory(root, log_utc_offset="+00:00")
             self.assertEqual(len(wrong.incidents), 2)
 
+    def test_same_serial_matches_on_controller_wall_clock(self):
+        # UR logs carry no zone; the recording prints the same controller clock with one.
+        for when, printed in (("2026-11-19 17:30:12.472", "Thu Nov 19 17:30:12 CET 2026"),
+                              ("2026-07-10 09:00:00", "Fri Jul 10 09:00:01 CEST 2026")):
+            with self.subTest(when=when):
+                e = event(time=when, robot_id="123", serial="123")
+                report = analyze_data([e], [flight(metadata={"serial": "123", "incident_time": printed})])
+                self.assertEqual(len(report.incidents), 1)
+                self.assertIn("same robot serial", " ".join(report.incidents[0].observations))
+                self.assertIn("controller's local wall-clock", " ".join(report.coverage))
+        e = event(time="2026-11-19 17:30:12", robot_id="123", serial="123")
+        for metadata in ({"serial": "456", "incident_time": "Thu Nov 19 17:30:12 CET 2026"},
+                         {"incident_time": "Thu Nov 19 17:30:12 CET 2026"}):
+            with self.subTest(metadata=metadata):
+                self.assertEqual(len(analyze_data([e], [flight(metadata=metadata)]).incidents), 2)
+        # An operator offset is authoritative; the wall-clock fallback is not used with it.
+        wrong = analyze_data([e], [flight(metadata={"serial": "123", "incident_time": "Thu Nov 19 17:30:12 CET 2026"})],
+                             log_utc_offset="+05:00")
+        self.assertEqual(len(wrong.incidents), 2)
+
+    def test_log_without_serial_matches_provisionally_when_all_recordings_name_one_robot(self):
+        printed = "Thu Nov 19 17:30:12 CET 2026"
+        e = event(time="2026-11-19 17:30:12")
+        one = analyze_data([e], [flight(metadata={"serial": "123", "incident_time": printed})])
+        self.assertEqual(len(one.incidents), 1)
+        self.assertFalse(one.incidents[0].association_verified)
+        self.assertIn("confirm the log came from that robot", " ".join(one.incidents[0].missing_evidence))
+        self.assertIn("provisional", " ".join(one.coverage))
+        two = analyze_data([e], [flight(metadata={"serial": "123", "incident_time": printed}),
+                                 flight("other.zip", metadata={"serial": "456", "incident_time": "Thu Nov 19 09:00:00 CET 2026"})])
+        self.assertFalse(any(i.flight_names and i.codes for i in two.incidents))
+
     def test_aware_log_preserved_and_unknown_zone_not_guessed(self):
         e = event(time="2026-04-01T10:00:00+00:00")
         known = flight(metadata={"incident_time": "Wed Apr 01 12:00:00 CEST 2026"})

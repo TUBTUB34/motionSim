@@ -40,7 +40,9 @@ class RobotStatusTests(unittest.TestCase):
         self.assertNotEqual(wrist.status, 'Needs attention')
 
     def test_fault_summary_is_not_a_joint_failure_diagnosis(self):
-        result = build_robot_status(analyze_data([event()], [flight()]))
+        # One collision warning is watched; a recurring one needs attention (health.METHOD).
+        self.assertEqual(build_robot_status(analyze_data([event()], [flight()])).overall_status, 'Monitor')
+        result = build_robot_status(analyze_data([event(), event(time='2026-04-02 09:00:00')], [flight()]))
         self.assertEqual(result.overall_status, 'Attention required')
         self.assertIn('does not establish that the joints need replacement', ' '.join(result.assessment))
         self.assertIn('do not establish that the joint is damaged', result.joints[0].summary)
@@ -73,7 +75,7 @@ class RobotStatusTests(unittest.TestCase):
     def test_recording_excursion_without_log_is_motion_review(self):
         report = analyze_data([], [flight()])
         joint = self.joint(report)
-        self.assertEqual(joint.status, 'Review motion evidence')
+        self.assertEqual(joint.status, 'Monitor')
         self.assertIn('No validated joint-specific fault', joint.summary)
         self.assertIn('Controller log coverage is unavailable.', joint.limitations)
         self.assertEqual(self.joint(report, 'Elbow').status, 'Not assessed')
@@ -90,7 +92,7 @@ class RobotStatusTests(unittest.TestCase):
                                  current_comparable_samples=5, current_both_bound_samples=5)
         report = DiagnosticReport(log_source_count=1, incidents=[Incident(id='REC-001', joint_evidence=[measured])])
         joint = self.joint(report)
-        self.assertEqual(joint.status, 'No recorded concern')
+        self.assertEqual(joint.status, 'Good')
         self.assertIn('does not establish present mechanical condition', joint.summary)
         for changed in (replace(measured, current_both_bound_samples=4), replace(measured, has_gaps=True),
                         replace(measured, channels=['velocity', 'current'])):

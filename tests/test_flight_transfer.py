@@ -116,6 +116,9 @@ class SFTP:
             def __exit__(self, *args):
                 stream.close()
 
+            def seek(self, offset):
+                stream.seek(offset)
+
             def read(self, size):
                 block = stream.read(size)
                 if remote.on_read:

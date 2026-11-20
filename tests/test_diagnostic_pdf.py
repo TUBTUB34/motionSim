@@ -102,7 +102,7 @@ class DiagnosticPdfTests(unittest.TestCase):
                 document = ReportDocument(pdf, path.name, 'ROBOT STATUS REPORT', '')
                 evidence = ChartEvidence(str(path), path.name, 2, 0, 21, 'Incident window')
                 _chart(document, evidence, 'INC-001')
-                lines = document.figure.axes[0].lines
+                lines = next(axes for axes in document.figure.axes if axes.lines).lines  # the logo is an image axes
                 traces = [line for line in lines if line.get_linestyle() != '--']
                 self.assertEqual(len(traces), 2)
                 self.assertEqual(list(traces[0].get_xdata()), [0, 1, 2])

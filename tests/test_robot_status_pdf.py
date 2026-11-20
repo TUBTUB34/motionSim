@@ -40,8 +40,8 @@ class RobotStatusPdfTests(unittest.TestCase):
                 text = '\n'.join(page.get_text() for page in pdf)
                 self.assertIn('Example Client', pdf[0].get_text())
                 self.assertIn('Packaging cell 2', pdf[0].get_text())
-                for required in ('Robot Status', 'Needs attention', 'Joint condition', 'Program areas to review',
-                                 'Client_pickup', '42–43', 'Recommended action plan', 'Not assessed', *JOINTS):
+                for required in ('Robot Status', 'Needs attention', 'Joint health', 'Where the program struggles',
+                                 'Client_pickup', '42–43', 'Recommendations', 'Not assessed', *JOINTS):
                     self.assertIn(required, text)
                 self.assertEqual(text.count('Verify the carried mass at pickup.'), 1)
                 self.assertNotIn('/private/operator', text)

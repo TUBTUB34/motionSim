@@ -102,6 +102,8 @@ def check(app):
                    for f in review.findings), 'Bundled move-distance calculation failed'
         program_pdf = export_program_pdf(review, Path(folder) / 'program.pdf')
         assert program_pdf.read_bytes().startswith(b'%PDF-'), 'Bundled program PDF export failed'
+        from motionstudio.reporting.pdf import logo
+        assert logo().shape[0] > 0, 'Bundled PDF header logo is missing'
         app.open_program_check()
         app.program_check_window.executor.submit(lambda: None).result(timeout=10)
         app.root.update()

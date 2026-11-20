@@ -27,8 +27,9 @@ SHARED = {
 }
 FEATURES = {'live', 'flight', 'logs', 'programs', 'diagnostics', 'backup', 'commissioning'}
 FEATURE_DEPENDENCIES = {
-    # Robot Status analyses flight recordings and robot logs and reuses the program report's line ranges.
-    'diagnostics': {'flight', 'logs', 'programs'},
+    # Robot Status analyses flight recordings and robot logs and reuses the program report's line ranges;
+    # its collection reuses project backup tars and, when nothing is saved yet, makes one on the robot.
+    'diagnostics': {'backup', 'flight', 'logs', 'programs'},
     # Live recordings are written in the flight-report format.
     'live': {'flight'},
     # The Logs page saves the robot's log pair with the backup job.

@@ -17,7 +17,7 @@ import numpy as np
 from motionstudio.flight.data import MAX_SAMPLES, MAX_TELEMETRY_BYTES, TELEMETRY_MEMBER
 from motionstudio.core.about import APP_NAME
 
-REPORT_TYPE = 'Motion Studio live recording'
+REPORT_TYPE = f'{APP_NAME} live recording'  # recordings saved earlier keep their own label
 
 
 def _joints(template):

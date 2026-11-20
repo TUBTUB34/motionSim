@@ -400,7 +400,7 @@ class FlightTransfer(SshJob):
         return succeeded, len(self.failed)
 
     def _error(self, error):
-        message = str(error)
+        message = str(error) or type(error).__name__
         if self.connection and self.connection.password:
             message = message.replace(self.connection.password, '[redacted]')
         return message

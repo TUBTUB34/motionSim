@@ -10,6 +10,7 @@ import re
 from motionstudio.core.kinematics import JOINTS
 from motionstudio.logs.parser import CODES, HEALTH_CODES
 from motionstudio.diagnostics.analysis import DiagnosticReport, _date
+from motionstudio.diagnostics.health import ArmHealth, build_arm_health
 
 JOINT_MOTION_REVIEW = ('Review {joints} at the affected motion stage: check physical clearance, '
                        'active payload and centre of gravity, then acceleration changes and move transitions.')
@@ -52,6 +53,7 @@ class RobotStatusReport:
     references: list[dict[str, str]] = field(default_factory=list)
     robot_details: list[tuple[str, str]] = field(default_factory=list)
     diagnostic_report: DiagnosticReport | None = None
+    health: ArmHealth = field(default_factory=ArmHealth)
 
 
 def _unique(items):
@@ -308,21 +310,29 @@ def build_robot_status(diagnostic_report):
             seen.add(key)
     status.joints = [_joint_status(joint, report, incidents) for joint in JOINTS]
     status.program_areas = _program_areas(incidents)
-    attention = [joint.joint for joint in status.joints if joint.status == 'Needs attention']
-    review_motion = [joint.joint for joint in status.joints if joint.status == 'Review motion evidence']
+    # Severity and recurrence (health.METHOD) grade a joint's concern; the evidence review
+    # above still decides whether a joint can be assessed at all.
+    evidence = {joint.joint: {'Review motion evidence': 'Monitor'}.get(joint.status, joint.status) for joint in status.joints}
+    status.health = build_arm_health(report, evidence)
+    graded = {row.joint: row.status for row in status.health.joints}
+    for joint in status.joints:
+        if joint.status in ('Needs attention', 'Review motion evidence', 'No recorded concern'):
+            joint.status = graded[joint.joint]
+    attention = [joint.joint for joint in status.joints if joint.status in ('Critical', 'Attention required')]
+    review_motion = [joint.joint for joint in status.joints if joint.status == 'Monitor']
     unassessed = [joint.joint for joint in status.joints if joint.status in {'Not assessed', 'Limited evidence'}]
     if attention:
-        status.overall_status = 'Attention required'
-        status.assessment.append('Controller evidence identifies concerns involving ' + ', '.join(attention) + '. These are the first areas to investigate; the evidence does not establish that the joints need replacement.')
-        status.assessment.append('Start with the recorded process stage, physical clearance and active load settings. Use the joint summaries to distinguish application-related warnings from controller messages that require service interpretation.')
+        status.overall_status = 'Critical' if any(j.status == 'Critical' for j in status.joints) else 'Attention required'
+        status.assessment.append('Controller warnings recur on ' + ', '.join(attention) + '. These are the first areas to investigate; the evidence does not establish that the joints need replacement.')
+        status.assessment.append('Start with the active payload and centre of gravity, physical clearance at the stopping stage and the motion leading into it, before suspecting the joint hardware.')
     elif review_motion:
-        status.overall_status = 'Motion review recommended'
-        status.assessment.append('Recorded motion needs review for ' + ', '.join(review_motion) + '. Current crossed available recorded bounds, but the supplied evidence does not confirm physical contact or a component defect.')
+        status.overall_status = 'Monitor'
+        status.assessment.append('Isolated warnings or recorded current outside its bounds were found for ' + ', '.join(review_motion) + '. Watch for recurrence; the evidence does not confirm contact or a component defect.')
     elif any(incident.codes for incident in incidents):
         status.overall_status = 'Controller review required'
         status.assessment.append('Controller messages require review, but the available evidence does not reliably assign them to a specific joint condition. Use the program context and complete messages to decide the next investigation.')
     elif report.log_source_count or any(incident.joint_evidence for incident in incidents):
-        status.overall_status = 'Limited condition assessment' if unassessed or report.warnings else 'No recorded concern'
+        status.overall_status = 'Limited condition assessment' if unassessed or report.warnings else 'Good'
         status.assessment.append('No mapped joint-specific warning or recorded current-bound excursion was identified in the reviewed evidence. This is a statement about these records, not confirmation of present mechanical health.')
     else:
         status.assessment.append('The available files do not contain enough usable robot evidence to assess condition. Collect controller logs and flight recordings before issuing a condition conclusion.')

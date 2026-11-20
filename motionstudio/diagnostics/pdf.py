@@ -10,7 +10,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 from motionstudio.core.rendering import RENDER_LOCK
 from motionstudio.flight.data import load_flight
 from motionstudio.core.kinematics import JOINTS
-from motionstudio.reporting.pdf import ReportDocument, LEFT, RIGHT, PAGE_WIDTH, PAGE_HEIGHT, INK, MUTED
+from motionstudio.reporting.pdf import Chip, ReportDocument, LEFT, RIGHT, PAGE_WIDTH, PAGE_HEIGHT, INK, MUTED
 from motionstudio.programs.pdf import deployment_follow_up, line_ranges
 from motionstudio.core.about import APP_NAME
 
@@ -135,13 +135,22 @@ def _source_inventory(sources, root):
     return [_client_text(path, root) + (': lines ' + line_ranges(lines) if lines else '') for path, lines in files.items()]
 
 
+APPENDIX_ALL_INCIDENTS = 25  # above this, only incidents with a flight recording get their own page
+
+
 def _technical_appendix(document, report, check):
     document.new_page('Technical evidence appendix')
     document.paragraph('Supporting records are included for technical review. Codes and script lines identify recorded context; they do not alone establish a physical root cause.')
     document.y += 12
-    document.rows('Incident guide', [(item.id, f'{item.time or "Time unavailable"} · {item.title}') for item in report.incidents])
+    incidents = report.incidents
+    if len(incidents) > APPENDIX_ALL_INCIDENTS:
+        incidents = [incident for incident in incidents if incident.flight_names]
+        document.paragraph(f'{len(report.incidents)} incidents were analysed; the {len(incidents)} with a flight recording are shown here. '
+                           'The others are counted in the findings table.', size=9, color=MUTED)
+        document.y += 8
+    document.rows('Incident guide', [(item.id, f'{item.time or "Time unavailable"} · {item.title}') for item in incidents])
     plotted = set()
-    for incident in report.incidents:
+    for incident in incidents:
         check()
         document.new_page(f'{incident.id} · Incident review')
         document.heading(incident.title)
@@ -167,90 +176,259 @@ def _technical_appendix(document, report, check):
                 [_client_text(value, report.source) for value in report.coverage + report.warnings])
 
 
+def clean_warnings(values):
+    """Coverage warnings worth showing: unique, and not an empty 'Source: ' stub from an older collection."""
+    return [value for value in unique_text(values) if not value.rstrip().endswith(':')]
+
+
+def _joint_rows(status):
+    health = status.health
+    if health.joints:
+        return [(row.joint, Chip(row.status), '\n'.join(row.metrics) or 'No recording', str(row.events) if row.events else '0',
+                 row.trend, row.notes) for row in health.joints]
+    return [(joint.joint, Chip(joint.status), 'No recording', '–', '–', joint.summary) for joint in status.joints]
+
+
+def _class_details(document, findings):
+    """One block per event class: cause, why, fix and basis once, then its findings by joint."""
+    from motionstudio.diagnostics.health import SEVERITIES
+    classes = {}
+    for finding in findings:
+        classes.setdefault(finding.category, []).append(finding)
+    for name, group in sorted(classes.items(), key=lambda kv: min(SEVERITIES.index(f.severity) for f in kv[1])):
+        info = group[0].info
+        document.ensure(150)
+        document.heading(f'{name} · {", ".join(f.id for f in group)}', 11.5)
+        fix = ' '.join(text for text in (info[4], info[6], info[5]) if text)
+        bases = unique_text(f.basis for f in group)
+        document.table(('', ''), [(('Likely cause', MUTED, 'bold'), info[2]), (('Why it matters', MUTED, 'bold'), info[3]),
+                                  (('Recommended fix', MUTED, 'bold'), fix),
+                                  (('Basis', MUTED, 'bold'), f'{"; ".join(bases)}. Reference: {info[7]}.')],
+                       (.18, .82), size=8.5, header=False)
+        document.y -= 6
+        document.table(('ID', 'Severity', 'Joint', 'Events', 'Period', 'Trend', 'Codes', 'Where'),
+                       [(f.id, Chip(f.severity), f.joint or '–', str(f.count), f.period,
+                         f'{f.trend} {f.trend_counts[0]}→{f.trend_counts[1]}' if f.trend in ('Rising', 'Falling', 'Stable') else f.trend,
+                         ', '.join(f.codes), f.where) for f in group],
+                       (.07, .12, .11, .07, .19, .13, .11, .2), size=7.5)
+        recorded = unique_text(name for f in group for name in f.recordings)
+        if recorded:
+            document.paragraph('Flight recordings at these events: ' + ', '.join(recorded) + '.', size=8, color=MUTED)
+            document.y += 4
+
+
+def _monthly_chart(document, health):
+    """Classified events per month, stacked by class; the largest four classes keep their own colour."""
+    months = sorted(month for month in health.monthly if month != 'Unknown')
+    totals = {}
+    for month in months:
+        for name, count in health.monthly[month].items():
+            if name != 'Uninterpreted':
+                totals[name] = totals.get(name, 0) + count
+    if len(months) < 2 or not totals:
+        return
+    order = sorted(totals, key=totals.get, reverse=True)
+    shown, other = order[:4], order[4:]
+    series = [(name, [health.monthly[m].get(name, 0) for m in months]) for name in shown]
+    if other:
+        series.append(('Other classified', [sum(health.monthly[m].get(name, 0) for name in other) for m in months]))
+    colors = ('#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#8a9aa0')  # dataviz categorical slots 1-4, then neutral
+    height = 130
+    document.ensure(height+60)
+    document.paragraph('Classified events per month', size=10, weight='bold')
+    document.paragraph('Uninterpreted controller codes are left out; one event can carry more than one class.', size=8, color=MUTED)
+    top = document.y + 26
+    axes = document.figure.add_axes(((LEFT+28)/PAGE_WIDTH, 1-(top+height)/PAGE_HEIGHT, (RIGHT-LEFT-28)/PAGE_WIDTH, height/PAGE_HEIGHT))
+    base = np.zeros(len(months))
+    positions = np.arange(len(months))
+    for (name, values), color in zip(series, colors):
+        axes.bar(positions, values, .55, bottom=base, color=color, label=name, edgecolor='white', linewidth=1)
+        base += values
+    for x, total in zip(positions, base):
+        axes.text(x, total, f'{int(total)}', ha='center', va='bottom', fontsize=7, color=INK)
+    axes.set_xticks(positions, [__import__('datetime').date(int(m[:4]), int(m[5:]), 1).strftime('%b %Y') for m in months])
+    axes.tick_params(labelsize=7.5, colors=MUTED, length=0)
+    axes.grid(True, axis='y', color='#e3e9ea', linewidth=.5)
+    axes.set_axisbelow(True)
+    axes.set_ylim(0, max(base)*1.15)
+    for name, spine in axes.spines.items():
+        spine.set_visible(name == 'bottom')
+        spine.set_color('#b9c5c8')
+    axes.legend(loc='lower left', bbox_to_anchor=(0, 1.02), ncol=len(series), fontsize=7, frameon=False,
+                labelcolor=INK, handlelength=1, handleheight=1, columnspacing=1.2, borderaxespad=0)
+    document.y = top + height + 26
+
+
 def export_diagnostic_pdf(report, destination, check_cancel=None, *, metadata=None, include_evidence=False):
     """Save a client Robot Status report; technical incident detail is opt-in."""
     check = check_cancel or (lambda: None)
     check()
     from motionstudio.diagnostics.status import RobotStatusReport, build_robot_status
+    from motionstudio.diagnostics.health import METHOD
     status = report if isinstance(report, RobotStatusReport) else build_robot_status(report)
     report = status.diagnostic_report
+    health = status.health
     metadata = metadata or {}
     destination = Path(destination)
+    source = status.source
     handle, temporary = tempfile.mkstemp(prefix='.diagnostic-', suffix='.pdf', dir=destination.parent)
     os.close(handle)
     try:
         with RENDER_LOCK, PdfPages(temporary, metadata={
-            'Title': 'Robot Status', 'Author': metadata.get('prepared_by') or APP_NAME,
-            'Subject': 'Recorded robot condition, joint assessments and program review priorities',
+            'Title': 'Robot Status Report', 'Author': metadata.get('prepared_by') or APP_NAME,
+            'Subject': 'Arm health: joint condition, findings and program areas to review',
         }) as pdf:
-            document = ReportDocument(pdf, metadata.get('robot_label', '').strip() or metadata.get('client', '').strip(),
-                                      subtitle='ROBOT STATUS REPORT', note=NOTE)
-            document.new_page('Robot Status')
-            document.paragraph('Recorded condition and recommended next steps', size=11, color=MUTED)
-            document.y += 12
-            context = []
-            for label, key in (('Client', 'client'), ('Robot / asset', 'robot_label'), ('Prepared by', 'prepared_by')):
-                if metadata.get(key, '').strip():
-                    context.append((label, metadata[key].strip()))
-            context.extend(status.robot_details)
+            label = metadata.get('robot_label', '').strip() or metadata.get('client', '').strip()
+            document = ReportDocument(pdf, label, subtitle='ROBOT STATUS REPORT', note=NOTE)
+
+            # 1. Executive summary
+            document.new_page('Robot Status Report')
+            details = dict(status.robot_details)
+            robot = ' · '.join(value for key in ('Robot model', 'Robot serial') if (value := details.get(key, ''))
+                               and not value.startswith(('Not ', 'Not available')))
+            document.paragraph('Arm health review' + (f' · {robot}' if robot else '') + (f' · {health.period}' if health.start else ''),
+                               size=10.5, color=MUTED)
+            document.y += 10
+            context = [(label, metadata[key].strip()) for label, key in (('Client', 'client'), ('Robot / asset', 'robot_label'),
+                       ('Prepared by', 'prepared_by')) if metadata.get(key, '').strip()]
+            context += [(key, value) for key, value in status.robot_details if key != 'Incident dates']
+            if health.start:
+                context.append(('Period analysed', health.period))
+            if report is not None:
+                context.append(('Evidence', f'{report.log_source_count} controller log set(s), {report.recording_count} flight recording(s)'
+                                + (f', {health.bursts} logged events' if health.bursts else '')))
             document.rows('Review details', context)
-            document.heading('Overall assessment: ' + status.overall_status)
-            for value in unique_text(status.assessment):
-                document.paragraph(_client_text(value, status.source))
-                document.y += 6
-            document.paragraph('This assessment describes the available records. It is not an inspection of the robot’s present mechanical condition or a safety approval.', size=9, color=MUTED)
+            document.banner(status.overall_status, 'Overall arm health: ' + status.overall_status,
+                            ' '.join(_client_text(value, source) for value in unique_text(status.assessment)[:2]))
+            if health.findings:
+                serious = sum(count for name, count in health.counts() if name in ('Critical', 'High'))
+                concern = [row.joint for row in health.joints if row.status in ('Critical', 'Attention required')]
+                document.tiles([(f'{health.bursts:,}', 'logged events analysed'),
+                                (f'{len(concern)} of 6', 'joints needing attention'),
+                                (str(serious), 'critical or high findings'),
+                                (f'{health.matched_recordings} of {report.recording_count}' if report else '0', 'recordings matched to events')])
+                document.heading('Top risks', 11)
+                document.table(('ID', 'Severity', 'Finding', 'Events', 'Trend'),
+                               [(f.id, Chip(f.severity), f.title, str(f.count), f.trend) for f in health.findings[:3]],
+                               (.09, .16, .5, .11, .14))
+                document.paragraph('Findings by severity: ' + ' · '.join(f'{name} {count}' for name, count in health.counts()),
+                                   size=8.5, color=MUTED)
 
-            check()
-            document.new_page('Joint condition')
-            document.paragraph('Each joint is assessed separately. “Not assessed” and “Limited evidence” are gaps in the available records, not a pass or a prediction of remaining life.')
-            document.y += 12
-            document.rows('Assessment by joint', [(joint.joint, [(joint.status, INK, 'bold'), (joint.summary, INK, 'normal')])
-                                                  for joint in status.joints], label_width=82)
-            document.paragraph('Recommendations below connect the observed concerns to practical checks. Full incident measurements can be included in the optional technical evidence appendix.', size=9, color=MUTED)
+            document.y += 6
+            document.paragraph('This assessment describes the available records. It is not an inspection of the robot’s present mechanical '
+                               'condition, a prediction of remaining joint life or a safety approval.', size=8.5, color=MUTED)
 
+            # 2. Joint health
             check()
-            document.new_page('Program areas to review')
-            if not status.program_areas:
-                document.paragraph('The available evidence does not identify a specific program area to change. Obtain matching recorded program context before attributing a fault to a command or line.')
-            for area in status.program_areas:
-                check()
-                document.heading(area.area)
-                document.paragraph(f'{area.program or "Program not identified"} · Review priority: {area.priority}',
-                                   size=9, weight='bold')
-                if area.association:
-                    document.paragraph('Evidence link: ' + area.association, size=9, color=MUTED)
+            document.new_page('Joint health')
+            document.paragraph('Status follows each joint\'s most severe finding (see Data coverage and method). Key metrics are the largest values in the '
+                               'matched flight recordings: tracking is actual − target position, Current Δ is actual − target current.', size=9, color=MUTED)
+            document.y += 8
+            document.table(('Joint', 'Status', 'Key metrics', 'Events', 'Trend', 'Notes'), _joint_rows(status),
+                           (.11, .18, .21, .08, .1, .32), size=7.5, bold_first=True)
+            _monthly_chart(document, health)
+
+            # 3. Findings and program hot spots
+            check()
+            document.start_section('Findings')
+            if health.findings:
+                document.paragraph('One finding per event class and joint; the fixes are under Finding details and Recommendations.', size=9, color=MUTED)
                 document.y += 6
-                document.paragraph(area.summary)
-                document.y += 6
-                if area.script_lines:
-                    document.paragraph('Recorded script context: lines ' + line_ranges(area.script_lines) + '. These are execution references, not proof that the line caused the issue.', size=9, color=MUTED)
+                document.table(('ID', 'Severity', 'Category', 'Joint', 'Events', 'Trend', 'Program location'),
+                               [(f.id, Chip(f.severity), f.category, f.joint or '–', str(f.count), f.trend, f.where)
+                                for f in health.findings], (.07, .13, .21, .12, .08, .1, .29), size=8)
+            else:
+                document.paragraph('No classified controller warnings were found in the supplied records.')
+            document.heading('Where the program struggles')
+            if health.hot_spots:
+                document.table(('Rank', 'Program location', 'Events', 'Event types', 'Likely cause', 'Findings', 'Program Check'),
+                               [(str(h.rank), h.location, str(h.count), h.types, h.cause, ', '.join(h.findings), ', '.join(h.program_refs) or '–')
+                                for h in health.hot_spots], (.06, .18, .07, .22, .27, .1, .1), size=7.5)
+                for program_check in health.program_checks:
+                    document.heading(f'Program Check of {program_check["program"]} · score {program_check["score"]} / 100', 11)
+                    document.paragraph(f'The program saved in {program_check["recording"]}, the program that was running at that stop. '
+                                       'P-IDs match a Program Check report of the same program.', size=8.5, color=MUTED)
                     document.y += 4
-                if area.incident_ids:
-                    document.paragraph('Supporting cases: ' + ', '.join(unique_text(area.incident_ids)), size=9, color=MUTED)
+                    if program_check['findings']:
+                        document.table(('ID', 'Severity', 'Category', 'Location', 'Issue'),
+                                       [(f['id'], Chip(f['severity']), f['category'], f['location'], f['issue']) for f in program_check['findings']],
+                                       (.08, .13, .22, .15, .42), size=7.5)
+                    else:
+                        document.paragraph('No source value departs from UR guidance.', size=8.5)
+                missing = [p for p in health.programs if p not in {c['program'] for c in health.program_checks}]
+                if missing:
+                    document.paragraph('Cross-check: run Program Check on ' + ', '.join(missing) +
+                                       ' and compare its payload, blend and motion findings with these locations.', size=8.5, color=MUTED)
+                document.paragraph('“Not identified”: no flight recording exists at those times, so the program location is unknown.', size=8, color=MUTED)
+            identified = [area for area in status.program_areas if area.program and area.program != 'Program not identified']
+            if not health.hot_spots:  # without graded findings, show the program review areas themselves
+                for area in identified:
+                    lines = f' · recorded script lines {line_ranges(area.script_lines)}' if area.script_lines else ''
+                    document.bullet(f'{area.program} · {area.area}{lines}. {area.summary}', size=8.5)
+            if not health.hot_spots and not identified:
+                document.paragraph('The records do not place the events in a program location. A flight recording at the time of an event is needed to do so.')
 
+            # 4. Finding details
+            detailed = [f for f in health.findings if f.info]
+            if detailed:
+                check()
+                document.start_section('Finding details')
+                document.paragraph('Grouped by event class: cause, impact and fix are stated once, then each joint\'s finding. '
+                                   'Trend gives the events in the first → second half of the period.', size=9, color=MUTED)
+                _class_details(document, detailed)
+                rest = [f for f in health.findings if f not in detailed]
+                if rest:
+                    document.heading('Not classified', 11.5)
+                    for finding in rest:
+                        document.paragraph(f'{finding.id} · {finding.what} Their meaning is not interpreted here; look them up in the UR error-code directory for this software version.', size=8.5)
+
+            # 5. Timeline
+            if health.timeline:
+                check()
+                document.start_section('Event timeline')
+                document.paragraph('Recorded flight reports, and the first and latest occurrence of each critical or high finding.', size=9, color=MUTED)
+                document.y += 6
+                document.table(('Time', 'Event', 'Codes · joint · program', 'Finding'), health.timeline, (.2, .3, .38, .12), size=8)
+
+            # 6. Recommendations
             check()
-            document.new_page('Recommended action plan')
-            _paragraphs(document, 'Recommended next steps', status.actions or ['Collect sufficient matching controller logs and flight recordings to assess the robot and identify targeted checks.'], numbered=True)
-            document.paragraph('Verify the application and physical setup before changing motion or load settings. Retain the original evidence for follow-up and service review.', size=9, color=MUTED)
-            document.y += 12
-            _paragraphs(document, 'Scope of this assessment', [_client_text(value, status.source) for value in status.coverage])
-            if report is not None and report.warnings:
-                warnings = unique_text(report.warnings)
-                _paragraphs(document, 'Coverage notes', [_client_text(value, status.source) for value in warnings[:5]])
-                if len(warnings) > 5:
-                    document.paragraph(f'{len(warnings)-5} additional source warnings are retained in the application’s Coverage & sources view and optional technical appendix.', size=9, color=MUTED)
-                    document.y += 8
-            _paragraphs(document, 'Limits of this assessment', [_client_text(value, status.source) for value in status.limitations])
-            if status.references:
-                document.heading('Technical references')
-                document.paragraph('UR technical guidance used to interpret the recorded controller messages.', size=9, color=MUTED)
+            document.start_section('Recommendations')
+            groups = [('Program changes', health.program), ('Maintenance and hardware', health.maintenance),
+                      ('Application and environment', health.application), ('Further data needed', health.data_needed),
+                      ('Monitoring', health.monitoring)]
+            if not any(values for _, values in groups):
+                groups = [('Recommended next steps', status.actions)]
+            for title, values in groups:
+                _paragraphs(document, title, [_client_text(v, source) for v in values], numbered=True)
                 document.y += 4
-                for number, reference in enumerate(status.references, 1):
-                    title = reference.get('title', '')
-                    document.bullet(reference.get('url', '') if title in ('', 'Diagnostic guidance source')
-                                    else title + '\n' + reference.get('url', ''), f'{number}.', 8.5, 22)
+            document.paragraph('Change motion or payload settings only after checking the real tool, part and cell. Keep the original records for follow-up.', size=8.5, color=MUTED)
+
+            # 7. Coverage and method
+            check()
+            document.start_section('Data coverage and method')
+            _paragraphs(document, 'Coverage', [_client_text(v, source) for v in status.coverage])
+            warnings = clean_warnings(report.warnings if report is not None else [])
+            if warnings:
+                _paragraphs(document, 'Gaps in the data', [_client_text(v, source) for v in warnings[:6]])
+                if len(warnings) > 6:
+                    document.paragraph(f'{len(warnings)-6} further source notes are listed in the app\'s Coverage & sources view.', size=8.5, color=MUTED)
+            _paragraphs(document, 'How findings are rated', METHOD)
+            _paragraphs(document, 'Limits', [_client_text(v, source) for v in status.limitations] +
+                        ['This review does not replace a risk assessment (ISO 10218 / ISO/TS 15066) or a physical inspection.'])
+            references = {}
+            for finding in health.findings:
+                if finding.info:
+                    references.setdefault(finding.info[8], finding.info[7])
+            for reference in status.references:
+                url = reference.get('url', '')
+                references.setdefault(url, reference.get('title', '') if reference.get('title') not in ('', 'Diagnostic guidance source')
+                                      else 'UR ' + url.rstrip('/').rsplit('/', 1)[-1].replace('.html', '').replace('CODE_', 'error code C').replace('-', ' '))
+            if references:
+                document.heading('References')
+                for url, title in references.items():
+                    document.link(title, url)
             deployment_follow_up(document)
-            if include_evidence:
+            if include_evidence and report is not None:
                 check()
                 _technical_appendix(document, report, check)
             document.close()

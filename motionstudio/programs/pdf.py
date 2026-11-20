@@ -1,85 +1,20 @@
 """Readable, grouped Program Check PDFs; analysis values are never recalculated."""
-from dataclasses import dataclass
 from pathlib import Path
 import os
-import re
+
 import tempfile
 from matplotlib.backends.backend_pdf import PdfPages
-from motionstudio.reporting.pdf import ReportDocument, INK, MUTED, LEFT, RIGHT, BOTTOM
+from motionstudio.reporting.pdf import Chip, ReportDocument, INK, MUTED, BOTTOM
 from motionstudio.core.rendering import RENDER_LOCK
 from motionstudio.programs.check import REFERENCES, CATEGORIES
+from motionstudio.programs.findings import (ESTIMATE, FindingGroup, group_findings, line_ranges,  # noqa: F401 (re-exported)
+                                            program_report, SCORE_RULE, SEVERITY_RULE)
 from motionstudio.core.about import APP_NAME
 
 NOTE = ('Independent source review. Not a UR certification or safety validation. '
         'Validate runtime behavior and physical setup on the robot.')
 STATUS = {'Review recommended': 'Needs attention', 'Manual review': 'Needs verification',
           'Source observation': 'Source value', 'Within guideline': 'Within guideline'}
-ESTIMATE = re.compile(r'Source-definition estimate using (.*?)\. Initialization order, runtime changes and execution are not proven\.', re.S)
-# Shared qualifications appear once in the interpretation section. Numeric
-# values, comparisons and specific caveats stay intact in each result.
-SHARED_TEXT = (
-    'This is not a safety limit or measured acceleration.',
-    'Configured source value only; runtime motion is not certified.',
-    'Source geometry does not prove a skipped waypoint; controller planning and execution require verification.',
-    'First source occurrence; execution order and physical correctness are not proven.',
-    'Additional source occurrence; execution order and physical correctness are not proven.',
-    'Confirm tool plus workpiece mass, centre of gravity and inertia against the real tool; update payload when the workpiece changes.',
-    'Confirm the configured TCP against the actual tool and each tool change.',
-)
-
-
-@dataclass(frozen=True)
-class FindingGroup:
-    category: str
-    status: str
-    detail: str
-    estimated: bool
-    assumptions: tuple
-    findings: tuple
-
-    @property
-    def lines(self):
-        return tuple(sorted({finding.line for finding in self.findings if finding.line}))
-
-    @property
-    def references(self):
-        return tuple(sorted({finding.reference + 1 for finding in self.findings}))
-
-
-def group_findings(findings):
-    """Collapse equivalent results, retaining distinct evidence and assumptions.
-
-    Values, units, limits, status and literal/estimate basis are part of identity.
-    A different expression giving the same estimated result retains its own
-    initializer evidence. No numeric rounding or fuzzy text matching is used.
-    """
-    grouped = {}
-    for finding in findings:
-        assumptions = tuple(dict.fromkeys(' '.join(m.group(1).split()) for m in ESTIMATE.finditer(finding.detail)))
-        detail = ESTIMATE.sub('', finding.detail)
-        for phrase in SHARED_TEXT:
-            detail = detail.replace(phrase, '')
-        detail = ' '.join(detail.split())
-        category = 'Source files' if detail.startswith('No matching generated .script file.') else finding.category
-        key = (category, finding.status, detail, bool(assumptions), bool(finding.line))
-        members, notes = grouped.setdefault(key, ({}, {}))
-        members.setdefault((finding.line, finding.evidence, finding.detail, finding.reference), finding)
-        notes.update(dict.fromkeys(assumptions))
-    return [FindingGroup(category, status, detail, estimated, tuple(notes), tuple(members.values()))
-            for (category, status, detail, estimated, _), (members, notes) in grouped.items()]
-
-
-def line_ranges(lines):
-    """Compress consecutive lines without concealing gaps."""
-    runs = []
-    for number in sorted(set(lines)):
-        if runs and number == runs[-1][1] + 1:
-            runs[-1][1] = number
-        else:
-            runs.append([number, number])
-    return ', '.join(str(first) if first == last else f'{first}–{last}' for first, last in runs)
-
-
 def _source_label(group):
     if not group.lines:
         return 'Whole program'
@@ -109,9 +44,6 @@ def deployment_follow_up(document):
 
 def export_program_pdf(review, destination):
     groups = group_findings(review.findings)
-    issues = [group for group in groups if group.status == 'Review recommended']
-    remaining = [group for group in groups if group.status != 'Review recommended']
-    affected = {line for group in issues for line in group.lines}
     definitions = dict.fromkeys(note for group in groups for note in group.assumptions)
     definitions = {note: f'D{index}' for index, note in enumerate(definitions, 1)}
     definition_lines = {note: set() for note in definitions}
@@ -133,60 +65,86 @@ def export_program_pdf(review, destination):
     try:
         with RENDER_LOCK, PdfPages(temporary, metadata={'Title': f'Program Check — {review.pair.name}', 'Author': APP_NAME}) as pdf:
             page = ReportDocument(pdf, review.pair.name, subtitle='PROGRAM CHECK REPORT', note=NOTE)
+            report = program_report(review)
+            name = review.metadata.get('name', review.pair.name)
+            # 1. Executive summary
             page.new_page('Program Check Report')
-            page.paragraph(review.metadata.get('name', review.pair.name), size=14, weight='bold')
-            page.y += 4
-            count = len(issues)
-            page.paragraph(f'{count} issue group' + ('' if count == 1 else 's') + f' · {len(affected)} affected source lines',
-                           size=11, weight='bold', color='#9a4300' if issues else INK)
-            page.paragraph('Repeated results are combined below. Every affected line is retained; different values, limits and calculation bases remain separate.')
-            page.y += 12
+            page.paragraph(name + ' · source review against UR guidance', size=10.5, color=MUTED)
+            page.y += 10
             page.rows('Program at a glance', [
                 ('Saved software', review.metadata.get('lastSavedIn', 'Unavailable')),
                 ('Guidance', review.profile),
                 ('Installation', review.metadata.get('reviewInstallation', 'Unavailable — installation settings omitted').replace('\\', '/').rsplit('/', 1)[-1]),
                 ('Source coverage', f'{review.script_lines:,} script lines; ' + ', '.join(f'{n} {name}' for name, n in review.counts.items() if name in ('movej', 'movel', 'movep', 'movec', 'optimovej', 'optimovel', 'speedj', 'speedl', 'servoj'))),
-                ('Needs verification', f'{sum(group.status == "Manual review" for group in remaining)} grouped checks need runtime evidence or additional information'),
             ], label_width=118)
-            page.heading('Start here')
-            if issues:
-                page.paragraph('Review the grouped issues on the next pages. Each entry gives the comparison, affected script lines and any source-estimate assumptions.')
-            else:
-                page.paragraph('No explicit source-value warnings were found. This does not establish compliance: check the unresolved items and source coverage below.')
-            page.y += 8
-            page.paragraph('Where a value depends on a variable, the review uses the variable’s saved initial value and labels the result a source estimate; the value at run time is not proven. UR acceleration recommendations are starting points, not safety limits. Unknown values are not treated as zero or a pass.')
+            serious = sum(count for severity, count in report.counts() if severity in ('Critical', 'High'))
+            status = 'Critical' if serious and any(f.severity == 'Critical' for f in report.findings) else 'High' if serious else 'Medium' if report.findings else 'Good'
+            summary = (f'{len(report.findings)} finding(s) in {len({l for f in report.findings for l in f.lines})} source line(s); '
+                       f'{len(report.observations)} topic(s) need verification on the robot.') if report.findings else \
+                      'No source value departs from UR guidance or the entered specification. This does not establish compliance: verify the observations listed later.'
+            page.banner(status, f'Program health score: {report.score} / 100', summary)
+            page.tiles([(str(report.score), 'program health score'),
+                        (str(serious), 'critical or high findings'),
+                        (str(sum(f.severity == 'Medium' for f in report.findings)), 'medium findings'),
+                        (str(len(report.observations)), 'topics to verify')])
+            if report.findings:
+                page.heading('Top risks', 11)
+                page.table(('ID', 'Severity', 'Category', 'Location'),
+                           [(f.id, Chip(f.severity), f.category, f.location) for f in report.findings[:3]],
+                           (.1, .18, .4, .32), size=8)
+            page.paragraph('Findings by severity: ' + ' · '.join(f'{name} {count}' for name, count in report.counts()), size=8.5, color=MUTED)
+            page.y += 4
+            page.paragraph('This review does not replace a risk assessment (ISO 10218 / ISO/TS 15066). Values that depend on variables use their saved '
+                           'initial value; the value at run time is not proven. UR acceleration recommendations are starting points, not safety limits.',
+                           size=8.5, color=MUTED)
 
-            if issues:
-                page.new_page('Issues to review')
-                for index, group in enumerate(issues, 1):
-                    parts = [(f'{index}. {group.category}', 12, INK, 'bold'), (group.detail, 10, INK, 'normal'),
-                             (_source_label(group), 9, INK, 'bold'), (basis(group), 8.5, MUTED, 'normal')]
-                    example = next((finding for finding in group.findings if finding.evidence), None)
-                    if example:
-                        text = example.evidence
-                        if len(text) > 240:
-                            text = text[:240] + '…'
-                        parts.append((f'Example, line {example.line}: {text}', 8.5, MUTED, 'normal'))
-                    height = 24 + sum(len(page.lines(text, RIGHT-LEFT, size, weight))*size*1.45+3 for text, size, _, weight in parts)
-                    if page.y + height > BOTTOM and height < BOTTOM-185:
-                        page.new_page('Issues to review (continued)')
-                    elif index > 1:
-                        page.rule(page.y)
-                        page.y += 12
-                    for text, size, color, weight in parts:
-                        page.paragraph(text, size=size, color=color, weight=weight)
-                        page.y += 3
-                    page.y += 9
+            # 2. Findings table, 3. details
+            if report.findings:
+                page.start_section('Findings')
+                page.table(('ID', 'Severity', 'Category', 'Location', 'Issue', 'Recommended fix'),
+                           [(f.id, Chip(f.severity), f.category, f.location, f.issue, f.fix) for f in report.findings],
+                           (.07, .12, .17, .12, .26, .26), size=7.5)
+                page.start_section('Finding details')
+                by_category = {}
+                for finding in report.findings:
+                    by_category.setdefault(finding.category, []).append(finding)
+                for category, findings in by_category.items():
+                    page.ensure(140)
+                    page.heading(f'{category} · {", ".join(f.id for f in findings)}', 11.5)
+                    references = sorted({n for f in findings for n in f.references})
+                    page.table(('', ''), [(('Why it matters', MUTED, 'bold'), findings[0].why),
+                                          (('Basis', MUTED, 'bold'), '; '.join(dict.fromkeys(f.basis for f in findings))
+                                           + ('. References ' + ', '.join(f'[{n}]' for n in references) if references else '') + '.')],
+                               (.18, .82), size=8.5, header=False)
+                    page.y -= 6
+                    page.table(('ID', 'Source evidence'), [(f.id, f.evidence or f.location) for f in findings], (.08, .92), size=7.5)
+
+            # 4. Observations / needs verification
+            if report.observations:
+                page.start_section('Observations / needs verification')
+                page.paragraph('The source alone cannot decide these. They are not findings; check them on the robot or enter the missing specification.', size=9, color=MUTED)
+                page.y += 6
+                rows = []
+                for item in report.observations:
+                    shown = item.items[:2] + ([f'{len(item.items)-2} more items of this kind.'] if len(item.items) > 2 else [])
+                    rows.append((item.category, '\n'.join(shown), item.location))
+                page.table(('Topic', 'What needs verifying', 'Where'), rows, (.2, .58, .22), size=7.5, bold_first=True)
+
+            # 5. Prioritised action list
+            page.start_section('Prioritised action list')
+            actions = report.actions() + [f'Verify on the robot: {item.category.lower()} (see Observations).' for item in report.observations]
+            for number, action in enumerate(actions or ['No source corrections are needed; keep this report as the baseline for the next change.'], 1):
+                page.bullet(action, f'{number}.', size=9, indent=22)
 
             page.new_page('Checks and source values')
-            page.paragraph('Everything else the review read from the program, grouped by topic. Issues already listed are not repeated here.')
+            page.paragraph('The values the review read from the program, grouped by topic. Findings and observations above are not repeated here.')
             page.y += 6
-            for label, meaning in (('Needs verification', 'the source alone cannot decide; runtime evidence or a specification is missing.'),
-                                   ('Source value', 'what is saved in the program or installation, not proof that it is physically correct.'),
+            for label, meaning in (('Source value', 'what is saved in the program or installation, not proof that it is physically correct.'),
                                    ('Within guideline', 'the saved value is inside the selected guidance; this is not a safety approval.')):
                 page.bullet(f'{label}: {meaning}', size=9)
             page.y += 10
-            order = {'Manual review': 0, 'Source observation': 1}
+            order = {'Source observation': 0}
+            remaining = report.values
             categories = list(dict.fromkeys([*CATEGORIES, *(group.category for group in remaining)]))
             for category in categories:
                 selected = sorted((group for group in remaining if group.category == category),
@@ -198,6 +156,12 @@ def export_program_pdf(review, destination):
 
             deployment_follow_up(page)
             page.new_page('Source notes')
+            page.heading('How findings are rated')
+            page.paragraph(SEVERITY_RULE, size=9)
+            page.y += 4
+            page.paragraph(SCORE_RULE, size=9)
+            page.y += 4
+            page.paragraph('Each finding is marked “UR documented recommendation” when a UR reference supports the check, otherwise “Engineering best practice / inference”.', size=9)
             page.heading('How to interpret the review')
             for note in ('This is a static review of the saved program; no URScript is executed.',
                          'Counts include definitions and branches, not how often a statement runs.',
