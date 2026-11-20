@@ -28,6 +28,7 @@ from motionstudio.ui.address_book import SavedAddressCombobox, refresh_address_f
 from motionstudio.live.recorder import LiveCapture
 from motionstudio.live.rtde_client import DATA_TIMEOUT, STALE_AFTER
 from motionstudio.remote.ssh_trust import host_key_prompt
+from motionstudio.core.about import APP_NAME
 
 PAYLOAD_NOTICE = "Payload info will not be loaded without an SSH password. Blank username uses root."
 DEFAULT_IP = "10.22.33.81"
@@ -126,7 +127,7 @@ class SimulatorApp:
         from motionstudio.ui.theme import apply_theme
         apply_theme(root, self.preferences.theme)
         theme.set_text_scale(root, self.preferences.text_scale)
-        root.title("UR Motion Studio")
+        root.title(APP_NAME)
         root.geometry("1440x900")
         root.minsize(1120, 740)
         self.ip = tk.StringVar(value=self.preferences.addresses[0] if self.preferences.addresses else DEFAULT_IP)

@@ -22,6 +22,7 @@ from motionstudio.core.kinematics import JOINTS
 from motionstudio.flight.charts import script_line_at
 from motionstudio.reporting.pdf import BAR, BOTTOM, INK, LEFT, MUTED, PAGE_HEIGHT, PAGE_WIDTH, RIGHT, ReportDocument
 from motionstudio.flight.stats import Peak, joint_statistics, protective_stops, recording_overview, state_changes
+from motionstudio.core.about import APP_NAME
 
 ACTUAL, TARGET, STOP = '#1f7fb5', '#5a8f1f', '#c0392b'
 DEGREES = 180 / np.pi
@@ -418,7 +419,7 @@ def export_flight_pdf(report, path):
     temporary = Path(temporary_name)
     try:
         with PdfPages(temporary, metadata={'Title': f'Flight Recording Report - {report.name}',
-                                          'Author': 'UR Motion Studio',
+                                          'Author': APP_NAME,
                                           'Subject': 'Recorded joint measurements for the complete flight recording'}) as pdf:
             doc = ReportDocument(pdf, report.name, 'FLIGHT RECORDING REPORT', NOTE)
             _summary_page(doc, report, statistics)

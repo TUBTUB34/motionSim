@@ -10,6 +10,7 @@ import textwrap
 
 from motionstudio.ui import theme
 from motionstudio.ui.theme import apply_theme, style_text
+from motionstudio.core.about import APP_NAME
 
 
 class MessageDialog(tk.Toplevel):
@@ -105,7 +106,7 @@ def _show(title, message, *, parent=None, question=False, kind='info', default='
     parent = parent or tk._get_default_root('show a dialog')
     root = parent._root()
     apply_theme(root)
-    return MessageDialog(parent, title or 'UR Motion Studio', message or '', question=question,
+    return MessageDialog(parent, title or APP_NAME, message or '', question=question,
                          kind=kind, default=default, detail=detail).show()
 
 

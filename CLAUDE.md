@@ -1,4 +1,4 @@
-# UR Motion Studio (motionSim)
+# ArmChair (motionSim, formerly UR Motion Studio)
 
 Read-only Tkinter + matplotlib + numpy desktop app for Universal Robots: live RTDE viewer, live monitor/recorder, flight reports, logs, Program check and Robot Status PDFs, backups. It never sends motion or scripts to a robot.
 
@@ -7,7 +7,7 @@ Read-only Tkinter + matplotlib + numpy desktop app for Universal Robots: live RT
 - Tests (WSL, no windows opened): `.venv/bin/python -m unittest discover -s tests`. UI tests are skipped unless `MOTIONSIM_UI_TESTS=1`. When staging a copy for Windows, delete its old `*.py`/`__pycache__` first so stale modules cannot load.
 - **Never open app windows on the user's visible desktop.** WSL has no Xvfb. Run UI tests and the EXE smoke on the hidden Windows desktop: `scripts/run_hidden.py` from the staged copy (ECC: "never run UI tests…").
 - Windows EXE: `build_windows.bat` (PyInstaller, `MotionStudio.spec`; the spec collects every `motionstudio` module) builds `dist\ArmChair-v<version>.exe`.
-- Version: `motionstudio/__init__.py` `__version__`; release = bump it, add a `CHANGELOG.md` entry, tag `v<version>`. Only the EXE is named ArmChair; the app, its preferences folder and window title stay UR Motion Studio.
+- Version: `motionstudio/__init__.py` `__version__`; release = bump it, add a `CHANGELOG.md` entry, tag `v<version>`. The app is shown as ArmChair (`core/about.APP_NAME`: titles, dialogs, PDF author, recordings); data folders keep the old names (`URMotionStudio` preferences, `Documents\UR Motion Studio` working folder) so saved settings stay found.
 - Benchmarks (simulated, never a robot): `scripts/benchmark_transfer.py`, `scripts/benchmark_fast_transfer.py`.
 
 ## Rules
@@ -32,7 +32,7 @@ Put new shared code in the lowest package that fits instead of importing across 
 
 ## File map (`motionstudio/`)
 - `app/`: `main_window.py` (SimulatorApp: connection form, poll loop, fps/reconnect status, `set_project`/`busy_pages`), `shell.py` (nav + side simulator), `home.py`, `settings_view.py` (Settings page), `preferences.py`, `help_content.py`/`help_view.py`, `model_catalog.py`, `status_view.py`, `smoke.py` (`--smoke-test`).
-- `core/`: `kinematics.py` (MODELS, JOINTS), `telemetry.py`, `installation.py`, `robot_assets.py`, `tooling.py`, `playback.py` (recorded-motion timeline), `paths.py` (working folder, projects, `project_folder`, earlier-data move), `rendering.py` (RENDER_LOCK).
+- `core/`: `about.py` (APP_NAME), `kinematics.py` (MODELS, JOINTS), `telemetry.py`, `installation.py`, `robot_assets.py`, `tooling.py`, `playback.py` (recorded-motion timeline), `paths.py` (working folder, projects, `project_folder`, earlier-data move), `rendering.py` (RENDER_LOCK).
 - `ui/`: `theme.py` (tokens, `flow()`, `status_color`), `dialogs.py`, `workspace_panel.py`, `address_book.py`, `charts.py` (joint colours, palette, `StackedPanels`), `chart_canvas.py` (ChartCanvas).
 - `remote/`: `connection.py` (settings, `active_robot_settings`, `transfer_connection`, `robot_download_folder`), `ssh_trust.py` (prompt, HostKeyQuestion, ConfirmHostKey, saving keys), `ssh_job.py` (SshConnection, SshJob: verified connect, `open_bulk`), `fast_transfer.py` (AsyncSSH), `stream.py` (`copy_remote`, SSH_TIMEOUT), `installation_transfer.py` (SCP).
 - `reporting/pdf.py`: ReportDocument (A4 frame for every PDF).

@@ -12,6 +12,7 @@ from motionstudio.flight.data import load_flight
 from motionstudio.core.kinematics import JOINTS
 from motionstudio.reporting.pdf import ReportDocument, LEFT, RIGHT, PAGE_WIDTH, PAGE_HEIGHT, INK, MUTED
 from motionstudio.programs.pdf import deployment_follow_up, line_ranges
+from motionstudio.core.about import APP_NAME
 
 NOTE = ('Local evidence-based review; hypotheses require verification. Controller detections do not alone prove '
         'physical contact or component failure. Not a safety validation.')
@@ -179,7 +180,7 @@ def export_diagnostic_pdf(report, destination, check_cancel=None, *, metadata=No
     os.close(handle)
     try:
         with RENDER_LOCK, PdfPages(temporary, metadata={
-            'Title': 'Robot Status', 'Author': metadata.get('prepared_by') or 'UR Motion Studio',
+            'Title': 'Robot Status', 'Author': metadata.get('prepared_by') or APP_NAME,
             'Subject': 'Recorded robot condition, joint assessments and program review priorities',
         }) as pdf:
             document = ReportDocument(pdf, metadata.get('robot_label', '').strip() or metadata.get('client', '').strip(),

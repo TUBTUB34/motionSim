@@ -15,6 +15,7 @@ import zipfile
 import numpy as np
 
 from motionstudio.flight.data import MAX_SAMPLES, MAX_TELEMETRY_BYTES, TELEMETRY_MEMBER
+from motionstudio.core.about import APP_NAME
 
 REPORT_TYPE = 'Motion Studio live recording'
 
@@ -115,7 +116,7 @@ class Recording:
         destination = Path(destination)
         rate = (self.samples - 1) / self.duration if self.duration > 0 else None
         metadata = {'reportId': destination.stem, 'reportType': REPORT_TYPE,
-                    'application': 'UR Motion Studio', 'model': model, 'robotAddress': robot,
+                    'application': APP_NAME, 'model': model, 'robotAddress': robot,
                     'recordedAt': self.started_at.isoformat(timespec='seconds'),
                     'samples': self.samples, 'durationSeconds': round(self.duration, 6),
                     'sampleRateHz': round(rate, 3) if rate else None, 'notes': notes.strip()}
@@ -126,10 +127,10 @@ class Recording:
                 'tcp': list(installation.tcp) if installation.tcp else None,
                 'payloadMass': installation.payload_mass,
                 'payloadCog': list(installation.payload_cog) if installation.payload_cog else None}
-        summary = ['== UR Motion Studio live recording ==', '',
+        summary = [f'== {APP_NAME} live recording ==', '',
                    f'Recording Time: {self.started_at.strftime("%a %b %d %H:%M:%S %Z %Y")}',
                    f'Robot address: {robot or "not recorded"}',
-                   f'Robot model: {model or "not recorded"} (selected in Motion Studio; nominal geometry)',
+                   f'Robot model: {model or "not recorded"} (selected in {APP_NAME}; nominal geometry)',
                    f'Samples: {self.samples}', f'Duration [s]: {self.duration:.3f}']
         if notes.strip():
             summary += ['', 'Notes: ' + notes.strip()]

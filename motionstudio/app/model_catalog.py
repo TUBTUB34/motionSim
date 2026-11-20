@@ -6,6 +6,7 @@ marketing names stay reference-only until their own geometry is verified.
 from dataclasses import dataclass
 
 from motionstudio.core.kinematics import MODELS
+from motionstudio.core.about import APP_NAME
 
 LINEUP_SOURCE = 'https://www.universal-robots.com/products/robot-arms/'
 DESCRIPTION_SOURCE = 'https://github.com/UniversalRobots/Universal_Robots_ROS2_Description/tree/6662e15f32c23c12ece57d0050aee9a716e4fc41/config'
@@ -63,7 +64,7 @@ def show_catalog(parent, selected_model):
     from tkinter import ttk
     from motionstudio.ui.theme import BACKGROUND, MUTED, style_tree
     window = tk.Toplevel(parent)
-    window.title('Robot sizes · UR Motion Studio')
+    window.title(f'Robot sizes · {APP_NAME}')
     window.geometry('960x700')
     window.minsize(820, 580)
     window.transient(parent)

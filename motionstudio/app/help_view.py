@@ -5,12 +5,13 @@ from tkinter import ttk
 from motionstudio.app.help_content import TOPICS
 from motionstudio.ui import theme
 from motionstudio.ui.theme import style_tree, style_text
+from motionstudio.core.about import APP_NAME
 
 
 class HelpWindow(tk.Toplevel):
     def __init__(self, app):
         super().__init__(app.root, background=theme.BACKGROUND)
-        self.title('UR Motion Studio · How to')
+        self.title(f'{APP_NAME} · How to')
         self.geometry('1040x760')
         self.minsize(700, 520)
         self.protocol('WM_DELETE_WINDOW', self.withdraw)
@@ -19,7 +20,7 @@ class HelpWindow(tk.Toplevel):
         self.rowconfigure(1, weight=1)
         heading = ttk.Frame(self, style='Toolbar.TFrame', padding=(18, 14))
         heading.grid(row=0, column=0, columnspan=2, sticky='ew')
-        ttk.Label(heading, text='How to use Motion Studio', style='Title.Panel.TLabel').pack(side='left')
+        ttk.Label(heading, text=f'How to use {APP_NAME}', style='Title.Panel.TLabel').pack(side='left')
         ttk.Button(heading, text='Close guide', command=self.withdraw).pack(side='right')
         navigation = ttk.Frame(self, padding=12)
         navigation.grid(row=1, column=0, sticky='ns')

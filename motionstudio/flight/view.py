@@ -23,6 +23,7 @@ from motionstudio.flight.transfer import discover_library
 from motionstudio.core.paths import default_library, start_folder
 from motionstudio.ui import theme
 from motionstudio.ui.theme import ScrollableFrame, flow, style_text, style_toolbar, status_color
+from motionstudio.core.about import APP_NAME
 
 TRAILS = ('Off', 'Last 5 s', 'Whole recording')
 EVIDENCE_WINDOW = .25
@@ -44,7 +45,7 @@ class FlightWindow(WorkspacePanel):
     def __init__(self, app, parent=None):
         super().__init__(app.root, page_host=parent, on_show=lambda: app.navigate_panel(self), on_hide=getattr(app, 'show_workspace', None), background=theme.BACKGROUND)
         self.app = app
-        self.title('UR Motion Studio · Flight reports')
+        self.title(f'{APP_NAME} · Flight reports')
         self.geometry('1420x920')
         self.minsize(1000, 720)
         self.protocol('WM_DELETE_WINDOW', self.hide)

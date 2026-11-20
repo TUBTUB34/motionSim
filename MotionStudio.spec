@@ -11,14 +11,14 @@ from PyInstaller.utils.win32.versioninfo import (FixedFileInfo, StringFileInfo, 
 root = Path(SPECPATH)
 if not (root / 'motionstudio' / 'app' / 'main_window.py').is_file():
     raise RuntimeError('Missing the motionstudio package next to MotionStudio.spec.')
-# The built file is ArmChair-v<version>.exe; the app itself is still UR Motion Studio.
+# The built file is ArmChair-v<version>.exe (the name shown in the app is core/about.APP_NAME).
 version = re.search(r"__version__ = '([0-9.]+)'", (root / 'motionstudio' / '__init__.py').read_text()).group(1)
 name = f'ArmChair-v{version}'
 numbers = (*map(int, version.split('.')), 0)
 file_version = VSVersionInfo(
     ffi=FixedFileInfo(filevers=numbers, prodvers=numbers),
     kids=[StringFileInfo([StringTable('040904B0', [
-              StringStruct('ProductName', 'UR Motion Studio'), StringStruct('FileDescription', 'UR Motion Studio'),
+              StringStruct('ProductName', 'ArmChair'), StringStruct('FileDescription', 'ArmChair'),
               StringStruct('ProductVersion', version), StringStruct('FileVersion', version),
               StringStruct('InternalName', 'ArmChair'), StringStruct('OriginalFilename', f'{name}.exe')])]),
           VarFileInfo([VarStruct('Translation', [1033, 1200])])])

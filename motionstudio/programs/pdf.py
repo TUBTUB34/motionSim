@@ -8,6 +8,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 from motionstudio.reporting.pdf import ReportDocument, INK, MUTED, LEFT, RIGHT, BOTTOM
 from motionstudio.core.rendering import RENDER_LOCK
 from motionstudio.programs.check import REFERENCES, CATEGORIES
+from motionstudio.core.about import APP_NAME
 
 NOTE = ('Independent source review. Not a UR certification or safety validation. '
         'Validate runtime behavior and physical setup on the robot.')
@@ -130,7 +131,7 @@ def export_program_pdf(review, destination):
     fd, temporary = tempfile.mkstemp(suffix='.pdf', dir=destination.parent)
     os.close(fd)
     try:
-        with RENDER_LOCK, PdfPages(temporary, metadata={'Title': f'Program Check — {review.pair.name}', 'Author': 'UR Motion Studio'}) as pdf:
+        with RENDER_LOCK, PdfPages(temporary, metadata={'Title': f'Program Check — {review.pair.name}', 'Author': APP_NAME}) as pdf:
             page = ReportDocument(pdf, review.pair.name, subtitle='PROGRAM CHECK REPORT', note=NOTE)
             page.new_page('Program Check Report')
             page.paragraph(review.metadata.get('name', review.pair.name), size=14, weight='bold')

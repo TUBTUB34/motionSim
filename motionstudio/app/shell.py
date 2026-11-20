@@ -6,6 +6,7 @@ from tkinter import ttk
 from motionstudio.ui import theme
 from motionstudio.live.rtde_client import STALE_AFTER
 from motionstudio.live.session import reconnect_reason
+from motionstudio.core.about import APP_NAME
 
 
 class WorkspaceShell(ttk.Frame):
@@ -96,7 +97,7 @@ class SimulatorPopout(tk.Toplevel):
     def __init__(self, app):
         super().__init__(app.root)
         self.app = app
-        self.title('UR Motion Studio · Separate simulator')
+        self.title(f'{APP_NAME} · Separate simulator')
         self.geometry('1050x760')
         self.minsize(760, 560)
         self.protocol('WM_DELETE_WINDOW', self.close)

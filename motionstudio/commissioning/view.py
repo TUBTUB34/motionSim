@@ -12,6 +12,7 @@ from motionstudio.core.paths import start_folder
 from motionstudio.ui.theme import ScrollableFrame, style_text, style_tree
 from motionstudio.ui.workspace_panel import WorkspacePanel
 from motionstudio.ui import dialogs as messagebox
+from motionstudio.core.about import APP_NAME
 
 
 class CommissioningPage(WorkspacePanel):
@@ -20,7 +21,7 @@ class CommissioningPage(WorkspacePanel):
                          on_show=lambda: app.navigate_panel(self),
                          on_hide=getattr(app, 'show_workspace', None))
         self.app = app
-        self.title('UR Motion Studio · Commissioning & inspection')
+        self.title(f'{APP_NAME} · Commissioning & inspection')
         self.geometry('1100x800')
         self.protocol('WM_DELETE_WINDOW', self.withdraw)
         self.record = new_record()

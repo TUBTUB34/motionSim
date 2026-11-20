@@ -14,6 +14,7 @@ from motionstudio.app.preferences import TEXT_SCALES
 from motionstudio.ui import dialogs as messagebox
 from motionstudio.ui.address_book import refresh_address_fields
 from motionstudio.ui.theme import ScrollableFrame, flow, style_tree
+from motionstudio.core.about import APP_NAME
 
 TEXT_SIZE_NAMES = dict(zip(TEXT_SCALES, ('Small', 'Standard', 'Large', 'Larger', 'Largest')))
 FOLDER_PURPOSE = {
@@ -162,7 +163,7 @@ class SettingsPage(ttk.Frame):
             side_labels.append(label)
         ttk.Separator(side).pack(fill='x', pady=18)
         ttk.Button(side, text='Open project folder', command=lambda: self._open(self.app.project_root)).pack(anchor='w')
-        self.version_label = ttk.Label(side, text=f'UR Motion Studio {__version__}', style='Muted.Panel.TLabel')
+        self.version_label = ttk.Label(side, text=f'{APP_NAME} {__version__}', style='Muted.Panel.TLabel')
         self.version_label.pack(anchor='w', pady=(18, 0))
         side.bind('<Configure>', lambda e: [label.configure(wraplength=max(160, e.width-36))
                                             for label in side_labels] if e.widget is side else None)

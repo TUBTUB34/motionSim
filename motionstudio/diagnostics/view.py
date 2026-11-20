@@ -18,6 +18,7 @@ from motionstudio.ui.theme import style_text
 from motionstudio.core.paths import start_folder
 from motionstudio.ui.workspace_panel import WorkspacePanel
 from motionstudio.ui import dialogs as messagebox
+from motionstudio.core.about import APP_NAME
 
 
 class _Cancelled(Exception):
@@ -29,7 +30,7 @@ class DiagnosticWindow(WorkspacePanel):
         super().__init__(app.root, page_host=parent,
                          on_show=lambda: app.navigate_panel(self), on_hide=getattr(app, 'show_workspace', None))
         self.app = app
-        self.title('UR Motion Studio · Robot Status')
+        self.title(f'{APP_NAME} · Robot Status')
         self.geometry('1180x820')
         self.minsize(900, 650)
         self.protocol('WM_DELETE_WINDOW', self.hide)

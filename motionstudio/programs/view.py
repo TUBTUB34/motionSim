@@ -15,13 +15,14 @@ from motionstudio.remote.ssh_trust import host_key_prompt
 from motionstudio.ui.address_book import SavedAddressCombobox
 from motionstudio.ui.workspace_panel import WorkspacePanel
 from motionstudio.ui import dialogs as messagebox
+from motionstudio.core.about import APP_NAME
 
 
 class ProgramCheckWindow(WorkspacePanel):
     def __init__(self, app, parent=None):
         super().__init__(app.root, page_host=parent, on_show=lambda: app.navigate_panel(self), on_hide=getattr(app, 'show_workspace', None))
         self.app = app
-        self.title('UR Motion Studio · Program Check')
+        self.title(f'{APP_NAME} · Program Check')
         self.geometry('1180x820')
         self.minsize(900, 650)
         self.protocol('WM_DELETE_WINDOW', self.withdraw)

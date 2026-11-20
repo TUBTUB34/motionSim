@@ -24,6 +24,7 @@ from motionstudio.ui import theme
 from motionstudio.core.paths import start_folder
 from motionstudio.ui.theme import style_toolbar, style_tree, status_color
 from motionstudio.remote.ssh_trust import host_key_prompt
+from motionstudio.core.about import APP_NAME
 
 
 
@@ -31,7 +32,7 @@ class LogWindow(WorkspacePanel):
     def __init__(self, app, parent=None):
         super().__init__(app.root, page_host=parent, on_show=lambda: app.navigate_panel(self), on_hide=getattr(app, 'show_workspace', None))
         self.app = app
-        self.title('UR Motion Studio · Logs & graphs')
+        self.title(f'{APP_NAME} · Logs & graphs')
         self.geometry('1240x850')
         self.minsize(1060, 740)
         self.job = None

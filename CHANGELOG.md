@@ -12,4 +12,6 @@ First numbered release.
   goes into the active project in the working folder (default `Documents\UR Motion Studio`). Save and open dialogs
   start there. Files from earlier versions can be moved in from Settings; nothing is overwritten.
 - The footer shows the active project; the theme switch moved to Settings.
+- The app is now called ArmChair (window titles, dialogs, PDF author, recordings). Data folders keep their
+  earlier names, so saved settings and projects are found as before.
 - The version is shown in Settings and in the EXE's file properties.

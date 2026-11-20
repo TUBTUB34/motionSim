@@ -14,6 +14,7 @@ from motionstudio.ui.workspace_panel import WorkspacePanel
 from motionstudio.ui import theme
 from motionstudio.ui.theme import style_tree, status_color
 from motionstudio.remote.ssh_trust import host_key_prompt
+from motionstudio.core.about import APP_NAME
 
 
 def byte_text(value):
@@ -36,7 +37,7 @@ class RobotFlightWindow(WorkspacePanel):
     def __init__(self, app, parent=None):
         super().__init__(app.root, page_host=parent, on_show=lambda: app.navigate_panel(self), on_hide=getattr(app, 'show_workspace', None), background=theme.BACKGROUND)
         self.app = app
-        self.title('UR Motion Studio · Retrieve flight reports')
+        self.title(f'{APP_NAME} · Retrieve flight reports')
         self.geometry('1120x790')
         self.minsize(920, 740)
         self.protocol('WM_DELETE_WINDOW', self.hide)

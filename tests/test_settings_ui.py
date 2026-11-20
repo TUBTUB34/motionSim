@@ -67,7 +67,7 @@ class SettingsUITests(unittest.TestCase):
         self.assertEqual(self.app.backup_page.directory.get(), str(workspace / 'General' / 'Backups'))
         self.assertEqual(self.app.shell.project_label.cget('text'), 'Project · General')
         from motionstudio import __version__
-        self.assertEqual(self.app.settings_page.version_label.cget('text'), f'UR Motion Studio {__version__}')
+        self.assertEqual(self.app.settings_page.version_label.cget('text'), f'ArmChair {__version__}')
 
     def test_creating_and_switching_projects_moves_every_page_and_survives_restart(self):
         self.app.open_flights()

@@ -15,6 +15,7 @@ from motionstudio.ui.workspace_panel import WorkspacePanel
 from motionstudio.ui.theme import style_text
 from motionstudio.ui import dialogs as messagebox
 from motionstudio.remote.ssh_trust import host_key_prompt
+from motionstudio.core.about import APP_NAME
 
 
 def backup_filename(project, date=None):
@@ -35,7 +36,7 @@ class BackupPage(WorkspacePanel):
         self.app = app
         self.job = None
         self.closed = False
-        self.title('UR Motion Studio · Backups')
+        self.title(f'{APP_NAME} · Backups')
         self.geometry('1000x760')
         self.protocol('WM_DELETE_WINDOW', self.withdraw)
         self.ip = tk.StringVar()
